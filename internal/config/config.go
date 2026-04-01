@@ -23,6 +23,7 @@ type Config struct {
 	IDTokenTTL              time.Duration
 	RefreshAbsoluteTTL      time.Duration
 	RefreshInactiveTTL      time.Duration
+	OTPChallengeTTL         time.Duration
 	AuthorizationRequestTTL time.Duration
 	AuthorizationCodeTTL    time.Duration
 	SSOSessionTTL           time.Duration
@@ -73,6 +74,10 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	otpChallengeTTL, err := durationEnv("OTP_CHALLENGE_TTL", 10*time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
 	authorizationRequestTTL, err := durationEnv("AUTHORIZATION_REQUEST_TTL", 10*time.Minute)
 	if err != nil {
 		return Config{}, err
@@ -103,6 +108,7 @@ func Load() (Config, error) {
 		IDTokenTTL:              idTokenTTL,
 		RefreshAbsoluteTTL:      refreshAbsoluteTTL,
 		RefreshInactiveTTL:      refreshInactiveTTL,
+		OTPChallengeTTL:         otpChallengeTTL,
 		AuthorizationRequestTTL: authorizationRequestTTL,
 		AuthorizationCodeTTL:    authorizationCodeTTL,
 		SSOSessionTTL:           ssoSessionTTL,

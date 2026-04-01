@@ -18,3 +18,8 @@ type AccountProviderRepository interface {
 	FindByProviderAccountID(ctx context.Context, provider string, providerAccountID string) (domain.AccountProvider, error)
 	FindByAccountIDAndProvider(ctx context.Context, accountID string, provider string) (domain.AccountProvider, error)
 }
+
+type OAuthClientRepository interface {
+	Create(ctx context.Context, client domain.OAuthClient) (domain.OAuthClient, error)
+	FindByClientID(ctx context.Context, clientID string) (domain.OAuthClient, error)
+}

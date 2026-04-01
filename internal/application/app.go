@@ -12,10 +12,13 @@ type App struct {
 	Identity identity.Service
 	Token    token.Service
 
-	Accounts    port.AccountRepository
-	Clients     port.OAuthClientRepository
-	SSOSessions port.SSOSessionRepository
-	Requests    port.AuthorizationRequestRepository
-	JWKS        port.JWKSProvider
-	Providers   map[string]port.IdentityProvider
+	Accounts      port.AccountRepository
+	Clients       port.OAuthClientRepository
+	SSOSessions   port.SSOSessionRepository
+	Requests      port.AuthorizationRequestRepository
+	JWKS          port.JWKSProvider
+	Verifier      port.JWTVerifier
+	Providers     map[string]port.IdentityProvider
+	RefreshChains port.RefreshTokenChainRepository
+	RefreshTokens port.RefreshTokenRepository
 }

@@ -38,6 +38,9 @@ func RegisterRoutes(router *gin.Engine, cfg config.Config, app application.App) 
 	router.GET("/.well-known/jwks.json", handler.jwks)
 	router.GET("/v1/oauth2/authorize", handler.authorize)
 	router.POST("/v1/oauth2/token", handler.token)
+	router.POST("/v1/oauth2/revoke", handler.revoke)
+	router.POST("/v1/oauth2/introspect", handler.introspect)
+	router.GET("/v1/oidc/userinfo", handler.userInfo)
 
 	auth := router.Group("/v1/auth")
 	auth.GET("/requests/:requestID", handler.getAuthorizationRequest)
@@ -193,6 +196,95 @@ func (h Handler) token(c *gin.Context) {
 	}
 }
 
+func (h Handler) revoke(c *gin.Context) {
+	clientID, clientSecret := h.clientCredentials(c)
+	if clientID == "" {
+		clientID = c.PostForm("client_id")
+	}
+	client, ok := h.authenticateClient(c, clientID, clientSecret, false)
+	if !ok {
+		return
+	}
+
+	tokenValue := c.PostForm("token")
+	_, tokenHash, err := hashOpaqueToken(tokenValue)
+	if err != nil {
+		c.Status(http.StatusOK)
+		return
+	}
+	refreshToken, err := h.app.RefreshTokens.FindByTokenHash(c.Request.Context(), tokenHash)
+	if err == nil {
+		chain, chainErr := h.app.RefreshChains.FindByID(c.Request.Context(), refreshToken.RefreshTokenChainID)
+		if chainErr == nil && chain.ClientID == client.ClientID {
+			_ = h.app.RefreshTokens.RevokeByChainID(c.Request.Context(), chain.ID)
+			_ = h.app.RefreshChains.RevokeByID(c.Request.Context(), chain.ID)
+		}
+	}
+	c.Status(http.StatusOK)
+}
+
+func (h Handler) introspect(c *gin.Context) {
+	clientID, clientSecret := h.clientCredentials(c)
+	if clientID == "" {
+		clientID = c.PostForm("client_id")
+	}
+	_, ok := h.authenticateClient(c, clientID, clientSecret, true)
+	if !ok {
+		return
+	}
+
+	tokenValue := c.PostForm("token")
+	tokenTypeHint := c.PostForm("token_type_hint")
+	if tokenTypeHint == "refresh_token" {
+		h.introspectRefreshToken(c, tokenValue)
+		return
+	}
+	h.introspectAccessToken(c, tokenValue)
+}
+
+func (h Handler) userInfo(c *gin.Context) {
+	rawToken := strings.TrimSpace(strings.TrimPrefix(c.GetHeader("Authorization"), "Bearer"))
+	if rawToken == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_token"})
+		return
+	}
+
+	claims, err := h.app.Verifier.Verify(rawToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_token"})
+		return
+	}
+
+	subject := stringClaim(claims, "sub")
+	if subject == "" || subject == stringClaim(claims, "client_id") {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_token"})
+		return
+	}
+
+	account, err := h.app.Accounts.FindByID(c.Request.Context(), subject)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_token"})
+		return
+	}
+
+	scopeSet := make(map[string]struct{})
+	for _, scope := range splitProtocolList(stringClaim(claims, "scope")) {
+		scopeSet[scope] = struct{}{}
+	}
+
+	response := gin.H{"sub": account.ID}
+	if _, ok := scopeSet["email"]; ok {
+		response["email"] = account.PrimaryVerifiedEmail
+		response["email_verified"] = true
+	}
+	if _, ok := scopeSet["profile"]; ok {
+		response["name"] = account.DisplayName
+		response["picture"] = account.AvatarURL
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 func (h Handler) handleAuthorizationCodeToken(c *gin.Context, clientID string, clientSecret string) {
 	code := c.PostForm("code")
 	redirectURI := c.PostForm("redirect_uri")
@@ -305,6 +397,67 @@ func (h Handler) handleClientCredentials(c *gin.Context, clientID string, client
 		"token_type":   tokens.TokenType,
 		"expires_in":   tokens.ExpiresIn,
 		"scope":        tokens.Scope,
+	})
+}
+
+func (h Handler) introspectAccessToken(c *gin.Context, tokenValue string) {
+	claims, err := h.app.Verifier.Verify(tokenValue)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"active": false})
+		return
+	}
+	exp, _ := claims["exp"].(float64)
+	if exp > 0 && time.Now().UTC().Unix() >= int64(exp) {
+		c.JSON(http.StatusOK, gin.H{"active": false})
+		return
+	}
+
+	response := gin.H{
+		"active":     true,
+		"scope":      stringClaim(claims, "scope"),
+		"client_id":  stringClaim(claims, "client_id"),
+		"sub":        stringClaim(claims, "sub"),
+		"token_type": "Bearer",
+	}
+	if exp > 0 {
+		response["exp"] = int64(exp)
+	}
+	if iat, ok := claims["iat"].(float64); ok {
+		response["iat"] = int64(iat)
+	}
+	if aud, ok := claims["aud"]; ok {
+		response["aud"] = aud
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (h Handler) introspectRefreshToken(c *gin.Context, tokenValue string) {
+	_, tokenHash, err := hashOpaqueToken(tokenValue)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"active": false})
+		return
+	}
+	tokenRecord, err := h.app.RefreshTokens.FindByTokenHash(c.Request.Context(), tokenHash)
+	if err != nil || tokenRecord.RevokedAt != nil || tokenRecord.UsedAt != nil || time.Now().UTC().After(tokenRecord.ExpiresAt) {
+		c.JSON(http.StatusOK, gin.H{"active": false})
+		return
+	}
+
+	chain, err := h.app.RefreshChains.FindByID(c.Request.Context(), tokenRecord.RefreshTokenChainID)
+	if err != nil || chain.RevokedAt != nil || chain.Status != domain.RefreshTokenChainStatusActive {
+		c.JSON(http.StatusOK, gin.H{"active": false})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"active":     true,
+		"scope":      chain.Scope,
+		"client_id":  chain.ClientID,
+		"sub":        chain.AccountID,
+		"exp":        chain.AbsoluteExpiresAt.Unix(),
+		"iat":        tokenRecord.IssuedAt.Unix(),
+		"token_type": "refresh_token",
 	})
 }
 
@@ -823,6 +976,14 @@ func matchSecret(stored string, provided string) bool {
 	return subtle.ConstantTimeCompare([]byte(stored), []byte(provided)) == 1
 }
 
+func hashOpaqueToken(value string) (string, string, error) {
+	if value == "" {
+		return "", "", fmt.Errorf("empty token")
+	}
+	sum := sha256.Sum256([]byte(value))
+	return value, base64.RawURLEncoding.EncodeToString(sum[:]), nil
+}
+
 func (h Handler) clientCredentials(c *gin.Context) (string, string) {
 	username, password, ok := c.Request.BasicAuth()
 	if !ok {
@@ -922,4 +1083,17 @@ func maskEmail(value string) string {
 	}
 
 	return local[:1] + strings.Repeat("*", len(local)-2) + local[len(local)-1:] + "@" + parts[1]
+}
+
+func stringClaim(claims map[string]any, key string) string {
+	value, ok := claims[key]
+	if !ok {
+		return ""
+	}
+	switch typed := value.(type) {
+	case string:
+		return typed
+	default:
+		return fmt.Sprint(typed)
+	}
 }

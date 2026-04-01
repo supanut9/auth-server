@@ -13,3 +13,7 @@ type JWTSigner interface {
 type JWKSProvider interface {
 	PublicJWKS() ([]byte, error)
 }
+
+type JWTVerifier interface {
+	Verify(token string) (map[string]any, error)
+}

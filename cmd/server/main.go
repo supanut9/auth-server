@@ -109,15 +109,18 @@ func main() {
 	}
 
 	app := application.App{
-		Flow:        flowService,
-		Identity:    identityService,
-		Token:       tokenService,
-		Accounts:    accountRepository,
-		Clients:     clientRepository,
-		SSOSessions: ssoSessionRepository,
-		Requests:    authorizationRequestRepository,
-		JWKS:        jwksManager,
-		Providers:   providers,
+		Flow:          flowService,
+		Identity:      identityService,
+		Token:         tokenService,
+		Accounts:      accountRepository,
+		Clients:       clientRepository,
+		SSOSessions:   ssoSessionRepository,
+		Requests:      authorizationRequestRepository,
+		JWKS:          jwksManager,
+		Verifier:      jwksManager,
+		Providers:     providers,
+		RefreshChains: refreshTokenChainRepository,
+		RefreshTokens: refreshTokenRepository,
 	}
 
 	router := gin.New()

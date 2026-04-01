@@ -107,6 +107,28 @@ func (m Manager) PublicJWKS() ([]byte, error) {
 	return json.Marshal(doc)
 }
 
+func (m Manager) Verify(rawToken string) (map[string]any, error) {
+	parsed, err := jwt.Parse(rawToken, func(token *jwt.Token) (any, error) {
+		if token.Method.Alg() != m.alg {
+			return nil, fmt.Errorf("unexpected signing alg: %s", token.Method.Alg())
+		}
+		return m.publicKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !parsed.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	claims, ok := parsed.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	return map[string]any(claims), nil
+}
+
 func loadPrivateKey(path string) (*rsa.PrivateKey, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {

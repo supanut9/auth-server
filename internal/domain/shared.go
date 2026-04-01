@@ -1,5 +1,9 @@
 package domain
 
 const (
-	AccountStatusActive = "active"
+	AccountStatusActive            = "active"
+	AccessTokenStatusActive        = "active"
+	AccessTokenStatusRevoked       = "revoked"
+	RefreshTokenChainStatusActive  = "active"
+	RefreshTokenChainStatusRevoked = "revoked"
 )

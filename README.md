@@ -54,3 +54,15 @@ Root planning docs remain authoritative for phase 1:
 - current workflow:
   - `atlas schema inspect --env gorm --url env://src`
   - `atlas migrate diff <name> --env gorm`
+
+## Dev Signing Keys
+
+The service expects RSA PEM files at the configured JWT key paths.
+
+Example local generation:
+
+```bash
+mkdir -p secrets
+openssl genrsa -out secrets/jwt-private.pem 2048
+openssl rsa -in secrets/jwt-private.pem -pubout -out secrets/jwt-public.pem
+```

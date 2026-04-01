@@ -10,6 +10,7 @@ Expected config areas:
 - issuer URL
 - auth-ui base URL
 - JWT signing and JWKS settings
+- platform audience and token lifetimes
 - Google OAuth settings
 - GitHub OAuth settings
 - Email OTP and mail settings

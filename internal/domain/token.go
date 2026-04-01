@@ -23,6 +23,7 @@ type RefreshTokenChain struct {
 	AccountID         string
 	ClientID          string
 	SSOSessionID      string
+	Scope             string
 	DeviceSessionID   string
 	Status            string
 	AbsoluteExpiresAt time.Time

@@ -159,6 +159,7 @@ func (s Service) IssueUserTokens(ctx context.Context, req UserTokenRequest) (Iss
 		AccountID:         req.AccountID,
 		ClientID:          req.ClientID,
 		SSOSessionID:      req.SSOSessionID,
+		Scope:             strings.Join(scope, " "),
 		DeviceSessionID:   req.DeviceSessionID,
 		Status:            domain.RefreshTokenChainStatusActive,
 		AbsoluteExpiresAt: refreshExp,
@@ -298,7 +299,7 @@ func (s Service) RefreshUserTokens(ctx context.Context, req RefreshTokenRequest)
 		return IssuedTokens{}, ErrRefreshTokenExpired
 	}
 
-	scope := []string{}
+	scope := splitScopes(chain.Scope)
 	accessJTI, err := s.idGenerator.NewID()
 	if err != nil {
 		return IssuedTokens{}, err
@@ -370,7 +371,7 @@ func (s Service) RefreshUserTokens(ctx context.Context, req RefreshTokenRequest)
 		RefreshToken:          nextRefreshValue,
 		TokenType:             "Bearer",
 		ExpiresIn:             int64(s.accessTokenTTL.Seconds()),
-		Scope:                 "",
+		Scope:                 strings.Join(scope, " "),
 		AccessTokenExpiresAt:  accessExp,
 		RefreshTokenExpiresAt: chain.AbsoluteExpiresAt,
 	}, nil
@@ -392,6 +393,14 @@ func normalizeScopes(scopes []string) []string {
 	}
 	sort.Strings(normalized)
 	return normalized
+}
+
+func splitScopes(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+
+	return normalizeScopes(strings.Fields(raw))
 }
 
 func newOpaqueToken() (string, string, error) {

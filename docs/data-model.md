@@ -25,5 +25,6 @@ Rules:
 - GORM models are the schema input for migration generation
 - repositories follow the generated migration contract rather than inventing schema independently
 - tables that reference OAuth clients use the public `oauth_clients.client_id` value for relational consistency with protocol inputs
+- `refresh_token_chains` stores the granted scope set so refresh can reissue equivalent access
 
 Refer to `../../docs/phase-1-storage-model.md` for the cross-service storage contract.

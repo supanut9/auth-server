@@ -7,22 +7,25 @@ import (
 )
 
 type Config struct {
-	AppName            string
-	AppEnv             string
-	HTTPAddr           string
-	PublicBaseURL      string
-	AuthUIBaseURL      string
-	DatabaseURL        string
-	RedisURL           string
-	JWTIssuer          string
-	JWTSigningAlg      string
-	JWTPrivateKeyPath  string
-	JWTPublicKeyPath   string
-	PlatformAudience   string
-	AccessTokenTTL     time.Duration
-	IDTokenTTL         time.Duration
-	RefreshAbsoluteTTL time.Duration
-	RefreshInactiveTTL time.Duration
+	AppName                 string
+	AppEnv                  string
+	HTTPAddr                string
+	PublicBaseURL           string
+	AuthUIBaseURL           string
+	DatabaseURL             string
+	RedisURL                string
+	JWTIssuer               string
+	JWTSigningAlg           string
+	JWTPrivateKeyPath       string
+	JWTPublicKeyPath        string
+	PlatformAudience        string
+	AccessTokenTTL          time.Duration
+	IDTokenTTL              time.Duration
+	RefreshAbsoluteTTL      time.Duration
+	RefreshInactiveTTL      time.Duration
+	AuthorizationRequestTTL time.Duration
+	AuthorizationCodeTTL    time.Duration
+	SSOSessionTTL           time.Duration
 }
 
 func Load() (Config, error) {
@@ -70,24 +73,39 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	authorizationRequestTTL, err := durationEnv("AUTHORIZATION_REQUEST_TTL", 10*time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
+	authorizationCodeTTL, err := durationEnv("AUTHORIZATION_CODE_TTL", 5*time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
+	ssoSessionTTL, err := durationEnv("SSO_SESSION_TTL", 30*24*time.Hour)
+	if err != nil {
+		return Config{}, err
+	}
 
 	cfg := Config{
-		AppName:            getEnv("APP_NAME", "auth-server"),
-		AppEnv:             getEnv("APP_ENV", "development"),
-		HTTPAddr:           getEnv("HTTP_ADDR", ":8050"),
-		PublicBaseURL:      publicBaseURL,
-		AuthUIBaseURL:      authUIBaseURL,
-		DatabaseURL:        databaseURL,
-		RedisURL:           redisURL,
-		JWTIssuer:          jwtIssuer,
-		JWTSigningAlg:      getEnv("JWT_SIGNING_ALG", "RS256"),
-		JWTPrivateKeyPath:  jwtPrivateKeyPath,
-		JWTPublicKeyPath:   jwtPublicKeyPath,
-		PlatformAudience:   getEnv("PLATFORM_AUDIENCE", "platform-api"),
-		AccessTokenTTL:     accessTokenTTL,
-		IDTokenTTL:         idTokenTTL,
-		RefreshAbsoluteTTL: refreshAbsoluteTTL,
-		RefreshInactiveTTL: refreshInactiveTTL,
+		AppName:                 getEnv("APP_NAME", "auth-server"),
+		AppEnv:                  getEnv("APP_ENV", "development"),
+		HTTPAddr:                getEnv("HTTP_ADDR", ":8050"),
+		PublicBaseURL:           publicBaseURL,
+		AuthUIBaseURL:           authUIBaseURL,
+		DatabaseURL:             databaseURL,
+		RedisURL:                redisURL,
+		JWTIssuer:               jwtIssuer,
+		JWTSigningAlg:           getEnv("JWT_SIGNING_ALG", "RS256"),
+		JWTPrivateKeyPath:       jwtPrivateKeyPath,
+		JWTPublicKeyPath:        jwtPublicKeyPath,
+		PlatformAudience:        getEnv("PLATFORM_AUDIENCE", "platform-api"),
+		AccessTokenTTL:          accessTokenTTL,
+		IDTokenTTL:              idTokenTTL,
+		RefreshAbsoluteTTL:      refreshAbsoluteTTL,
+		RefreshInactiveTTL:      refreshInactiveTTL,
+		AuthorizationRequestTTL: authorizationRequestTTL,
+		AuthorizationCodeTTL:    authorizationCodeTTL,
+		SSOSessionTTL:           ssoSessionTTL,
 	}
 
 	return cfg, nil

@@ -11,6 +11,7 @@ Expected config areas:
 - auth-ui base URL
 - JWT signing and JWKS settings
 - platform audience and token lifetimes
+- authorization request, authorization code, and SSO session lifetimes
 - Google OAuth settings
 - GitHub OAuth settings
 - Email OTP and mail settings

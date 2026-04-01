@@ -1,7 +1,12 @@
 package http
 
 import (
+	"context"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,6 +17,7 @@ import (
 	"github.com/supanut9/auth-server/internal/application"
 	flowapp "github.com/supanut9/auth-server/internal/application/flow"
 	identityapp "github.com/supanut9/auth-server/internal/application/identity"
+	tokenapp "github.com/supanut9/auth-server/internal/application/token"
 	"github.com/supanut9/auth-server/internal/config"
 	"github.com/supanut9/auth-server/internal/domain"
 	"gorm.io/gorm"
@@ -30,6 +36,8 @@ func RegisterRoutes(router *gin.Engine, cfg config.Config, app application.App) 
 	router.GET("/healthz", handler.healthz)
 	router.GET("/.well-known/openid-configuration", handler.openIDConfiguration)
 	router.GET("/.well-known/jwks.json", handler.jwks)
+	router.GET("/v1/oauth2/authorize", handler.authorize)
+	router.POST("/v1/oauth2/token", handler.token)
 
 	auth := router.Group("/v1/auth")
 	auth.GET("/requests/:requestID", handler.getAuthorizationRequest)
@@ -76,6 +84,224 @@ func (h Handler) jwks(c *gin.Context) {
 	}
 
 	c.Data(http.StatusOK, "application/json", document)
+}
+
+func (h Handler) authorize(c *gin.Context) {
+	responseType := c.Query("response_type")
+	clientID := c.Query("client_id")
+	redirectURI := c.Query("redirect_uri")
+	scope := splitProtocolList(c.Query("scope"))
+	state := c.Query("state")
+	nonce := c.Query("nonce")
+	codeChallenge := c.Query("code_challenge")
+	codeChallengeMethod := c.DefaultQuery("code_challenge_method", "plain")
+
+	client, clientErr := h.app.Clients.FindByClientID(c.Request.Context(), clientID)
+	if clientErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_client"})
+		return
+	}
+
+	if responseType != "code" {
+		h.redirectOAuthError(c, redirectURI, state, "unsupported_response_type", "response_type must be code")
+		return
+	}
+	if redirectURI == "" || !containsValue(splitProtocolList(client.RedirectURIs), redirectURI) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "error_description": "redirect_uri is invalid"})
+		return
+	}
+	if state == "" {
+		h.redirectOAuthError(c, redirectURI, state, "invalid_request", "state is required")
+		return
+	}
+	if !scopeSubset(scope, splitProtocolList(client.AllowedScopes)) {
+		h.redirectOAuthError(c, redirectURI, state, "invalid_scope", "requested scopes are not allowed")
+		return
+	}
+	if containsValue(scope, "openid") && nonce == "" {
+		h.redirectOAuthError(c, redirectURI, state, "invalid_request", "nonce is required for openid")
+		return
+	}
+	if client.ClientType == "public" && codeChallenge == "" {
+		h.redirectOAuthError(c, redirectURI, state, "invalid_request", "code_challenge is required for public clients")
+		return
+	}
+
+	var accountID *string
+	var ssoSessionID *string
+	authTime := time.Now().UTC()
+	if session, err := h.currentSSOSession(c.Request.Context(), c); err == nil {
+		accountID = stringPtr(session.AccountID)
+		ssoSessionID = stringPtr(session.ID)
+		authTime = session.AuthenticatedAt
+	}
+
+	request, err := h.app.Flow.StartAuthorization(c.Request.Context(), flowapp.StartAuthorizationRequest{
+		ClientID:                client.ClientID,
+		RedirectURI:             redirectURI,
+		RequestedScopes:         scope,
+		State:                   state,
+		Nonce:                   optionalStringPtr(nonce),
+		PKCECodeChallenge:       codeChallenge,
+		PKCECodeChallengeMethod: codeChallengeMethod,
+		AccountID:               accountID,
+		SSOSessionID:            ssoSessionID,
+	})
+	if err != nil {
+		h.redirectOAuthError(c, redirectURI, state, "server_error", err.Error())
+		return
+	}
+
+	switch request.Stage {
+	case domain.AuthorizationStageAuthorizationReady:
+		codeValue, _, err := h.app.Flow.IssueAuthorizationCode(c.Request.Context(), flowapp.IssueAuthorizationCodeRequest{
+			RequestID: request.ID,
+			AuthTime:  authTime,
+		})
+		if err != nil {
+			h.redirectOAuthError(c, redirectURI, state, "server_error", err.Error())
+			return
+		}
+		h.redirectAuthorizationSuccess(c, redirectURI, codeValue, state)
+	case domain.AuthorizationStageConsentRequired:
+		c.Redirect(http.StatusFound, strings.TrimRight(h.cfg.AuthUIBaseURL, "/")+"/consent?request_id="+url.QueryEscape(request.ID))
+	default:
+		c.Redirect(http.StatusFound, strings.TrimRight(h.cfg.AuthUIBaseURL, "/")+"/login?request_id="+url.QueryEscape(request.ID))
+	}
+}
+
+func (h Handler) token(c *gin.Context) {
+	clientID, clientSecret := h.clientCredentials(c)
+	if clientID == "" {
+		clientID = c.PostForm("client_id")
+	}
+
+	grantType := c.PostForm("grant_type")
+	switch grantType {
+	case "authorization_code":
+		h.handleAuthorizationCodeToken(c, clientID, clientSecret)
+	case "refresh_token":
+		h.handleRefreshToken(c, clientID, clientSecret)
+	case "client_credentials":
+		h.handleClientCredentials(c, clientID, clientSecret)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported_grant_type"})
+	}
+}
+
+func (h Handler) handleAuthorizationCodeToken(c *gin.Context, clientID string, clientSecret string) {
+	code := c.PostForm("code")
+	redirectURI := c.PostForm("redirect_uri")
+	codeVerifier := c.PostForm("code_verifier")
+
+	client, ok := h.authenticateClient(c, clientID, clientSecret, false)
+	if !ok {
+		return
+	}
+
+	authorizationCode, err := h.app.Flow.ConsumeAuthorizationCode(c.Request.Context(), flowapp.ConsumeAuthorizationCodeRequest{
+		Code:        code,
+		ClientID:    client.ClientID,
+		RedirectURI: redirectURI,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_grant"})
+		return
+	}
+
+	if !validatePKCE(authorizationCode.PKCECodeChallengeMethod, authorizationCode.PKCECodeChallenge, codeVerifier) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_grant", "error_description": "pkce validation failed"})
+		return
+	}
+
+	account, err := h.app.Accounts.FindByID(c.Request.Context(), authorizationCode.AccountID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return
+	}
+
+	tokens, err := h.app.Token.IssueUserTokens(c.Request.Context(), tokenapp.UserTokenRequest{
+		AccountID:       account.ID,
+		ClientID:        client.ClientID,
+		Scope:           splitProtocolList(authorizationCode.GrantedScopes),
+		SSOSessionID:    derefString(authorizationCode.SSOSessionID),
+		DeviceSessionID: authorizationCode.ID,
+		AuthTime:        authorizationCode.AuthTime,
+		Email:           account.PrimaryVerifiedEmail,
+		EmailVerified:   true,
+		Name:            account.DisplayName,
+		Picture:         account.AvatarURL,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"access_token":  tokens.AccessToken,
+		"id_token":      tokens.IDToken,
+		"refresh_token": tokens.RefreshToken,
+		"token_type":    tokens.TokenType,
+		"expires_in":    tokens.ExpiresIn,
+		"scope":         tokens.Scope,
+	})
+}
+
+func (h Handler) handleRefreshToken(c *gin.Context, clientID string, clientSecret string) {
+	client, ok := h.authenticateClient(c, clientID, clientSecret, false)
+	if !ok {
+		return
+	}
+
+	tokens, err := h.app.Token.RefreshUserTokens(c.Request.Context(), tokenapp.RefreshTokenRequest{
+		ClientID:     client.ClientID,
+		RefreshToken: c.PostForm("refresh_token"),
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_grant"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
+		"token_type":    tokens.TokenType,
+		"expires_in":    tokens.ExpiresIn,
+		"scope":         tokens.Scope,
+	})
+}
+
+func (h Handler) handleClientCredentials(c *gin.Context, clientID string, clientSecret string) {
+	client, ok := h.authenticateClient(c, clientID, clientSecret, true)
+	if !ok {
+		return
+	}
+
+	scope := splitProtocolList(c.PostForm("scope"))
+	if containsValue(scope, "openid") || containsValue(scope, "email") || containsValue(scope, "profile") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_scope"})
+		return
+	}
+	if !scopeSubset(scope, splitProtocolList(client.AllowedScopes)) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_scope"})
+		return
+	}
+
+	tokens, err := h.app.Token.IssueClientCredentialsToken(c.Request.Context(), tokenapp.ClientCredentialsTokenRequest{
+		ClientID: client.ClientID,
+		Scope:    scope,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"access_token": tokens.AccessToken,
+		"token_type":   tokens.TokenType,
+		"expires_in":   tokens.ExpiresIn,
+		"scope":        tokens.Scope,
+	})
 }
 
 type authorizationRequestResponse struct {
@@ -327,6 +553,44 @@ func (h Handler) clearSSOCookie(c *gin.Context) {
 	c.SetCookie(ssoCookieName, "", -1, "/", "", false, true)
 }
 
+func (h Handler) authenticateClient(c *gin.Context, clientID string, clientSecret string, confidentialOnly bool) (domain.OAuthClient, bool) {
+	client, err := h.app.Clients.FindByClientID(c.Request.Context(), clientID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_client"})
+		return domain.OAuthClient{}, false
+	}
+
+	if confidentialOnly && client.ClientType != "confidential" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized_client"})
+		return domain.OAuthClient{}, false
+	}
+
+	if client.ClientType == "confidential" {
+		if !matchSecret(client.ClientSecretHash, clientSecret) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid_client"})
+			return domain.OAuthClient{}, false
+		}
+	}
+
+	return client, true
+}
+
+func (h Handler) currentSSOSession(ctx context.Context, c *gin.Context) (domain.SSOSession, error) {
+	cookieValue, err := c.Cookie(ssoCookieName)
+	if err != nil {
+		return domain.SSOSession{}, err
+	}
+
+	session, err := h.app.SSOSessions.FindByID(ctx, cookieValue)
+	if err != nil {
+		return domain.SSOSession{}, err
+	}
+	if session.Status != domain.SSOSessionStatusActive || time.Now().UTC().After(session.ExpiresAt) || session.RevokedAt != nil {
+		return domain.SSOSession{}, fmt.Errorf("inactive sso session")
+	}
+	return session, nil
+}
+
 func (h Handler) postLogoutRedirect(candidate string) string {
 	if candidate == "" {
 		return strings.TrimRight(h.cfg.AuthUIBaseURL, "/") + "/logout"
@@ -365,6 +629,130 @@ func optionalStringPtr(value string) *string {
 		return nil
 	}
 	return &value
+}
+
+func derefString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func containsValue(items []string, needle string) bool {
+	for _, item := range items {
+		if item == needle {
+			return true
+		}
+	}
+	return false
+}
+
+func splitProtocolList(raw string) []string {
+	fields := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ' ' || r == ',' || r == '\n' || r == '\t'
+	})
+	values := make([]string, 0, len(fields))
+	seen := make(map[string]struct{}, len(fields))
+	for _, field := range fields {
+		trimmed := strings.TrimSpace(field)
+		if trimmed == "" {
+			continue
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		values = append(values, trimmed)
+	}
+	return values
+}
+
+func scopeSubset(requested []string, allowed []string) bool {
+	allowedSet := make(map[string]struct{}, len(allowed))
+	for _, item := range allowed {
+		allowedSet[item] = struct{}{}
+	}
+	for _, item := range requested {
+		if _, ok := allowedSet[item]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func validatePKCE(method string, challenge string, verifier string) bool {
+	if challenge == "" {
+		return verifier == ""
+	}
+	if verifier == "" {
+		return false
+	}
+	switch method {
+	case "", "plain":
+		return subtle.ConstantTimeCompare([]byte(challenge), []byte(verifier)) == 1
+	case "S256":
+		sum := sha256.Sum256([]byte(verifier))
+		encoded := base64.RawURLEncoding.EncodeToString(sum[:])
+		return subtle.ConstantTimeCompare([]byte(challenge), []byte(encoded)) == 1
+	default:
+		return false
+	}
+}
+
+func matchSecret(stored string, provided string) bool {
+	if stored == "" || provided == "" {
+		return false
+	}
+	if strings.HasPrefix(stored, "sha256:") {
+		sum := sha256.Sum256([]byte(provided))
+		encoded := base64.RawURLEncoding.EncodeToString(sum[:])
+		return subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(stored, "sha256:")), []byte(encoded)) == 1
+	}
+	return subtle.ConstantTimeCompare([]byte(stored), []byte(provided)) == 1
+}
+
+func (h Handler) clientCredentials(c *gin.Context) (string, string) {
+	username, password, ok := c.Request.BasicAuth()
+	if !ok {
+		return "", ""
+	}
+	return username, password
+}
+
+func (h Handler) redirectOAuthError(c *gin.Context, redirectURI string, state string, errorCode string, description string) {
+	target, err := url.Parse(redirectURI)
+	if err != nil || redirectURI == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":             errorCode,
+			"error_description": description,
+		})
+		return
+	}
+	query := target.Query()
+	query.Set("error", errorCode)
+	if description != "" {
+		query.Set("error_description", description)
+	}
+	if state != "" {
+		query.Set("state", state)
+	}
+	target.RawQuery = query.Encode()
+	c.Redirect(http.StatusFound, target.String())
+}
+
+func (h Handler) redirectAuthorizationSuccess(c *gin.Context, redirectURI string, code string, state string) {
+	target, err := url.Parse(redirectURI)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+		return
+	}
+	query := target.Query()
+	query.Set("code", code)
+	if state != "" {
+		query.Set("state", state)
+	}
+	target.RawQuery = query.Encode()
+	c.Redirect(http.StatusFound, target.String())
 }
 
 func maskEmail(value string) string {

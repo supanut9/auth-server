@@ -30,6 +30,28 @@ type Handler struct {
 	app application.App
 }
 
+func CORSMiddleware(cfg config.Config) gin.HandlerFunc {
+	allowedOrigin := strings.TrimRight(cfg.AuthUIBaseURL, "/")
+
+	return func(c *gin.Context) {
+		origin := strings.TrimRight(c.GetHeader("Origin"), "/")
+		if origin == allowedOrigin {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+			c.Header("Access-Control-Allow-Credentials", "true")
+			c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		}
+
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func RegisterRoutes(router *gin.Engine, cfg config.Config, app application.App) {
 	handler := Handler{cfg: cfg, app: app}
 
@@ -655,6 +677,36 @@ func (h Handler) acceptConsent(c *gin.Context) {
 		return
 	}
 
+	if request.Stage == domain.AuthorizationStageAuthorizationReady {
+		authTime := time.Now().UTC()
+		if request.SSOSessionID != nil {
+			if session, err := h.currentSSOSession(c.Request.Context(), c); err == nil {
+				authTime = session.AuthenticatedAt
+			}
+		}
+
+		codeValue, _, err := h.app.Flow.IssueAuthorizationCode(c.Request.Context(), flowapp.IssueAuthorizationCodeRequest{
+			RequestID: request.ID,
+			AuthTime:  authTime,
+		})
+		if err != nil {
+			h.renderFlowError(c, err)
+			return
+		}
+		redirectTo, ok := h.authorizationSuccessURL(request.RedirectURI, codeValue, request.State)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"request_id":  request.ID,
+			"stage":       domain.AuthorizationStageCompleted,
+			"redirect_to": redirectTo,
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"request_id": request.ID,
 		"stage":      request.Stage,
@@ -673,10 +725,16 @@ func (h Handler) rejectConsent(c *gin.Context) {
 		h.renderFlowError(c, err)
 		return
 	}
+	redirectTo, ok := h.oauthErrorURL(request.RedirectURI, request.State, "access_denied", "user denied consent")
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"request_id": request.ID,
-		"stage":      request.Stage,
+		"request_id":  request.ID,
+		"stage":       request.Stage,
+		"redirect_to": redirectTo,
 	})
 }
 
@@ -1045,13 +1103,44 @@ func (h Handler) providerRedirectURI(providerName string) string {
 }
 
 func (h Handler) redirectOAuthError(c *gin.Context, redirectURI string, state string, errorCode string, description string) {
-	target, err := url.Parse(redirectURI)
-	if err != nil || redirectURI == "" {
+	target, ok := h.oauthErrorURL(redirectURI, state, errorCode, description)
+	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":             errorCode,
 			"error_description": description,
 		})
 		return
+	}
+	c.Redirect(http.StatusFound, target)
+}
+
+func (h Handler) redirectAuthorizationSuccess(c *gin.Context, redirectURI string, code string, state string) {
+	target, ok := h.authorizationSuccessURL(redirectURI, code, state)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+		return
+	}
+	c.Redirect(http.StatusFound, target)
+}
+
+func (h Handler) authorizationSuccessURL(redirectURI string, code string, state string) (string, bool) {
+	target, err := url.Parse(redirectURI)
+	if err != nil || redirectURI == "" {
+		return "", false
+	}
+	query := target.Query()
+	query.Set("code", code)
+	if state != "" {
+		query.Set("state", state)
+	}
+	target.RawQuery = query.Encode()
+	return target.String(), true
+}
+
+func (h Handler) oauthErrorURL(redirectURI string, state string, errorCode string, description string) (string, bool) {
+	target, err := url.Parse(redirectURI)
+	if err != nil || redirectURI == "" {
+		return "", false
 	}
 	query := target.Query()
 	query.Set("error", errorCode)
@@ -1062,22 +1151,7 @@ func (h Handler) redirectOAuthError(c *gin.Context, redirectURI string, state st
 		query.Set("state", state)
 	}
 	target.RawQuery = query.Encode()
-	c.Redirect(http.StatusFound, target.String())
-}
-
-func (h Handler) redirectAuthorizationSuccess(c *gin.Context, redirectURI string, code string, state string) {
-	target, err := url.Parse(redirectURI)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-		return
-	}
-	query := target.Query()
-	query.Set("code", code)
-	if state != "" {
-		query.Set("state", state)
-	}
-	target.RawQuery = query.Encode()
-	c.Redirect(http.StatusFound, target.String())
+	return target.String(), true
 }
 
 func maskEmail(value string) string {

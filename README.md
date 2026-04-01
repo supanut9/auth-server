@@ -46,3 +46,11 @@ Root planning docs remain authoritative for phase 1:
 - `../docs/phase-1-token-model.md`
 - `../docs/phase-1-storage-model.md`
 - `../docs/phase-1-endpoints.md`
+
+## Migrations
+
+- use Atlas to generate migration files from the GORM models
+- do not handwrite migration SQL by default
+- current workflow:
+  - `atlas schema inspect --env gorm --url env://src`
+  - `atlas migrate diff <name> --env gorm`

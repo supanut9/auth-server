@@ -65,4 +65,6 @@ Those belong to `auth-ui`.
 - keep handlers thin
 - put flow rules in application/domain services, not Gin handlers
 - avoid putting business logic in GORM hooks
-- prefer explicit migrations over relying on automigrate as the long-term schema source
+- generate migration files from the GORM data model with Atlas
+- do not handwrite migration SQL by default
+- do not rely on GORM `AutoMigrate` as the durable schema workflow

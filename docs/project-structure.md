@@ -33,4 +33,5 @@ Guidelines:
 - keep business rules in domain/application layers
 - keep framework code in adapters only
 - avoid putting business logic in GORM hooks
-- use explicit migrations as the long-term schema source
+- use Atlas-generated migrations from the GORM models as the durable schema source
+- do not handwrite migration SQL by default

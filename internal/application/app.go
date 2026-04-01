@@ -17,4 +17,5 @@ type App struct {
 	SSOSessions port.SSOSessionRepository
 	Requests    port.AuthorizationRequestRepository
 	JWKS        port.JWKSProvider
+	Providers   map[string]port.IdentityProvider
 }

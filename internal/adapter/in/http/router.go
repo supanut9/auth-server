@@ -41,6 +41,10 @@ func RegisterRoutes(router *gin.Engine, cfg config.Config, app application.App) 
 
 	auth := router.Group("/v1/auth")
 	auth.GET("/requests/:requestID", handler.getAuthorizationRequest)
+	auth.POST("/login/google", handler.startGoogleLogin)
+	auth.POST("/login/github", handler.startGitHubLogin)
+	auth.GET("/login/callback/google", handler.handleGoogleCallback)
+	auth.GET("/login/callback/github", handler.handleGitHubCallback)
 	auth.POST("/consent/accept", handler.acceptConsent)
 	auth.POST("/consent/reject", handler.rejectConsent)
 	auth.POST("/otp/start", handler.startOTP)
@@ -387,6 +391,95 @@ type consentRequest struct {
 	RequestID string `json:"request_id" binding:"required"`
 }
 
+type providerLoginStartRequest struct {
+	RequestID string `json:"request_id" binding:"required"`
+}
+
+func (h Handler) startGoogleLogin(c *gin.Context) {
+	h.startProviderLogin(c, "google")
+}
+
+func (h Handler) startGitHubLogin(c *gin.Context) {
+	h.startProviderLogin(c, "github")
+}
+
+func (h Handler) startProviderLogin(c *gin.Context, providerName string) {
+	var req providerLoginStartRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+		return
+	}
+
+	request, err := h.app.Requests.FindByID(c.Request.Context(), req.RequestID)
+	if err != nil {
+		h.renderLookupError(c, err)
+		return
+	}
+	if _, ok := h.app.Providers[providerName]; !ok {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "provider_unavailable"})
+		return
+	}
+
+	if _, err := h.app.Flow.MarkProviderRedirect(c.Request.Context(), request.ID); err != nil {
+		h.renderFlowError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"authorization_url": h.providerAuthorizationURL(providerName, request.ID),
+	})
+}
+
+func (h Handler) handleGoogleCallback(c *gin.Context) {
+	h.handleProviderCallback(c, "google")
+}
+
+func (h Handler) handleGitHubCallback(c *gin.Context) {
+	h.handleProviderCallback(c, "github")
+}
+
+func (h Handler) handleProviderCallback(c *gin.Context, providerName string) {
+	requestID := c.Query("state")
+	code := c.Query("code")
+	if requestID == "" || code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+		return
+	}
+
+	provider, ok := h.app.Providers[providerName]
+	if !ok {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "provider_unavailable"})
+		return
+	}
+
+	profile, err := provider.ExchangeAuthorizationCode(c.Request.Context(), code, h.providerRedirectURI(providerName))
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "provider_error", "error_description": err.Error()})
+		return
+	}
+
+	_, _, session, request, err := h.app.Identity.HandleProviderLogin(c.Request.Context(), identityapp.ProviderLoginRequest{
+		RequestID:         requestID,
+		ProviderName:      providerName,
+		ProviderAccountID: profile.AccountID,
+		Email:             profile.Email,
+		EmailVerified:     profile.EmailVerified,
+		DisplayName:       profile.DisplayName,
+		AvatarURL:         profile.AvatarURL,
+	})
+	if err != nil {
+		if errors.Is(err, identityapp.ErrProviderEmailVerificationRequired) {
+			c.Redirect(http.StatusFound, strings.TrimRight(h.cfg.AuthUIBaseURL, "/")+"/otp?request_id="+url.QueryEscape(requestID))
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_grant", "error_description": err.Error()})
+		return
+	}
+
+	h.setSSOCookie(c, session.ID, session.ExpiresAt)
+	h.redirectPostAuthentication(c, request, session.AuthenticatedAt)
+}
+
 func (h Handler) acceptConsent(c *gin.Context) {
 	var req consentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -537,6 +630,25 @@ func (h Handler) logoutGlobal(c *gin.Context) {
 
 	h.clearSSOCookie(c)
 	c.Redirect(http.StatusFound, h.postLogoutRedirect(c.Query("post_logout_redirect_uri")))
+}
+
+func (h Handler) redirectPostAuthentication(c *gin.Context, request domain.AuthorizationRequest, authTime time.Time) {
+	switch request.Stage {
+	case domain.AuthorizationStageAuthorizationReady:
+		codeValue, _, err := h.app.Flow.IssueAuthorizationCode(c.Request.Context(), flowapp.IssueAuthorizationCodeRequest{
+			RequestID: request.ID,
+			AuthTime:  authTime,
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+			return
+		}
+		h.redirectAuthorizationSuccess(c, request.RedirectURI, codeValue, request.State)
+	case domain.AuthorizationStageConsentRequired:
+		c.Redirect(http.StatusFound, strings.TrimRight(h.cfg.AuthUIBaseURL, "/")+"/consent?request_id="+url.QueryEscape(request.ID))
+	default:
+		c.Redirect(http.StatusFound, strings.TrimRight(h.cfg.AuthUIBaseURL, "/")+"/login?request_id="+url.QueryEscape(request.ID))
+	}
 }
 
 func (h Handler) setSSOCookie(c *gin.Context, value string, expiresAt time.Time) {
@@ -717,6 +829,49 @@ func (h Handler) clientCredentials(c *gin.Context) (string, string) {
 		return "", ""
 	}
 	return username, password
+}
+
+func (h Handler) providerAuthorizationURL(providerName string, requestID string) string {
+	callback := h.providerRedirectURI(providerName)
+	values := url.Values{}
+	values.Set("client_id", h.providerClientID(providerName))
+	values.Set("redirect_uri", callback)
+	values.Set("response_type", "code")
+	values.Set("state", requestID)
+
+	switch providerName {
+	case "google":
+		values.Set("scope", "openid email profile")
+		values.Set("access_type", "offline")
+		return "https://accounts.google.com/o/oauth2/v2/auth?" + values.Encode()
+	case "github":
+		values.Set("scope", "read:user user:email")
+		return "https://github.com/login/oauth/authorize?" + values.Encode()
+	default:
+		return ""
+	}
+}
+
+func (h Handler) providerClientID(providerName string) string {
+	switch providerName {
+	case "google":
+		return h.cfg.GoogleClientID
+	case "github":
+		return h.cfg.GitHubClientID
+	default:
+		return ""
+	}
+}
+
+func (h Handler) providerRedirectURI(providerName string) string {
+	switch providerName {
+	case "google":
+		return h.cfg.GoogleRedirectURL
+	case "github":
+		return h.cfg.GitHubRedirectURL
+	default:
+		return ""
+	}
 }
 
 func (h Handler) redirectOAuthError(c *gin.Context, redirectURI string, state string, errorCode string, description string) {

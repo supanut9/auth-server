@@ -18,6 +18,12 @@ type Config struct {
 	JWTSigningAlg           string
 	JWTPrivateKeyPath       string
 	JWTPublicKeyPath        string
+	GoogleClientID          string
+	GoogleClientSecret      string
+	GoogleRedirectURL       string
+	GitHubClientID          string
+	GitHubClientSecret      string
+	GitHubRedirectURL       string
 	PlatformAudience        string
 	AccessTokenTTL          time.Duration
 	IDTokenTTL              time.Duration
@@ -103,6 +109,12 @@ func Load() (Config, error) {
 		JWTSigningAlg:           getEnv("JWT_SIGNING_ALG", "RS256"),
 		JWTPrivateKeyPath:       jwtPrivateKeyPath,
 		JWTPublicKeyPath:        jwtPublicKeyPath,
+		GoogleClientID:          getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:      getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURL:       getEnv("GOOGLE_REDIRECT_URL", ""),
+		GitHubClientID:          getEnv("GITHUB_CLIENT_ID", ""),
+		GitHubClientSecret:      getEnv("GITHUB_CLIENT_SECRET", ""),
+		GitHubRedirectURL:       getEnv("GITHUB_REDIRECT_URL", ""),
 		PlatformAudience:        getEnv("PLATFORM_AUDIENCE", "platform-api"),
 		AccessTokenTTL:          accessTokenTTL,
 		IDTokenTTL:              idTokenTTL,

@@ -8,6 +8,7 @@ import (
 	"github.com/supanut9/auth-server/internal/adapter/in/http"
 	"github.com/supanut9/auth-server/internal/adapter/out/jwks"
 	"github.com/supanut9/auth-server/internal/adapter/out/persistence"
+	provideradapter "github.com/supanut9/auth-server/internal/adapter/out/provider"
 	"github.com/supanut9/auth-server/internal/adapter/out/system"
 	uuidadapter "github.com/supanut9/auth-server/internal/adapter/out/uuid"
 	"github.com/supanut9/auth-server/internal/application"
@@ -15,6 +16,7 @@ import (
 	identityapp "github.com/supanut9/auth-server/internal/application/identity"
 	tokenapp "github.com/supanut9/auth-server/internal/application/token"
 	"github.com/supanut9/auth-server/internal/config"
+	"github.com/supanut9/auth-server/internal/port"
 )
 
 func main() {
@@ -96,6 +98,16 @@ func main() {
 		refreshTokenRepository,
 	)
 
+	providers := map[string]port.IdentityProvider{}
+	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" && cfg.GoogleRedirectURL != "" {
+		googleProvider := provideradapter.NewGoogleProvider(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURL)
+		providers[googleProvider.Name()] = googleProvider
+	}
+	if cfg.GitHubClientID != "" && cfg.GitHubClientSecret != "" && cfg.GitHubRedirectURL != "" {
+		githubProvider := provideradapter.NewGitHubProvider(cfg.GitHubClientID, cfg.GitHubClientSecret, cfg.GitHubRedirectURL)
+		providers[githubProvider.Name()] = githubProvider
+	}
+
 	app := application.App{
 		Flow:        flowService,
 		Identity:    identityService,
@@ -105,6 +117,7 @@ func main() {
 		SSOSessions: ssoSessionRepository,
 		Requests:    authorizationRequestRepository,
 		JWKS:        jwksManager,
+		Providers:   providers,
 	}
 
 	router := gin.New()

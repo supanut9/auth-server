@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	_ "github.com/joho/godotenv/autoload"
 
 	"github.com/supanut9/auth-server/internal/adapter/in/http"
 	"github.com/supanut9/auth-server/internal/adapter/out/jwks"

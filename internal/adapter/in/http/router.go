@@ -34,6 +34,7 @@ func RegisterRoutes(router *gin.Engine, cfg config.Config, app application.App) 
 	handler := Handler{cfg: cfg, app: app}
 
 	router.GET("/healthz", handler.healthz)
+	router.GET("/dev/callback", handler.devCallback)
 	router.GET("/.well-known/openid-configuration", handler.openIDConfiguration)
 	router.GET("/.well-known/jwks.json", handler.jwks)
 	router.GET("/v1/oauth2/authorize", handler.authorize)
@@ -61,6 +62,14 @@ func (h Handler) healthz(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":   "ok",
 		"app_name": h.cfg.AppName,
+	})
+}
+
+func (h Handler) devCallback(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"code":  c.Query("code"),
+		"state": c.Query("state"),
+		"error": c.Query("error"),
 	})
 }
 

@@ -16,6 +16,7 @@ Expected config areas:
 - GitHub OAuth settings
 - Email OTP and mail settings
 - logout redirect settings
+- dev verification client seeding and local callback support
 
 Current local defaults:
 

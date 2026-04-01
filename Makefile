@@ -1,0 +1,20 @@
+SHELL := /bin/bash
+
+.PHONY: dev-keys migrate seed-dev run test
+
+dev-keys:
+	mkdir -p secrets
+	openssl genrsa -out secrets/jwt-private.pem 2048
+	openssl rsa -in secrets/jwt-private.pem -pubout -out secrets/jwt-public.pem
+
+migrate:
+	atlas migrate apply --env gorm
+
+seed-dev:
+	go run ./cmd/devseed
+
+run:
+	go run ./cmd/server
+
+test:
+	go test ./internal/... ./cmd/server

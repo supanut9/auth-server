@@ -1,0 +1,98 @@
+package main
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"fmt"
+	"log"
+	"strings"
+	"time"
+
+	_ "github.com/joho/godotenv/autoload"
+
+	"github.com/supanut9/auth-server/internal/adapter/out/persistence"
+	"github.com/supanut9/auth-server/internal/adapter/out/system"
+	uuidadapter "github.com/supanut9/auth-server/internal/adapter/out/uuid"
+	"github.com/supanut9/auth-server/internal/config"
+	"github.com/supanut9/auth-server/internal/domain"
+	"gorm.io/gorm"
+)
+
+func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("load config: %v", err)
+	}
+
+	db, err := persistence.Open(cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("open database: %v", err)
+	}
+
+	clock := system.NewClock()
+	idGenerator := uuidadapter.NewGenerator()
+	repo := persistence.NewOAuthClientRepository(db, idGenerator, clock)
+
+	ctx := context.Background()
+
+	publicClient := domain.OAuthClient{
+		ClientID:      "dev-browser",
+		ClientType:    "public",
+		DisplayName:   "Development Browser Client",
+		RedirectURIs:  strings.Join([]string{"http://localhost:8050/dev/callback"}, " "),
+		AllowedScopes: strings.Join([]string{"openid", "email", "profile", "trading.read", "trading.write"}, " "),
+		Status:        "active",
+	}
+
+	confidentialSecret := "dev-worker-secret"
+	confidentialClient := domain.OAuthClient{
+		ClientID:         "dev-worker",
+		ClientType:       "confidential",
+		ClientSecretHash: hashSecret(confidentialSecret),
+		DisplayName:      "Development Worker Client",
+		RedirectURIs:     strings.Join([]string{"http://localhost:8050/dev/callback"}, " "),
+		AllowedScopes:    strings.Join([]string{"trading.read", "trading.write"}, " "),
+		Status:           "active",
+	}
+
+	upsertClient(ctx, db, repo, publicClient)
+	upsertClient(ctx, db, repo, confidentialClient)
+
+	fmt.Println("seeded oauth clients:")
+	fmt.Println("- public client_id: dev-browser")
+	fmt.Println("- confidential client_id: dev-worker")
+	fmt.Println("- confidential client_secret: dev-worker-secret")
+	fmt.Println("- demo redirect_uri: http://localhost:8050/dev/callback")
+}
+
+func upsertClient(ctx context.Context, db *gorm.DB, repo persistence.OAuthClientRepository, client domain.OAuthClient) {
+	if existing, err := repo.FindByClientID(ctx, client.ClientID); err == nil {
+		client.ID = existing.ID
+		client.CreatedAt = existing.CreatedAt
+		client.UpdatedAt = time.Now().UTC()
+		if err := db.WithContext(ctx).Model(&persistence.OAuthClientModel{}).
+			Where("client_id = ?", client.ClientID).
+			Updates(map[string]any{
+				"client_type":        client.ClientType,
+				"client_secret_hash": client.ClientSecretHash,
+				"display_name":       client.DisplayName,
+				"redirect_uris":      client.RedirectURIs,
+				"allowed_scopes":     client.AllowedScopes,
+				"status":             client.Status,
+				"updated_at":         client.UpdatedAt,
+			}).Error; err != nil {
+			log.Fatalf("update client %s: %v", client.ClientID, err)
+		}
+		return
+	}
+
+	if _, err := repo.Create(ctx, client); err != nil {
+		log.Fatalf("create client %s: %v", client.ClientID, err)
+	}
+}
+
+func hashSecret(secret string) string {
+	sum := sha256.Sum256([]byte(secret))
+	return "sha256:" + base64.RawURLEncoding.EncodeToString(sum[:])
+}

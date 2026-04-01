@@ -8,6 +8,7 @@ import (
 
 	"github.com/supanut9/auth-server/internal/adapter/in/http"
 	"github.com/supanut9/auth-server/internal/adapter/out/jwks"
+	mailadapter "github.com/supanut9/auth-server/internal/adapter/out/mail"
 	"github.com/supanut9/auth-server/internal/adapter/out/persistence"
 	provideradapter "github.com/supanut9/auth-server/internal/adapter/out/provider"
 	"github.com/supanut9/auth-server/internal/adapter/out/system"
@@ -33,6 +34,21 @@ func main() {
 
 	clock := system.NewClock()
 	idGenerator := uuidadapter.NewGenerator()
+
+	var mailSender port.MailSender
+	if cfg.SMTPHost != "" && cfg.SMTPFrom != "" {
+		sender, err := mailadapter.NewSMTPSender(mailadapter.SMTPSenderConfig{
+			Host:     cfg.SMTPHost,
+			Port:     cfg.SMTPPort,
+			Username: cfg.SMTPUsername,
+			Password: cfg.SMTPPassword,
+			From:     cfg.SMTPFrom,
+		})
+		if err != nil {
+			log.Fatalf("create smtp sender: %v", err)
+		}
+		mailSender = sender
+	}
 
 	jwksManager, err := jwks.NewManager(cfg.JWTSigningAlg, cfg.JWTPrivateKeyPath, cfg.JWTPublicKeyPath)
 	if err != nil {
@@ -78,7 +94,7 @@ func main() {
 		accountProviderRepository,
 		authorizationRequestRepository,
 		otpChallengeRepository,
-		nil,
+		mailSender,
 		flowService,
 	)
 

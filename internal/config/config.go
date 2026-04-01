@@ -24,6 +24,11 @@ type Config struct {
 	GitHubClientID          string
 	GitHubClientSecret      string
 	GitHubRedirectURL       string
+	SMTPHost                string
+	SMTPPort                string
+	SMTPUsername            string
+	SMTPPassword            string
+	SMTPFrom                string
 	PlatformAudience        string
 	AccessTokenTTL          time.Duration
 	IDTokenTTL              time.Duration
@@ -115,6 +120,11 @@ func Load() (Config, error) {
 		GitHubClientID:          getEnv("GITHUB_CLIENT_ID", ""),
 		GitHubClientSecret:      getEnv("GITHUB_CLIENT_SECRET", ""),
 		GitHubRedirectURL:       getEnv("GITHUB_REDIRECT_URL", ""),
+		SMTPHost:                getEnv("SMTP_HOST", ""),
+		SMTPPort:                getEnv("SMTP_PORT", "587"),
+		SMTPUsername:            getEnv("SMTP_USERNAME", ""),
+		SMTPPassword:            getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:                getEnv("SMTP_FROM", ""),
 		PlatformAudience:        getEnv("PLATFORM_AUDIENCE", "platform-api"),
 		AccessTokenTTL:          accessTokenTTL,
 		IDTokenTTL:              idTokenTTL,

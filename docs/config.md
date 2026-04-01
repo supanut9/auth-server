@@ -15,6 +15,8 @@ Expected config areas:
 - Google OAuth settings
 - GitHub OAuth settings
 - Email OTP and mail settings
+  - configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`
+  - when `SMTP_HOST` and `SMTP_FROM` are set, `auth-server` sends OTP emails through SMTP
 - logout redirect settings
 - dev verification client seeding and local callback support
 

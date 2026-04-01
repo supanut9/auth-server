@@ -1,12 +1,12 @@
 package mail
 
-import "context"
+import (
+	"context"
 
-type Message struct {
-	To      string
-	Subject string
-	Text    string
-}
+	"github.com/supanut9/auth-server/internal/port"
+)
+
+type Message = port.MailMessage
 
 type Sender interface {
 	Send(ctx context.Context, message Message) error

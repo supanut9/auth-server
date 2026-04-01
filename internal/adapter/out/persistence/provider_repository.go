@@ -64,6 +64,17 @@ func (r AccountProviderRepository) FindByProviderAccountID(ctx context.Context, 
 	return mapAccountProviderModel(model), nil
 }
 
+func (r AccountProviderRepository) FindByAccountIDAndProvider(ctx context.Context, accountID string, provider string) (domain.AccountProvider, error) {
+	var model AccountProviderModel
+	if err := r.db.WithContext(ctx).
+		Where("account_id = ? AND provider = ?", accountID, provider).
+		First(&model).Error; err != nil {
+		return domain.AccountProvider{}, err
+	}
+
+	return mapAccountProviderModel(model), nil
+}
+
 func mapAccountProviderModel(model AccountProviderModel) domain.AccountProvider {
 	return domain.AccountProvider{
 		ID:                    model.ID,

@@ -65,6 +65,36 @@ func (r AccountRepository) FindByPrimaryVerifiedEmail(ctx context.Context, email
 	return mapAccountModel(model), nil
 }
 
+func (r AccountRepository) FindByID(ctx context.Context, id string) (domain.Account, error) {
+	var model AccountModel
+	if err := r.db.WithContext(ctx).
+		Where("id = ?", id).
+		First(&model).Error; err != nil {
+		return domain.Account{}, err
+	}
+
+	return mapAccountModel(model), nil
+}
+
+func (r AccountRepository) Update(ctx context.Context, account domain.Account) (domain.Account, error) {
+	now := r.clock.Now().UTC()
+	model := AccountModel{
+		ID:                   account.ID,
+		PrimaryVerifiedEmail: account.PrimaryVerifiedEmail,
+		DisplayName:          account.DisplayName,
+		AvatarURL:            account.AvatarURL,
+		Status:               account.Status,
+		CreatedAt:            account.CreatedAt,
+		UpdatedAt:            now,
+	}
+
+	if err := r.db.WithContext(ctx).Save(&model).Error; err != nil {
+		return domain.Account{}, err
+	}
+
+	return mapAccountModel(model), nil
+}
+
 func mapAccountModel(model AccountModel) domain.Account {
 	return domain.Account{
 		ID:                   model.ID,

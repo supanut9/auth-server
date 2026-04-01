@@ -238,13 +238,16 @@ func (s Service) VerifyOTPChallenge(ctx context.Context, req OTPVerifyRequest) (
 		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, err
 	}
 
-	request.PendingProviderName = ""
-	request.PendingProviderAccountID = ""
-	request.PendingProviderEmail = ""
-	request.PendingProviderEmailVerified = false
-	request.PendingProviderDisplayName = ""
-	request.PendingProviderAvatarURL = ""
-	_, _ = s.authorizationRequests.Update(ctx, request)
+	updated.PendingProviderName = ""
+	updated.PendingProviderAccountID = ""
+	updated.PendingProviderEmail = ""
+	updated.PendingProviderEmailVerified = false
+	updated.PendingProviderDisplayName = ""
+	updated.PendingProviderAvatarURL = ""
+	updated, err = s.authorizationRequests.Update(ctx, updated)
+	if err != nil {
+		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, err
+	}
 
 	return account, providerLink, session, updated, nil
 }

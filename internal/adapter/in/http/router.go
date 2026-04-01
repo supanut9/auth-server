@@ -790,7 +790,7 @@ func (h Handler) verifyOTP(c *gin.Context) {
 	}
 
 	h.setSSOCookie(c, session.ID, session.ExpiresAt)
-	c.JSON(http.StatusOK, gin.H{
+	response := gin.H{
 		"request_id": request.ID,
 		"stage":      request.Stage,
 		"account": gin.H{
@@ -799,7 +799,30 @@ func (h Handler) verifyOTP(c *gin.Context) {
 			"email":          account.PrimaryVerifiedEmail,
 			"email_verified": true,
 		},
-	})
+	}
+
+	switch request.Stage {
+	case domain.AuthorizationStageAuthorizationReady:
+		codeValue, _, issueErr := h.app.Flow.IssueAuthorizationCode(c.Request.Context(), flowapp.IssueAuthorizationCodeRequest{
+			RequestID: request.ID,
+			AuthTime:  session.AuthenticatedAt,
+		})
+		if issueErr != nil {
+			h.renderFlowError(c, issueErr)
+			return
+		}
+		redirectTo, ok := h.authorizationSuccessURL(request.RedirectURI, codeValue, request.State)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
+			return
+		}
+		response["stage"] = domain.AuthorizationStageCompleted
+		response["redirect_to"] = redirectTo
+	case domain.AuthorizationStageConsentRequired:
+		response["redirect_to"] = strings.TrimRight(h.cfg.AuthUIBaseURL, "/") + "/consent?request_id=" + url.QueryEscape(request.ID)
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func (h Handler) resendOTP(c *gin.Context) {

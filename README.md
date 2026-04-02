@@ -102,12 +102,18 @@ make run
 The dev seed command creates:
 
 - public client: `dev-browser`
+- public client: `community-web`
 - confidential client: `dev-worker`
 - confidential secret: `dev-worker-secret`
+- confidential client: `realtime-service`
+- confidential secret: `dev-realtime-secret`
 - demo redirect URI: `http://localhost:8050/dev/callback`
+- community web redirect URI: `http://localhost:3006/auth/callback`
 
 Example authorization URL:
 
 ```text
 http://localhost:8050/v1/oauth2/authorize?response_type=code&client_id=dev-browser&redirect_uri=http%3A%2F%2Flocalhost%3A8050%2Fdev%2Fcallback&scope=openid%20email%20profile%20trading.read&state=demo-state&nonce=demo-nonce&code_challenge=demo-challenge&code_challenge_method=plain
 ```
+
+The `realtime-service` client is seeded for service-to-service authentication patterns such as token introspection.

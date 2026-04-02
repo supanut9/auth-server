@@ -19,6 +19,9 @@ Expected config areas:
   - when `SMTP_HOST` and `SMTP_FROM` are set, `auth-server` sends OTP emails through SMTP
 - logout redirect settings
 - dev verification client seeding and local callback support
+  - seeds `dev-browser`, `community-web`, `dev-worker`, and `realtime-service`
+  - `community-web` callback: `http://localhost:3006/auth/callback`
+  - `realtime-service` secret: `dev-realtime-secret`
 
 Current local defaults:
 

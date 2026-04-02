@@ -45,6 +45,15 @@ func main() {
 		Status:        "active",
 	}
 
+	communityWebClient := domain.OAuthClient{
+		ClientID:      "community-web",
+		ClientType:    "public",
+		DisplayName:   "Community Web",
+		RedirectURIs:  strings.Join([]string{"http://localhost:3006/auth/callback"}, " "),
+		AllowedScopes: strings.Join([]string{"openid", "email", "profile"}, " "),
+		Status:        "active",
+	}
+
 	confidentialSecret := "dev-worker-secret"
 	confidentialClient := domain.OAuthClient{
 		ClientID:         "dev-worker",
@@ -56,14 +65,31 @@ func main() {
 		Status:           "active",
 	}
 
+	realtimeServiceSecret := "dev-realtime-secret"
+	realtimeServiceClient := domain.OAuthClient{
+		ClientID:         "realtime-service",
+		ClientType:       "confidential",
+		ClientSecretHash: hashSecret(realtimeServiceSecret),
+		DisplayName:      "Realtime Service",
+		RedirectURIs:     "",
+		AllowedScopes:    strings.Join([]string{"trading.read", "trading.write"}, " "),
+		Status:           "active",
+	}
+
 	upsertClient(ctx, db, repo, publicClient)
+	upsertClient(ctx, db, repo, communityWebClient)
 	upsertClient(ctx, db, repo, confidentialClient)
+	upsertClient(ctx, db, repo, realtimeServiceClient)
 
 	fmt.Println("seeded oauth clients:")
 	fmt.Println("- public client_id: dev-browser")
+	fmt.Println("- public client_id: community-web")
 	fmt.Println("- confidential client_id: dev-worker")
 	fmt.Println("- confidential client_secret: dev-worker-secret")
+	fmt.Println("- confidential client_id: realtime-service")
+	fmt.Println("- confidential client_secret: dev-realtime-secret")
 	fmt.Println("- demo redirect_uri: http://localhost:8050/dev/callback")
+	fmt.Println("- community web redirect_uri: http://localhost:3006/auth/callback")
 }
 
 func upsertClient(ctx context.Context, db *gorm.DB, repo persistence.OAuthClientRepository, client domain.OAuthClient) {

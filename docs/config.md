@@ -43,3 +43,5 @@ Deployment baseline:
 - `PUBLIC_BASE_URL`, `AUTH_UI_BASE_URL`, and `JWT_ISSUER` must be absolute URLs
 - if a Google or GitHub provider is partially configured, the full client id / secret / redirect URL set must be present
 - if SMTP is enabled, `SMTP_FROM` must be set and `SMTP_PORT` must be a valid port number
+- run `make smoke` after local or deploy startup to confirm request IDs, health, discovery, and JWKS responses
+- `X-Request-Id` is emitted on every response and surfaced in `/healthz` and `/readyz`

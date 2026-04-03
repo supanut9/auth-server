@@ -141,8 +141,9 @@ func main() {
 	}
 
 	router := gin.New()
+	router.Use(http.RequestIDMiddleware())
+	router.Use(http.StructuredLogger())
 	router.Use(gin.Recovery())
-	router.Use(gin.Logger())
 	router.Use(http.CORSMiddleware(cfg))
 
 	http.RegisterRoutes(router, cfg, db, app)

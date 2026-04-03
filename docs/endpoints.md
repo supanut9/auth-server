@@ -30,4 +30,6 @@ Phase-1 endpoint groups:
 
 Implementation must follow RFC/OIDC-compatible behavior where the root docs require it.
 
+Operational responses include `X-Request-Id`, and `/healthz` plus `/readyz` return the same `request_id` in JSON for smoke verification.
+
 Refer to `../../docs/auth/phase-1-endpoints.md` for the authoritative phase-1 endpoint contract.

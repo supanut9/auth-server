@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: dev-keys migrate seed-dev run test build check readyz
+.PHONY: dev-keys migrate seed-dev run test build check readyz smoke
 
 dev-keys:
 	mkdir -p secrets
@@ -27,3 +27,6 @@ check:
 
 readyz:
 	curl -fsS http://localhost:8050/readyz
+
+smoke:
+	python3 scripts/smoke.py

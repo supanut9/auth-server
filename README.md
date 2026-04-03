@@ -101,8 +101,10 @@ make run
 
 - `make check` runs the full test suite and a repo-wide build
 - `make readyz` probes the database-backed readiness endpoint
+- `make smoke` runs a small local smoke test across health, readiness, discovery, and JWKS
 - `GET /healthz` is the liveness endpoint
 - `GET /readyz` requires a reachable database and returns `503` if the DB is down
+- both health endpoints include a `request_id` field and every response carries `X-Request-Id`
 
 Use `readyz` for deployment probes so the service only receives traffic after the database is reachable.
 

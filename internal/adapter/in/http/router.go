@@ -84,8 +84,9 @@ func RegisterRoutes(router *gin.Engine, cfg config.Config, db *gorm.DB, app appl
 
 func (h Handler) healthz(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"status":   "ok",
-		"app_name": h.cfg.AppName,
+		"status":     "ok",
+		"app_name":   h.cfg.AppName,
+		"request_id": requestIDFromContext(c),
 	})
 }
 
@@ -111,9 +112,10 @@ func (h Handler) readyz(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":   "ok",
-		"app_name": h.cfg.AppName,
-		"database": "ready",
+		"status":     "ok",
+		"app_name":   h.cfg.AppName,
+		"database":   "ready",
+		"request_id": requestIDFromContext(c),
 	})
 }
 

@@ -5,6 +5,9 @@ Phase-1 endpoint groups:
 - discovery
   - `/.well-known/openid-configuration`
   - `/.well-known/jwks.json`
+- health
+  - `/healthz`
+  - `/readyz`
 - protocol
   - `/v1/oauth2/authorize`
   - `/v1/oauth2/token`

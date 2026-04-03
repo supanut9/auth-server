@@ -145,7 +145,7 @@ func main() {
 	router.Use(gin.Logger())
 	router.Use(http.CORSMiddleware(cfg))
 
-	http.RegisterRoutes(router, cfg, app)
+	http.RegisterRoutes(router, cfg, db, app)
 
 	if err := router.Run(cfg.HTTPAddr); err != nil {
 		log.Fatalf("run server: %v", err)

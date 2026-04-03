@@ -2,7 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -136,7 +139,77 @@ func Load() (Config, error) {
 		SSOSessionTTL:           ssoSessionTTL,
 	}
 
+	if err := cfg.Validate(); err != nil {
+		return Config{}, err
+	}
+
 	return cfg, nil
+}
+
+func (c Config) Validate() error {
+	if err := validateAbsoluteURL("PUBLIC_BASE_URL", c.PublicBaseURL); err != nil {
+		return err
+	}
+	if err := validateAbsoluteURL("AUTH_UI_BASE_URL", c.AuthUIBaseURL); err != nil {
+		return err
+	}
+	if err := validateAbsoluteURL("JWT_ISSUER", c.JWTIssuer); err != nil {
+		return err
+	}
+
+	if err := validateProviderGroup(
+		"GOOGLE",
+		c.GoogleClientID,
+		c.GoogleClientSecret,
+		c.GoogleRedirectURL,
+	); err != nil {
+		return err
+	}
+	if err := validateProviderGroup(
+		"GITHUB",
+		c.GitHubClientID,
+		c.GitHubClientSecret,
+		c.GitHubRedirectURL,
+	); err != nil {
+		return err
+	}
+
+	if strings.TrimSpace(c.SMTPHost) != "" {
+		if strings.TrimSpace(c.SMTPFrom) == "" {
+			return fmt.Errorf("missing required env: SMTP_FROM when SMTP_HOST is set")
+		}
+		if _, err := strconv.Atoi(strings.TrimSpace(c.SMTPPort)); err != nil {
+			return fmt.Errorf("invalid SMTP_PORT: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func validateAbsoluteURL(name, raw string) error {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid %s: %w", name, err)
+	}
+	if parsed.Scheme == "" || parsed.Host == "" {
+		return fmt.Errorf("invalid %s: must be an absolute URL", name)
+	}
+	return nil
+}
+
+func validateProviderGroup(prefix, clientID, clientSecret, redirectURL string) error {
+	values := []string{clientID, clientSecret, redirectURL}
+	filled := 0
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			filled++
+		}
+	}
+	if filled == 0 || filled == len(values) {
+		return nil
+	}
+
+	return fmt.Errorf("incomplete %s provider config: set client id, secret, and redirect url together", prefix)
 }
 
 func mustEnv(key string) (string, error) {

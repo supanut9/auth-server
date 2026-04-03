@@ -97,6 +97,15 @@ make seed-dev
 make run
 ```
 
+## Production Baseline
+
+- `make check` runs the full test suite and a repo-wide build
+- `make readyz` probes the database-backed readiness endpoint
+- `GET /healthz` is the liveness endpoint
+- `GET /readyz` requires a reachable database and returns `503` if the DB is down
+
+Use `readyz` for deployment probes so the service only receives traffic after the database is reachable.
+
 ## Demo Clients
 
 The dev seed command creates:

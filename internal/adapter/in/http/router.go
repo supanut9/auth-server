@@ -27,6 +27,7 @@ const ssoCookieName = "auth_sso_session"
 
 type Handler struct {
 	cfg config.Config
+	db  *gorm.DB
 	app application.App
 }
 
@@ -52,10 +53,11 @@ func CORSMiddleware(cfg config.Config) gin.HandlerFunc {
 	}
 }
 
-func RegisterRoutes(router *gin.Engine, cfg config.Config, app application.App) {
-	handler := Handler{cfg: cfg, app: app}
+func RegisterRoutes(router *gin.Engine, cfg config.Config, db *gorm.DB, app application.App) {
+	handler := Handler{cfg: cfg, db: db, app: app}
 
 	router.GET("/healthz", handler.healthz)
+	router.GET("/readyz", handler.readyz)
 	router.GET("/dev/callback", handler.devCallback)
 	router.GET("/.well-known/openid-configuration", handler.openIDConfiguration)
 	router.GET("/.well-known/jwks.json", handler.jwks)
@@ -84,6 +86,34 @@ func (h Handler) healthz(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":   "ok",
 		"app_name": h.cfg.AppName,
+	})
+}
+
+func (h Handler) readyz(c *gin.Context) {
+	sqlDB, err := h.db.DB()
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status": "degraded",
+			"error":  "database_unavailable",
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+	defer cancel()
+
+	if err := sqlDB.PingContext(ctx); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status": "degraded",
+			"error":  "database_unavailable",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":   "ok",
+		"app_name": h.cfg.AppName,
+		"database": "ready",
 	})
 }
 

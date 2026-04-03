@@ -34,5 +34,12 @@ Current local defaults:
 Recommended rule:
 
 - fail fast on missing required config
+- validate required production URLs at startup
 - keep secrets out of code and docs
 - separate provider config from general server config
+
+Deployment baseline:
+
+- `PUBLIC_BASE_URL`, `AUTH_UI_BASE_URL`, and `JWT_ISSUER` must be absolute URLs
+- if a Google or GitHub provider is partially configured, the full client id / secret / redirect URL set must be present
+- if SMTP is enabled, `SMTP_FROM` must be set and `SMTP_PORT` must be a valid port number

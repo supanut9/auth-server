@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: dev-keys migrate seed-dev run test
+.PHONY: dev-keys migrate seed-dev run test build check readyz
 
 dev-keys:
 	mkdir -p secrets
@@ -18,3 +18,12 @@ run:
 
 test:
 	go test ./internal/... ./cmd/server
+
+build:
+	go build ./...
+
+check:
+	go test ./... && go build ./...
+
+readyz:
+	curl -fsS http://localhost:8050/readyz

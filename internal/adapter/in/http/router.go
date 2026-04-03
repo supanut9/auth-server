@@ -144,7 +144,7 @@ func (h Handler) authorize(c *gin.Context) {
 		h.redirectOAuthError(c, redirectURI, state, "unsupported_response_type", "response_type must be code")
 		return
 	}
-	if redirectURI == "" || !containsValue(splitProtocolList(client.RedirectURIs), redirectURI) {
+	if redirectURI == "" || !containsValue(client.RedirectURIs, redirectURI) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "error_description": "redirect_uri is invalid"})
 		return
 	}

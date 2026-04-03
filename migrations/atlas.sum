@@ -1,4 +1,5 @@
-h1:C1E4L++HuINJCAUlgtYZeo7F5/ZkcahDqbzvyA5UMBA=
+h1:pfIp5HBWKvwZDF3siVxkIsuJLa0OBpHrYi+6CkXhGG8=
 20260401121613_phase1_initial.sql h1:h7lLhYzgqrgfINIf+jjuIQtDF0cUcbp+ZFzdv/f5rwg=
 20260401165000_auth005_provider_otp.sql h1:16LfggQlkAfybXZrEHCRTQWnkybY2QlAOfMpL4CQijE=
 20260401165001_add_refresh_chain_scope.sql h1:cNxrWKzgvHyrk1AkxXLnUWIIPstYZn8L7dE+83gBypY=
+20260403135356_oauth_client_redirect_uris.sql h1:yuF5uo3le++Do0rhzZPn+3Rx5bbDLgs/d+BTHDSE6mc=

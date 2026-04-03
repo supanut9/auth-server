@@ -8,7 +8,7 @@ type OAuthClient struct {
 	ClientType       string
 	ClientSecretHash string
 	DisplayName      string
-	RedirectURIs     string
+	RedirectURIs     []string
 	AllowedScopes    string
 	Status           string
 	CreatedAt        time.Time

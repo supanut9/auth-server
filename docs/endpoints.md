@@ -27,4 +27,4 @@ Phase-1 endpoint groups:
 
 Implementation must follow RFC/OIDC-compatible behavior where the root docs require it.
 
-Refer to `../../docs/phase-1-endpoints.md` for the authoritative phase-1 endpoint contract.
+Refer to `../../docs/auth/phase-1-endpoints.md` for the authoritative phase-1 endpoint contract.

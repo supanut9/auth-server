@@ -41,12 +41,12 @@ Phase-1 authorization server for the platform.
 
 Root planning docs remain authoritative for phase 1:
 
-- `../docs/architecture-overview.md`
-- `../docs/auth-flow.md`
-- `../docs/phase-1-identity.md`
-- `../docs/phase-1-token-model.md`
-- `../docs/phase-1-storage-model.md`
-- `../docs/phase-1-endpoints.md`
+- `../docs/auth/architecture-overview.md`
+- `../docs/auth/auth-flow.md`
+- `../docs/auth/phase-1-identity.md`
+- `../docs/auth/phase-1-token-model.md`
+- `../docs/auth/phase-1-storage-model.md`
+- `../docs/auth/phase-1-endpoints.md`
 
 ## Migrations
 
@@ -110,6 +110,8 @@ The dev seed command creates:
 - confidential secret: `dev-realtime-secret`
 - demo redirect URI: `http://localhost:8050/dev/callback`
 - community web redirect URI: `http://localhost:3006/api/auth/oauth2/callback/auth-server`
+
+Redirect URIs are stored in `oauth_client_redirect_uris` as a one-to-many relation from `oauth_clients`.
 
 Example authorization URL:
 

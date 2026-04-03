@@ -5,6 +5,7 @@ import "github.com/supanut9/auth-server/internal/adapter/out/persistence/schema"
 type AccountModel = schema.AccountModel
 type AccountProviderModel = schema.AccountProviderModel
 type OAuthClientModel = schema.OAuthClientModel
+type OAuthClientRedirectURIModel = schema.OAuthClientRedirectURIModel
 type AuthorizationRequestModel = schema.AuthorizationRequestModel
 type AuthorizationCodeModel = schema.AuthorizationCodeModel
 type SSOSessionModel = schema.SSOSessionModel

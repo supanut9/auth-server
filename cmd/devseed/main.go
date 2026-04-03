@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -16,6 +15,7 @@ import (
 	uuidadapter "github.com/supanut9/auth-server/internal/adapter/out/uuid"
 	"github.com/supanut9/auth-server/internal/config"
 	"github.com/supanut9/auth-server/internal/domain"
+	"github.com/supanut9/auth-server/internal/port"
 	"gorm.io/gorm"
 )
 
@@ -40,8 +40,8 @@ func main() {
 		ClientID:      "dev-browser",
 		ClientType:    "public",
 		DisplayName:   "Development Browser Client",
-		RedirectURIs:  strings.Join([]string{"http://localhost:8050/dev/callback"}, " "),
-		AllowedScopes: strings.Join([]string{"openid", "email", "profile", "trading.read", "trading.write"}, " "),
+		RedirectURIs:  []string{"http://localhost:8050/dev/callback"},
+		AllowedScopes: "openid email profile trading.read trading.write",
 		Status:        "active",
 	}
 
@@ -50,11 +50,10 @@ func main() {
 		ClientType:       "confidential",
 		ClientSecretHash: hashSecret("community-web-secret"),
 		DisplayName:      "Community Web",
-		RedirectURIs: strings.Join([]string{
+		RedirectURIs: []string{
 			"http://localhost:3006/api/auth/oauth2/callback/auth-server",
-			"http://localhost:3006/auth/callback",
-		}, " "),
-		AllowedScopes: strings.Join([]string{"openid", "email", "profile"}, " "),
+		},
+		AllowedScopes: "openid email profile",
 		Status:        "active",
 	}
 
@@ -64,8 +63,8 @@ func main() {
 		ClientType:       "confidential",
 		ClientSecretHash: hashSecret(confidentialSecret),
 		DisplayName:      "Development Worker Client",
-		RedirectURIs:     strings.Join([]string{"http://localhost:8050/dev/callback"}, " "),
-		AllowedScopes:    strings.Join([]string{"trading.read", "trading.write"}, " "),
+		RedirectURIs:     []string{"http://localhost:8050/dev/callback"},
+		AllowedScopes:    "trading.read trading.write",
 		Status:           "active",
 	}
 
@@ -75,15 +74,15 @@ func main() {
 		ClientType:       "confidential",
 		ClientSecretHash: hashSecret(realtimeServiceSecret),
 		DisplayName:      "Realtime Service",
-		RedirectURIs:     "",
-		AllowedScopes:    strings.Join([]string{"trading.read", "trading.write"}, " "),
+		RedirectURIs:     nil,
+		AllowedScopes:    "trading.read trading.write",
 		Status:           "active",
 	}
 
-	upsertClient(ctx, db, repo, publicClient)
-	upsertClient(ctx, db, repo, communityWebClient)
-	upsertClient(ctx, db, repo, confidentialClient)
-	upsertClient(ctx, db, repo, realtimeServiceClient)
+	upsertClient(ctx, db, repo, idGenerator, publicClient)
+	upsertClient(ctx, db, repo, idGenerator, communityWebClient)
+	upsertClient(ctx, db, repo, idGenerator, confidentialClient)
+	upsertClient(ctx, db, repo, idGenerator, realtimeServiceClient)
 
 	fmt.Println("seeded oauth clients:")
 	fmt.Println("- public client_id: dev-browser")
@@ -97,7 +96,7 @@ func main() {
 	fmt.Println("- community web redirect_uri: http://localhost:3006/api/auth/oauth2/callback/auth-server")
 }
 
-func upsertClient(ctx context.Context, db *gorm.DB, repo persistence.OAuthClientRepository, client domain.OAuthClient) {
+func upsertClient(ctx context.Context, db *gorm.DB, repo persistence.OAuthClientRepository, idGenerator port.IDGenerator, client domain.OAuthClient) {
 	if existing, err := repo.FindByClientID(ctx, client.ClientID); err == nil {
 		client.ID = existing.ID
 		client.CreatedAt = existing.CreatedAt
@@ -108,12 +107,30 @@ func upsertClient(ctx context.Context, db *gorm.DB, repo persistence.OAuthClient
 				"client_type":        client.ClientType,
 				"client_secret_hash": client.ClientSecretHash,
 				"display_name":       client.DisplayName,
-				"redirect_uris":      client.RedirectURIs,
 				"allowed_scopes":     client.AllowedScopes,
 				"status":             client.Status,
 				"updated_at":         client.UpdatedAt,
 			}).Error; err != nil {
 			log.Fatalf("update client %s: %v", client.ClientID, err)
+		}
+		if err := db.WithContext(ctx).Where("client_id = ?", client.ClientID).Delete(&persistence.OAuthClientRedirectURIModel{}).Error; err != nil {
+			log.Fatalf("clear redirect uris for client %s: %v", client.ClientID, err)
+		}
+		if len(client.RedirectURIs) > 0 {
+			now := client.UpdatedAt
+			redirectURIs := make([]persistence.OAuthClientRedirectURIModel, 0, len(client.RedirectURIs))
+			for _, redirectURI := range client.RedirectURIs {
+				redirectURIs = append(redirectURIs, persistence.OAuthClientRedirectURIModel{
+					ID:          mustNewID(idGenerator),
+					ClientID:    client.ClientID,
+					RedirectURI: redirectURI,
+					CreatedAt:   now,
+					UpdatedAt:   now,
+				})
+			}
+			if err := db.WithContext(ctx).Create(&redirectURIs).Error; err != nil {
+				log.Fatalf("create redirect uris for client %s: %v", client.ClientID, err)
+			}
 		}
 		return
 	}
@@ -126,4 +143,12 @@ func upsertClient(ctx context.Context, db *gorm.DB, repo persistence.OAuthClient
 func hashSecret(secret string) string {
 	sum := sha256.Sum256([]byte(secret))
 	return "sha256:" + base64.RawURLEncoding.EncodeToString(sum[:])
+}
+
+func mustNewID(idGenerator port.IDGenerator) string {
+	id, err := idGenerator.NewID()
+	if err != nil {
+		log.Fatalf("generate id: %v", err)
+	}
+	return id
 }

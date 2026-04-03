@@ -40,7 +40,7 @@ type OAuthClientModel struct {
 	ClientType       string    `gorm:"size:32;not null;index"`
 	ClientSecretHash string    `gorm:"size:255;not null;default:''"`
 	DisplayName      string    `gorm:"size:255;not null"`
-	RedirectURIs     string    `gorm:"type:text;not null"`
+	RedirectURIs     []OAuthClientRedirectURIModel `gorm:"foreignKey:ClientID;references:PublicClientID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	AllowedScopes    string    `gorm:"type:text;not null"`
 	Status           string    `gorm:"size:32;not null;index"`
 	CreatedAt        time.Time `gorm:"not null"`
@@ -49,6 +49,19 @@ type OAuthClientModel struct {
 
 func (OAuthClientModel) TableName() string {
 	return "oauth_clients"
+}
+
+type OAuthClientRedirectURIModel struct {
+	ID          string           `gorm:"type:uuid;primaryKey"`
+	ClientID    string           `gorm:"column:client_id;size:128;not null;uniqueIndex:idx_oauth_client_redirect_uris_client_redirect;index"`
+	Client      OAuthClientModel `gorm:"foreignKey:ClientID;references:PublicClientID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	RedirectURI string           `gorm:"size:2048;not null;uniqueIndex:idx_oauth_client_redirect_uris_client_redirect"`
+	CreatedAt   time.Time        `gorm:"not null"`
+	UpdatedAt   time.Time        `gorm:"not null"`
+}
+
+func (OAuthClientRedirectURIModel) TableName() string {
+	return "oauth_client_redirect_uris"
 }
 
 type AuthorizationRequestModel struct {
@@ -225,6 +238,7 @@ var Models = []any{
 	&AccountModel{},
 	&AccountProviderModel{},
 	&OAuthClientModel{},
+	&OAuthClientRedirectURIModel{},
 	&AuthorizationRequestModel{},
 	&AuthorizationCodeModel{},
 	&SSOSessionModel{},

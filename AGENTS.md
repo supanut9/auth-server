@@ -41,10 +41,10 @@ Those belong to `auth-ui`.
 
 ## Read Before Coding
 
-- `../docs/phase-1-endpoints.md`
-- `../docs/phase-1-storage-model.md`
-- `../docs/phase-1-token-model.md`
-- `../docs/phase-1-identity.md`
+- `../docs/auth/phase-1-endpoints.md`
+- `../docs/auth/phase-1-storage-model.md`
+- `../docs/auth/phase-1-token-model.md`
+- `../docs/auth/phase-1-identity.md`
 
 ## Data Model Rules
 

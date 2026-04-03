@@ -80,6 +80,10 @@ func RegisterRoutes(router *gin.Engine, cfg config.Config, db *gorm.DB, app appl
 	auth.POST("/otp/resend", handler.resendOTP)
 	auth.GET("/logout", handler.logoutLocal)
 	auth.GET("/logout/global", handler.logoutGlobal)
+
+	support := router.Group("/v1/support", SupportAuthMiddleware(cfg))
+	support.GET("/accounts/:accountID", handler.getSupportAccount)
+	support.POST("/accounts/:accountID/sign-out", handler.signOutSupportAccount)
 }
 
 func (h Handler) healthz(c *gin.Context) {

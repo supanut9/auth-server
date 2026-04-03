@@ -35,6 +35,7 @@ type Config struct {
 	SMTPUsername            string
 	SMTPPassword            string
 	SMTPFrom                string
+	SupportAPIToken         string
 	PlatformAudience        string
 	AccessTokenTTL          time.Duration
 	IDTokenTTL              time.Duration
@@ -156,6 +157,7 @@ func Load() (Config, error) {
 		SMTPUsername:            getEnv("SMTP_USERNAME", ""),
 		SMTPPassword:            getEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:                getEnv("SMTP_FROM", ""),
+		SupportAPIToken:         getEnv("SUPPORT_API_TOKEN", defaultSupportAPIToken(appEnv)),
 		PlatformAudience:        getEnv("PLATFORM_AUDIENCE", "platform-api"),
 		AccessTokenTTL:          accessTokenTTL,
 		IDTokenTTL:              idTokenTTL,
@@ -215,6 +217,9 @@ func (c Config) Validate() error {
 		if _, err := strconv.Atoi(strings.TrimSpace(c.SMTPPort)); err != nil {
 			return fmt.Errorf("invalid SMTP_PORT: %w", err)
 		}
+	}
+	if strings.TrimSpace(c.SupportAPIToken) == "" {
+		return fmt.Errorf("missing required env: SUPPORT_API_TOKEN")
 	}
 
 	if c.OTPMaxAttempts <= 0 {
@@ -277,6 +282,13 @@ func defaultSSOCookieSecure(appEnv string, publicBaseURL string) bool {
 		return false
 	}
 	return strings.EqualFold(parsed.Scheme, "https")
+}
+
+func defaultSupportAPIToken(appEnv string) string {
+	if strings.EqualFold(appEnv, "development") {
+		return "dev-support-token"
+	}
+	return ""
 }
 
 func mustEnv(key string) (string, error) {

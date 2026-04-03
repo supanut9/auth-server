@@ -40,6 +40,17 @@ func TestValidateRejectsInvalidOTPLimits(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsMissingSupportToken(t *testing.T) {
+	t.Parallel()
+
+	cfg := baseTestConfig()
+	cfg.SupportAPIToken = ""
+
+	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "SUPPORT_API_TOKEN") {
+		t.Fatalf("expected support token validation error, got %v", err)
+	}
+}
+
 func baseTestConfig() Config {
 	return Config{
 		PublicBaseURL:           "https://auth.example",
@@ -58,5 +69,6 @@ func baseTestConfig() Config {
 		IDTokenTTL:              10 * time.Minute,
 		RefreshAbsoluteTTL:      24 * time.Hour,
 		RefreshInactiveTTL:      24 * time.Hour,
+		SupportAPIToken:         "dev-support-token",
 	}
 }

@@ -24,6 +24,8 @@ Expected config areas:
   - OTP request throttling can be tuned with `OTP_MAX_ATTEMPTS`, `OTP_MAX_RESENDS`, and `OTP_RESEND_COOLDOWN`
 - logout redirect settings
   - post-logout redirects are restricted to the auth-ui origin
+- support API settings
+  - configure `SUPPORT_API_TOKEN` for `/v1/support` account summary and sign-out tooling
 - dev verification client seeding and local callback support
   - seeds `dev-browser`, `community-web`, `dev-worker`, and `realtime-service`
   - `community-web` callback: `http://localhost:3006/api/auth/oauth2/callback/auth-server`
@@ -50,6 +52,7 @@ Deployment baseline:
 - if a Google or GitHub provider is partially configured, the full client id / secret / redirect URL set must be present
 - if SMTP is enabled, `SMTP_FROM` must be set and `SMTP_PORT` must be a valid port number
 - if `SSO_COOKIE_SAME_SITE=none`, `SSO_COOKIE_SECURE` must be `true`
+- `SUPPORT_API_TOKEN` must be configured; development falls back to `dev-support-token`
 - OTP settings must remain positive and finite
 - run `make smoke` after local or deploy startup to confirm request IDs, health, discovery, and JWKS responses
 - `X-Request-Id` is emitted on every response and surfaced in `/healthz` and `/readyz`

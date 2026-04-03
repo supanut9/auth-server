@@ -26,6 +26,7 @@ Phase-1 authorization server for the platform.
 - Email OTP flow
 - SMTP-backed OTP delivery when SMTP env vars are configured
 - explicit SSO cookie policy and OTP abuse controls for production readiness
+- support-token-protected account summary and sign-out tooling
 - central SSO session management
 - token issuance, refresh, revoke, and introspection
 
@@ -106,6 +107,8 @@ make run
 - `GET /healthz` is the liveness endpoint
 - `GET /readyz` requires a reachable database and returns `503` if the DB is down
 - both health endpoints include a `request_id` field and every response carries `X-Request-Id`
+- `/v1/support/accounts/:accountID` summarizes sessions, consents, and refresh chains behind `Authorization: Bearer $SUPPORT_API_TOKEN`
+- `/v1/support/accounts/:accountID/sign-out` revokes all active SSO sessions and refresh chains for an account
 
 Use `readyz` for deployment probes so the service only receives traffic after the database is reachable.
 

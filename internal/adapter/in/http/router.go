@@ -213,6 +213,9 @@ func (h Handler) token(c *gin.Context) {
 	if clientID == "" {
 		clientID = c.PostForm("client_id")
 	}
+	if clientSecret == "" {
+		clientSecret = c.PostForm("client_secret")
+	}
 
 	grantType := c.PostForm("grant_type")
 	switch grantType {
@@ -231,6 +234,9 @@ func (h Handler) revoke(c *gin.Context) {
 	clientID, clientSecret := h.clientCredentials(c)
 	if clientID == "" {
 		clientID = c.PostForm("client_id")
+	}
+	if clientSecret == "" {
+		clientSecret = c.PostForm("client_secret")
 	}
 	client, ok := h.authenticateClient(c, clientID, clientSecret, false)
 	if !ok {
@@ -258,6 +264,9 @@ func (h Handler) introspect(c *gin.Context) {
 	clientID, clientSecret := h.clientCredentials(c)
 	if clientID == "" {
 		clientID = c.PostForm("client_id")
+	}
+	if clientSecret == "" {
+		clientSecret = c.PostForm("client_secret")
 	}
 	_, ok := h.authenticateClient(c, clientID, clientSecret, true)
 	if !ok {

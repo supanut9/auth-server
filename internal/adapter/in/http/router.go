@@ -1022,10 +1022,18 @@ func (h Handler) postLogoutRedirect(candidate string) string {
 	if candidate == "" {
 		return defaultTarget
 	}
-	if !sameOriginURL(candidate, h.cfg.AuthUIBaseURL) {
-		return defaultTarget
+
+	if sameOriginURL(candidate, h.cfg.AuthUIBaseURL) {
+		return candidate
 	}
-	return candidate
+
+	for _, allowedBase := range h.cfg.PostLogoutRedirectAllowlist {
+		if sameOriginURL(candidate, allowedBase) {
+			return candidate
+		}
+	}
+
+	return defaultTarget
 }
 
 func (h Handler) renderLookupError(c *gin.Context, err error) {

@@ -15,6 +15,7 @@ type Config struct {
 	HTTPAddr                string
 	PublicBaseURL           string
 	AuthUIBaseURL           string
+	PostLogoutRedirectAllowlist []string
 	DatabaseURL             string
 	RedisURL                string
 	JWTIssuer               string
@@ -137,6 +138,7 @@ func Load() (Config, error) {
 		HTTPAddr:                getEnv("HTTP_ADDR", ":8050"),
 		PublicBaseURL:           publicBaseURL,
 		AuthUIBaseURL:           authUIBaseURL,
+		PostLogoutRedirectAllowlist: splitEnvList("POST_LOGOUT_REDIRECT_ALLOWLIST"),
 		DatabaseURL:             databaseURL,
 		RedisURL:                redisURL,
 		JWTIssuer:               jwtIssuer,
@@ -185,6 +187,11 @@ func (c Config) Validate() error {
 	}
 	if err := validateAbsoluteURL("AUTH_UI_BASE_URL", c.AuthUIBaseURL); err != nil {
 		return err
+	}
+	for _, candidate := range c.PostLogoutRedirectAllowlist {
+		if err := validateAbsoluteURL("POST_LOGOUT_REDIRECT_ALLOWLIST", candidate); err != nil {
+			return err
+		}
 	}
 	if err := validateAbsoluteURL("JWT_ISSUER", c.JWTIssuer); err != nil {
 		return err
@@ -305,6 +312,24 @@ func getEnv(key, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func splitEnvList(key string) []string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return nil
+	}
+
+	rawParts := strings.Split(value, ",")
+	parts := make([]string, 0, len(rawParts))
+	for _, part := range rawParts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			parts = append(parts, trimmed)
+		}
+	}
+
+	return parts
 }
 
 func durationEnv(key string, fallback time.Duration) (time.Duration, error) {

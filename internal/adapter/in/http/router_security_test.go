@@ -27,3 +27,17 @@ func TestPostLogoutRedirectRejectsCrossOrigin(t *testing.T) {
 		t.Fatalf("expected cross-origin redirect to fall back, got %q", got)
 	}
 }
+
+func TestPostLogoutRedirectAcceptsAllowlistedOrigin(t *testing.T) {
+	t.Parallel()
+
+	handler := Handler{cfg: config.Config{
+		AuthUIBaseURL:               "https://auth-ui.example",
+		PostLogoutRedirectAllowlist: []string{"https://community.example"},
+	}}
+	candidate := "https://community.example/logout"
+
+	if got := handler.postLogoutRedirect(candidate); got != candidate {
+		t.Fatalf("expected allowlisted redirect to pass through, got %q", got)
+	}
+}

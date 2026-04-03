@@ -341,6 +341,15 @@ func (r *memoryRefreshTokenRepo) RevokeByChainID(_ context.Context, chainID stri
 }
 
 func newIdentityService(t *testing.T) (Service, *memoryMailSender, *memoryAuthorizationRequestRepo) {
+	return newIdentityServiceWithConfig(t, Config{
+		OTPChallengeTTL:   10 * time.Minute,
+		OTPMaxAttempts:    6,
+		OTPMaxResends:     3,
+		OTPResendCooldown: time.Minute,
+	})
+}
+
+func newIdentityServiceWithConfig(t *testing.T, cfg Config) (Service, *memoryMailSender, *memoryAuthorizationRequestRepo) {
 	t.Helper()
 
 	clock := fixedClock{now: time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)}
@@ -377,7 +386,7 @@ func newIdentityService(t *testing.T) (Service, *memoryMailSender, *memoryAuthor
 	mailSender := &memoryMailSender{}
 
 	return NewService(
-		Config{OTPChallengeTTL: 10 * time.Minute},
+		cfg,
 		clock,
 		ids,
 		staticOTPCodeGenerator{code: "123456"},
@@ -394,6 +403,10 @@ func TestProviderLoginCreatesAccountAndSession(t *testing.T) {
 	t.Parallel()
 
 	svc, _, requests := newIdentityService(t)
+	request := requests.items["req-1"]
+	request.Stage = domain.AuthorizationStageProviderRedirect
+	requests.items["req-1"] = request
+
 	account, providerLink, session, updated, err := svc.HandleProviderLogin(context.Background(), ProviderLoginRequest{
 		RequestID:         "req-1",
 		ProviderName:      "github",
@@ -419,7 +432,10 @@ func TestProviderLoginCreatesAccountAndSession(t *testing.T) {
 func TestProviderLoginRequiresEmailRecovery(t *testing.T) {
 	t.Parallel()
 
-	svc, _, _ := newIdentityService(t)
+	svc, _, requests := newIdentityService(t)
+	request := requests.items["req-1"]
+	request.Stage = domain.AuthorizationStageProviderRedirect
+	requests.items["req-1"] = request
 	_, _, _, request, err := svc.HandleProviderLogin(context.Background(), ProviderLoginRequest{
 		RequestID:         "req-1",
 		ProviderName:      "github",
@@ -439,10 +455,31 @@ func TestProviderLoginRequiresEmailRecovery(t *testing.T) {
 	}
 }
 
+func TestProviderLoginRejectsInvalidStage(t *testing.T) {
+	t.Parallel()
+
+	svc, _, _ := newIdentityService(t)
+	_, _, _, _, err := svc.HandleProviderLogin(context.Background(), ProviderLoginRequest{
+		RequestID:         "req-1",
+		ProviderName:      "github",
+		ProviderAccountID: "gh-1",
+		Email:             "user@example.com",
+		EmailVerified:     true,
+		DisplayName:       "User",
+	})
+	if !errors.Is(err, ErrProviderLoginInvalidStage) {
+		t.Fatalf("expected invalid stage, got %v", err)
+	}
+}
+
 func TestOTPFlowLinksPendingProvider(t *testing.T) {
 	t.Parallel()
 
 	svc, mailSender, requests := newIdentityService(t)
+	request := requests.items["req-1"]
+	request.Stage = domain.AuthorizationStageProviderRedirect
+	requests.items["req-1"] = request
+
 	_, _, _, request, err := svc.HandleProviderLogin(context.Background(), ProviderLoginRequest{
 		RequestID:         "req-1",
 		ProviderName:      "github",
@@ -486,5 +523,63 @@ func TestOTPFlowLinksPendingProvider(t *testing.T) {
 	}
 	if got := requests.items["req-1"].PendingProviderName; got != "" {
 		t.Fatalf("expected pending provider cleared after otp verify, got %q", got)
+	}
+}
+
+func TestOTPFlowThrottlesResend(t *testing.T) {
+	t.Parallel()
+
+	svc, mailSender, _ := newIdentityService(t)
+	challenge, err := svc.StartOTPChallenge(context.Background(), OTPStartRequest{
+		RequestID: "req-1",
+		Email:     "user@example.com",
+	})
+	if err != nil {
+		t.Fatalf("start otp challenge: %v", err)
+	}
+	if len(mailSender.sent) != 1 {
+		t.Fatalf("expected one mail sent, got %d", len(mailSender.sent))
+	}
+	if _, err := svc.ResendOTPChallenge(context.Background(), OTPStartRequest{
+		RequestID: "req-1",
+		Email:     challenge.Email,
+	}); !errors.Is(err, ErrOTPChallengeThrottled) {
+		t.Fatalf("expected throttled resend, got %v", err)
+	}
+}
+
+func TestOTPFlowStopsAfterMaxAttempts(t *testing.T) {
+	t.Parallel()
+
+	svc, _, _ := newIdentityServiceWithConfig(t, Config{
+		OTPChallengeTTL:   10 * time.Minute,
+		OTPMaxAttempts:    2,
+		OTPMaxResends:     1,
+		OTPResendCooldown: time.Minute,
+	})
+
+	if _, err := svc.StartOTPChallenge(context.Background(), OTPStartRequest{
+		RequestID: "req-1",
+		Email:     "user@example.com",
+	}); err != nil {
+		t.Fatalf("start otp challenge: %v", err)
+	}
+
+	_, _, _, _, err := svc.VerifyOTPChallenge(context.Background(), OTPVerifyRequest{
+		RequestID: "req-1",
+		Email:     "user@example.com",
+		Code:      "000000",
+	})
+	if !errors.Is(err, ErrOTPChallengeInvalid) {
+		t.Fatalf("expected invalid code, got %v", err)
+	}
+
+	_, _, _, _, err = svc.VerifyOTPChallenge(context.Background(), OTPVerifyRequest{
+		RequestID: "req-1",
+		Email:     "user@example.com",
+		Code:      "000000",
+	})
+	if !errors.Is(err, ErrOTPChallengeTooManyAttempts) {
+		t.Fatalf("expected too many attempts, got %v", err)
 	}
 }

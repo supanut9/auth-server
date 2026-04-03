@@ -85,7 +85,10 @@ func main() {
 
 	identityService := identityapp.NewService(
 		identityapp.Config{
-			OTPChallengeTTL: cfg.OTPChallengeTTL,
+			OTPChallengeTTL:   cfg.OTPChallengeTTL,
+			OTPMaxAttempts:    cfg.OTPMaxAttempts,
+			OTPMaxResends:     cfg.OTPMaxResends,
+			OTPResendCooldown: cfg.OTPResendCooldown,
 		},
 		clock,
 		idGenerator,

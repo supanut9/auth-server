@@ -15,7 +15,10 @@ import (
 )
 
 type Config struct {
-	OTPChallengeTTL time.Duration
+	OTPChallengeTTL   time.Duration
+	OTPMaxAttempts    int
+	OTPMaxResends     int
+	OTPResendCooldown time.Duration
 }
 
 type Service struct {
@@ -29,6 +32,9 @@ type Service struct {
 	mailSender            port.MailSender
 	flow                  flow.Service
 	otpChallengeTTL       time.Duration
+	otpMaxAttempts        int
+	otpMaxResends         int
+	otpResendCooldown     time.Duration
 }
 
 type ProviderLoginRequest struct {
@@ -79,6 +85,9 @@ func NewService(
 		mailSender:            mailSender,
 		flow:                  flowService,
 		otpChallengeTTL:       cfg.OTPChallengeTTL,
+		otpMaxAttempts:        positiveIntOrDefault(cfg.OTPMaxAttempts, 6),
+		otpMaxResends:         positiveIntOrDefault(cfg.OTPMaxResends, 3),
+		otpResendCooldown:     durationOrDefault(cfg.OTPResendCooldown, time.Minute),
 	}
 }
 
@@ -86,6 +95,12 @@ func (s Service) HandleProviderLogin(ctx context.Context, req ProviderLoginReque
 	request, err := s.authorizationRequests.FindByID(ctx, req.RequestID)
 	if err != nil {
 		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, err
+	}
+	if s.clock.Now().UTC().After(request.ExpiresAt) {
+		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, flow.ErrAuthorizationRequestExpired
+	}
+	if request.Stage != domain.AuthorizationStageProviderRedirect {
+		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, ErrProviderLoginInvalidStage
 	}
 
 	if !req.EmailVerified || strings.TrimSpace(req.Email) == "" {
@@ -141,6 +156,12 @@ func (s Service) StartOTPChallenge(ctx context.Context, req OTPStartRequest) (do
 	if err != nil {
 		return domain.OTPChallenge{}, err
 	}
+	if s.clock.Now().UTC().After(request.ExpiresAt) {
+		return domain.OTPChallenge{}, flow.ErrAuthorizationRequestExpired
+	}
+	if !isOTPAllowedStage(request.Stage) {
+		return domain.OTPChallenge{}, ErrOTPChallengeInvalidStage
+	}
 
 	email := strings.TrimSpace(req.Email)
 	if email == "" {
@@ -150,27 +171,19 @@ func (s Service) StartOTPChallenge(ctx context.Context, req OTPStartRequest) (do
 		return domain.OTPChallenge{}, fmt.Errorf("otp email required")
 	}
 
-	codeValue, err := s.otpCodeGenerator.NewCode()
-	if err != nil {
-		return domain.OTPChallenge{}, err
-	}
-	_, codeHash, err := hashOTPCode(codeValue)
-	if err != nil {
-		return domain.OTPChallenge{}, err
-	}
-	challenge := domain.OTPChallenge{
-		AuthorizationRequestID: &request.ID,
-		Email:                  email,
-		Purpose:                otpPurpose(request),
-		CodeHash:               codeHash,
-		AttemptCount:           0,
-		ResendCount:            0,
-		ExpiresAt:              s.clock.Now().UTC().Add(s.otpChallengeTTL),
-		CreatedAt:              s.clock.Now().UTC(),
+	var existing *domain.OTPChallenge
+	if activeChallenge, err := s.otpChallenges.FindActiveByRequestAndEmail(ctx, req.RequestID, email); err == nil {
+		existing = &activeChallenge
 	}
 
-	challenge, err = s.otpChallenges.Create(ctx, challenge)
+	challenge, codeValue, err := s.issueOTPChallenge(ctx, request, email, existing)
 	if err != nil {
+		return domain.OTPChallenge{}, err
+	}
+
+	request.Stage = domain.AuthorizationStageOTPRequired
+	request.PendingProviderEmail = email
+	if _, err := s.authorizationRequests.Update(ctx, request); err != nil {
 		return domain.OTPChallenge{}, err
 	}
 
@@ -182,12 +195,6 @@ func (s Service) StartOTPChallenge(ctx context.Context, req OTPStartRequest) (do
 		})
 	}
 
-	request.Stage = domain.AuthorizationStageOTPRequired
-	request.PendingProviderEmail = email
-	if _, err := s.authorizationRequests.Update(ctx, request); err != nil {
-		return domain.OTPChallenge{}, err
-	}
-
 	return challenge, nil
 }
 
@@ -196,10 +203,19 @@ func (s Service) VerifyOTPChallenge(ctx context.Context, req OTPVerifyRequest) (
 	if err != nil {
 		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, err
 	}
+	if s.clock.Now().UTC().After(request.ExpiresAt) {
+		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, flow.ErrAuthorizationRequestExpired
+	}
+	if request.Stage != domain.AuthorizationStageOTPRequired {
+		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, ErrOTPChallengeInvalidStage
+	}
 
 	challenge, err := s.otpChallenges.FindActiveByRequestAndEmail(ctx, req.RequestID, req.Email)
 	if err != nil {
 		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, ErrOTPChallengeNotFound
+	}
+	if challenge.AttemptCount >= s.otpMaxAttempts {
+		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, ErrOTPChallengeTooManyAttempts
 	}
 	if s.clock.Now().UTC().After(challenge.ExpiresAt) {
 		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, ErrOTPChallengeExpired
@@ -212,6 +228,9 @@ func (s Service) VerifyOTPChallenge(ctx context.Context, req OTPVerifyRequest) (
 	if hash != challenge.CodeHash {
 		challenge.AttemptCount++
 		_, _ = s.otpChallenges.Update(ctx, challenge)
+		if challenge.AttemptCount >= s.otpMaxAttempts {
+			return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, ErrOTPChallengeTooManyAttempts
+		}
 		return domain.Account{}, domain.AccountProvider{}, domain.SSOSession{}, domain.AuthorizationRequest{}, ErrOTPChallengeInvalid
 	}
 
@@ -257,6 +276,12 @@ func (s Service) ResendOTPChallenge(ctx context.Context, req OTPStartRequest) (d
 	if err != nil {
 		return domain.OTPChallenge{}, err
 	}
+	if s.clock.Now().UTC().After(request.ExpiresAt) {
+		return domain.OTPChallenge{}, flow.ErrAuthorizationRequestExpired
+	}
+	if !isOTPAllowedStage(request.Stage) {
+		return domain.OTPChallenge{}, ErrOTPChallengeInvalidStage
+	}
 
 	email := strings.TrimSpace(req.Email)
 	if email == "" {
@@ -270,20 +295,7 @@ func (s Service) ResendOTPChallenge(ctx context.Context, req OTPStartRequest) (d
 	if err != nil {
 		return domain.OTPChallenge{}, ErrOTPChallengeNotFound
 	}
-
-	codeValue, err := s.otpCodeGenerator.NewCode()
-	if err != nil {
-		return domain.OTPChallenge{}, err
-	}
-	_, codeHash, err := hashOTPCode(codeValue)
-	if err != nil {
-		return domain.OTPChallenge{}, err
-	}
-
-	challenge.ResendCount++
-	challenge.CodeHash = codeHash
-	challenge.ExpiresAt = s.clock.Now().UTC().Add(s.otpChallengeTTL)
-	updated, err := s.otpChallenges.Update(ctx, challenge)
+	updated, codeValue, err := s.issueOTPChallenge(ctx, request, email, &challenge)
 	if err != nil {
 		return domain.OTPChallenge{}, err
 	}
@@ -297,6 +309,63 @@ func (s Service) ResendOTPChallenge(ctx context.Context, req OTPStartRequest) (d
 	}
 
 	return updated, nil
+}
+
+func (s Service) issueOTPChallenge(ctx context.Context, request domain.AuthorizationRequest, email string, existing *domain.OTPChallenge) (domain.OTPChallenge, string, error) {
+	now := s.clock.Now().UTC()
+	if existing != nil {
+		if existing.AttemptCount >= s.otpMaxAttempts {
+			return domain.OTPChallenge{}, "", ErrOTPChallengeTooManyAttempts
+		}
+		if existing.ResendCount >= s.otpMaxResends {
+			return domain.OTPChallenge{}, "", ErrOTPChallengeTooManyResends
+		}
+		lastSentAt := existing.LastSentAt
+		if lastSentAt.IsZero() {
+			lastSentAt = existing.CreatedAt
+		}
+		if now.Before(lastSentAt.Add(s.otpResendCooldown)) {
+			return domain.OTPChallenge{}, "", ErrOTPChallengeThrottled
+		}
+	}
+
+	codeValue, err := s.otpCodeGenerator.NewCode()
+	if err != nil {
+		return domain.OTPChallenge{}, "", err
+	}
+	_, codeHash, err := hashOTPCode(codeValue)
+	if err != nil {
+		return domain.OTPChallenge{}, "", err
+	}
+
+	if existing == nil {
+		challenge := domain.OTPChallenge{
+			AuthorizationRequestID: &request.ID,
+			Email:                  email,
+			Purpose:                otpPurpose(request),
+			CodeHash:               codeHash,
+			AttemptCount:           0,
+			ResendCount:            0,
+			ExpiresAt:              now.Add(s.otpChallengeTTL),
+			LastSentAt:             now,
+			CreatedAt:              now,
+		}
+		created, err := s.otpChallenges.Create(ctx, challenge)
+		if err != nil {
+			return domain.OTPChallenge{}, "", err
+		}
+		return created, codeValue, nil
+	}
+
+	existing.ResendCount++
+	existing.CodeHash = codeHash
+	existing.ExpiresAt = now.Add(s.otpChallengeTTL)
+	existing.LastSentAt = now
+	updated, err := s.otpChallenges.Update(ctx, *existing)
+	if err != nil {
+		return domain.OTPChallenge{}, "", err
+	}
+	return updated, codeValue, nil
 }
 
 func (s Service) resolveAccountAndProvider(ctx context.Context, req ProviderLoginRequest) (domain.Account, domain.AccountProvider, error) {
@@ -387,6 +456,31 @@ func otpPurpose(request domain.AuthorizationRequest) string {
 		return "provider_email_recovery"
 	}
 	return "login"
+}
+
+func isOTPAllowedStage(stage string) bool {
+	switch stage {
+	case domain.AuthorizationStageLoginRequired,
+		domain.AuthorizationStageProviderRedirect,
+		domain.AuthorizationStageOTPRequired:
+		return true
+	default:
+		return false
+	}
+}
+
+func positiveIntOrDefault(value int, fallback int) int {
+	if value <= 0 {
+		return fallback
+	}
+	return value
+}
+
+func durationOrDefault(value time.Duration, fallback time.Duration) time.Duration {
+	if value <= 0 {
+		return fallback
+	}
+	return value
 }
 
 func loginMethodFromRequest(request domain.AuthorizationRequest) string {

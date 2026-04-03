@@ -25,6 +25,7 @@ Phase-1 authorization server for the platform.
 - Google and GitHub provider login
 - Email OTP flow
 - SMTP-backed OTP delivery when SMTP env vars are configured
+- explicit SSO cookie policy and OTP abuse controls for production readiness
 - central SSO session management
 - token issuance, refresh, revoke, and introspection
 

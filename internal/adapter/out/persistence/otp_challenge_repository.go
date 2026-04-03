@@ -30,6 +30,9 @@ func (r OTPChallengeRepository) Create(ctx context.Context, challenge domain.OTP
 	if challenge.CreatedAt.IsZero() {
 		challenge.CreatedAt = now
 	}
+	if challenge.LastSentAt.IsZero() {
+		challenge.LastSentAt = now
+	}
 
 	model := OTPChallengeModel{
 		ID:                     challenge.ID,
@@ -41,6 +44,7 @@ func (r OTPChallengeRepository) Create(ctx context.Context, challenge domain.OTP
 		ResendCount:            challenge.ResendCount,
 		ExpiresAt:              challenge.ExpiresAt,
 		VerifiedAt:             challenge.VerifiedAt,
+		LastSentAt:             challenge.LastSentAt,
 		CreatedAt:              challenge.CreatedAt,
 	}
 	if err := r.db.WithContext(ctx).Create(&model).Error; err != nil {
@@ -72,6 +76,7 @@ func (r OTPChallengeRepository) Update(ctx context.Context, challenge domain.OTP
 		ResendCount:            challenge.ResendCount,
 		ExpiresAt:              challenge.ExpiresAt,
 		VerifiedAt:             challenge.VerifiedAt,
+		LastSentAt:             challenge.LastSentAt,
 		CreatedAt:              challenge.CreatedAt,
 	}
 	if err := r.db.WithContext(ctx).Save(&model).Error; err != nil {
@@ -112,6 +117,7 @@ func mapOTPChallengeModel(model OTPChallengeModel) domain.OTPChallenge {
 		ResendCount:            model.ResendCount,
 		ExpiresAt:              model.ExpiresAt,
 		VerifiedAt:             model.VerifiedAt,
+		LastSentAt:             model.LastSentAt,
 		CreatedAt:              model.CreatedAt,
 	}
 }

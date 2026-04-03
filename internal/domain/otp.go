@@ -12,5 +12,6 @@ type OTPChallenge struct {
 	ResendCount            int
 	ExpiresAt              time.Time
 	VerifiedAt             *time.Time
+	LastSentAt             time.Time
 	CreatedAt              time.Time
 }

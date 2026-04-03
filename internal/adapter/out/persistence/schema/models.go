@@ -35,16 +35,16 @@ func (AccountProviderModel) TableName() string {
 }
 
 type OAuthClientModel struct {
-	ID               string    `gorm:"type:uuid;primaryKey"`
-	PublicClientID   string    `gorm:"column:client_id;size:128;not null;uniqueIndex:idx_oauth_clients_client_id"`
-	ClientType       string    `gorm:"size:32;not null;index"`
-	ClientSecretHash string    `gorm:"size:255;not null;default:''"`
-	DisplayName      string    `gorm:"size:255;not null"`
+	ID               string                        `gorm:"type:uuid;primaryKey"`
+	PublicClientID   string                        `gorm:"column:client_id;size:128;not null;uniqueIndex:idx_oauth_clients_client_id"`
+	ClientType       string                        `gorm:"size:32;not null;index"`
+	ClientSecretHash string                        `gorm:"size:255;not null;default:''"`
+	DisplayName      string                        `gorm:"size:255;not null"`
 	RedirectURIs     []OAuthClientRedirectURIModel `gorm:"foreignKey:ClientID;references:PublicClientID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	AllowedScopes    string    `gorm:"type:text;not null"`
-	Status           string    `gorm:"size:32;not null;index"`
-	CreatedAt        time.Time `gorm:"not null"`
-	UpdatedAt        time.Time `gorm:"not null"`
+	AllowedScopes    string                        `gorm:"type:text;not null"`
+	Status           string                        `gorm:"size:32;not null;index"`
+	CreatedAt        time.Time                     `gorm:"not null"`
+	UpdatedAt        time.Time                     `gorm:"not null"`
 }
 
 func (OAuthClientModel) TableName() string {
@@ -204,6 +204,7 @@ type OTPChallengeModel struct {
 	ResendCount            int                        `gorm:"type:integer;not null;default:0"`
 	ExpiresAt              time.Time                  `gorm:"not null;index"`
 	VerifiedAt             *time.Time
+	LastSentAt             time.Time `gorm:"not null;index"`
 	CreatedAt              time.Time `gorm:"not null"`
 }
 

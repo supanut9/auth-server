@@ -640,6 +640,14 @@ func (h Handler) startProviderLogin(c *gin.Context, providerName string) {
 		h.renderLookupError(c, err)
 		return
 	}
+	if time.Now().UTC().After(request.ExpiresAt) {
+		h.renderFlowError(c, flowapp.ErrAuthorizationRequestExpired)
+		return
+	}
+	if request.Stage != domain.AuthorizationStageLoginRequired && request.Stage != domain.AuthorizationStageProviderRedirect {
+		h.renderFlowError(c, flowapp.ErrAuthorizationRequestInvalidStage)
+		return
+	}
 	if _, ok := h.app.Providers[providerName]; !ok {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "provider_unavailable"})
 		return
@@ -674,6 +682,20 @@ func (h Handler) handleProviderCallback(c *gin.Context, providerName string) {
 	provider, ok := h.app.Providers[providerName]
 	if !ok {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "provider_unavailable"})
+		return
+	}
+
+	request, err := h.app.Requests.FindByID(c.Request.Context(), requestID)
+	if err != nil {
+		h.renderLookupError(c, err)
+		return
+	}
+	if request.Stage != domain.AuthorizationStageProviderRedirect {
+		h.renderFlowError(c, flowapp.ErrAuthorizationRequestInvalidStage)
+		return
+	}
+	if time.Now().UTC().After(request.ExpiresAt) {
+		h.renderFlowError(c, flowapp.ErrAuthorizationRequestExpired)
 		return
 	}
 
@@ -829,6 +851,10 @@ func (h Handler) verifyOTP(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_grant", "error_description": err.Error()})
 		return
 	}
+	if request.Stage != domain.AuthorizationStageAuthorizationReady && request.Stage != domain.AuthorizationStageConsentRequired {
+		h.renderFlowError(c, flowapp.ErrAuthorizationRequestInvalidStage)
+		return
+	}
 
 	h.setSSOCookie(c, session.ID, session.ExpiresAt)
 	response := gin.H{
@@ -940,13 +966,13 @@ func (h Handler) setSSOCookie(c *gin.Context, value string, expiresAt time.Time)
 	if maxAge < 0 {
 		maxAge = 0
 	}
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(ssoCookieName, value, maxAge, "/", "", false, true)
+	c.SetSameSite(sameSiteMode(h.cfg.SSOCookieSameSite))
+	c.SetCookie(ssoCookieName, value, maxAge, "/", h.cfg.SSOCookieDomain, h.cfg.SSOCookieSecure, true)
 }
 
 func (h Handler) clearSSOCookie(c *gin.Context) {
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(ssoCookieName, "", -1, "/", "", false, true)
+	c.SetSameSite(sameSiteMode(h.cfg.SSOCookieSameSite))
+	c.SetCookie(ssoCookieName, "", -1, "/", h.cfg.SSOCookieDomain, h.cfg.SSOCookieSecure, true)
 }
 
 func (h Handler) authenticateClient(c *gin.Context, clientID string, clientSecret string, confidentialOnly bool) (domain.OAuthClient, bool) {
@@ -988,11 +1014,12 @@ func (h Handler) currentSSOSession(ctx context.Context, c *gin.Context) (domain.
 }
 
 func (h Handler) postLogoutRedirect(candidate string) string {
+	defaultTarget := strings.TrimRight(h.cfg.AuthUIBaseURL, "/") + "/logout"
 	if candidate == "" {
-		return strings.TrimRight(h.cfg.AuthUIBaseURL, "/") + "/logout"
+		return defaultTarget
 	}
-	if _, err := url.ParseRequestURI(candidate); err != nil {
-		return strings.TrimRight(h.cfg.AuthUIBaseURL, "/") + "/logout"
+	if !sameOriginURL(candidate, h.cfg.AuthUIBaseURL) {
+		return defaultTarget
 	}
 	return candidate
 }
@@ -1041,6 +1068,32 @@ func containsValue(items []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+func sameSiteMode(value string) http.SameSite {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "strict":
+		return http.SameSiteStrictMode
+	case "none":
+		return http.SameSiteNoneMode
+	default:
+		return http.SameSiteLaxMode
+	}
+}
+
+func sameOriginURL(candidate string, base string) bool {
+	candidateURL, err := url.Parse(candidate)
+	if err != nil {
+		return false
+	}
+	baseURL, err := url.Parse(base)
+	if err != nil {
+		return false
+	}
+	if candidateURL.Scheme == "" || candidateURL.Host == "" || baseURL.Scheme == "" || baseURL.Host == "" {
+		return false
+	}
+	return strings.EqualFold(candidateURL.Scheme, baseURL.Scheme) && strings.EqualFold(candidateURL.Host, baseURL.Host)
 }
 
 func splitProtocolList(raw string) []string {

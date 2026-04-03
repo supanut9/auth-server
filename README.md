@@ -102,13 +102,14 @@ make run
 The dev seed command creates:
 
 - public client: `dev-browser`
-- public client: `community-web`
+- confidential client: `community-web`
+- confidential secret: `community-web-secret`
 - confidential client: `dev-worker`
 - confidential secret: `dev-worker-secret`
 - confidential client: `realtime-service`
 - confidential secret: `dev-realtime-secret`
 - demo redirect URI: `http://localhost:8050/dev/callback`
-- community web redirect URI: `http://localhost:3006/auth/callback`
+- community web redirect URI: `http://localhost:3006/api/auth/oauth2/callback/auth-server`
 
 Example authorization URL:
 

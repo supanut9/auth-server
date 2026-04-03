@@ -46,10 +46,14 @@ func main() {
 	}
 
 	communityWebClient := domain.OAuthClient{
-		ClientID:      "community-web",
-		ClientType:    "public",
-		DisplayName:   "Community Web",
-		RedirectURIs:  strings.Join([]string{"http://localhost:3006/auth/callback"}, " "),
+		ClientID:         "community-web",
+		ClientType:       "confidential",
+		ClientSecretHash: hashSecret("community-web-secret"),
+		DisplayName:      "Community Web",
+		RedirectURIs: strings.Join([]string{
+			"http://localhost:3006/api/auth/oauth2/callback/auth-server",
+			"http://localhost:3006/auth/callback",
+		}, " "),
 		AllowedScopes: strings.Join([]string{"openid", "email", "profile"}, " "),
 		Status:        "active",
 	}
@@ -83,13 +87,14 @@ func main() {
 
 	fmt.Println("seeded oauth clients:")
 	fmt.Println("- public client_id: dev-browser")
-	fmt.Println("- public client_id: community-web")
+	fmt.Println("- confidential client_id: community-web")
+	fmt.Println("- confidential client_secret: community-web-secret")
 	fmt.Println("- confidential client_id: dev-worker")
 	fmt.Println("- confidential client_secret: dev-worker-secret")
 	fmt.Println("- confidential client_id: realtime-service")
 	fmt.Println("- confidential client_secret: dev-realtime-secret")
 	fmt.Println("- demo redirect_uri: http://localhost:8050/dev/callback")
-	fmt.Println("- community web redirect_uri: http://localhost:3006/auth/callback")
+	fmt.Println("- community web redirect_uri: http://localhost:3006/api/auth/oauth2/callback/auth-server")
 }
 
 func upsertClient(ctx context.Context, db *gorm.DB, repo persistence.OAuthClientRepository, client domain.OAuthClient) {

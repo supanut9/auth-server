@@ -20,7 +20,8 @@ Expected config areas:
 - logout redirect settings
 - dev verification client seeding and local callback support
   - seeds `dev-browser`, `community-web`, `dev-worker`, and `realtime-service`
-  - `community-web` callback: `http://localhost:3006/auth/callback`
+  - `community-web` callback: `http://localhost:3006/api/auth/oauth2/callback/auth-server`
+  - `community-web` secret: `community-web-secret`
   - `realtime-service` secret: `dev-realtime-secret`
 
 Current local defaults:

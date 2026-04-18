@@ -21,6 +21,14 @@ import (
 	"github.com/supanut9/auth-server/internal/port"
 )
 
+type fixedOTPCodeGenerator struct {
+	code string
+}
+
+func (g fixedOTPCodeGenerator) NewCode() (string, error) {
+	return g.code, nil
+}
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -83,6 +91,11 @@ func main() {
 		refreshTokenRepository,
 	)
 
+	var otpCodeGenerator port.OTPCodeGenerator
+	if cfg.FixedOTPCode != "" {
+		otpCodeGenerator = fixedOTPCodeGenerator{code: cfg.FixedOTPCode}
+	}
+
 	identityService := identityapp.NewService(
 		identityapp.Config{
 			OTPChallengeTTL:   cfg.OTPChallengeTTL,
@@ -92,7 +105,7 @@ func main() {
 		},
 		clock,
 		idGenerator,
-		nil,
+		otpCodeGenerator,
 		accountRepository,
 		accountProviderRepository,
 		authorizationRequestRepository,

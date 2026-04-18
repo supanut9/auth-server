@@ -53,7 +53,7 @@ func main() {
 		RedirectURIs: []string{
 			"http://localhost:3006/api/auth/oauth2/callback/auth-server",
 		},
-		AllowedScopes: "openid email profile",
+		AllowedScopes: "openid email profile offline_access",
 		Status:        "active",
 	}
 

@@ -36,6 +36,7 @@ type Config struct {
 	SMTPUsername            string
 	SMTPPassword            string
 	SMTPFrom                string
+	FixedOTPCode            string
 	SupportAPIToken         string
 	PlatformAudience        string
 	AccessTokenTTL          time.Duration
@@ -159,6 +160,7 @@ func Load() (Config, error) {
 		SMTPUsername:            getEnv("SMTP_USERNAME", ""),
 		SMTPPassword:            getEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:                getEnv("SMTP_FROM", ""),
+		FixedOTPCode:            strings.TrimSpace(getEnv("FIXED_OTP_CODE", "")),
 		SupportAPIToken:         getEnv("SUPPORT_API_TOKEN", defaultSupportAPIToken(appEnv)),
 		PlatformAudience:        getEnv("PLATFORM_AUDIENCE", "platform-api"),
 		AccessTokenTTL:          accessTokenTTL,
@@ -224,6 +226,9 @@ func (c Config) Validate() error {
 		if _, err := strconv.Atoi(strings.TrimSpace(c.SMTPPort)); err != nil {
 			return fmt.Errorf("invalid SMTP_PORT: %w", err)
 		}
+	}
+	if c.FixedOTPCode != "" && strings.EqualFold(c.AppEnv, "production") {
+		return fmt.Errorf("FIXED_OTP_CODE must not be set in production")
 	}
 	if strings.TrimSpace(c.SupportAPIToken) == "" {
 		return fmt.Errorf("missing required env: SUPPORT_API_TOKEN")

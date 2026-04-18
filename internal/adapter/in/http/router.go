@@ -141,7 +141,7 @@ func (h Handler) openIDConfiguration(c *gin.Context) {
 		"userinfo_endpoint":                     issuer + "/v1/oidc/userinfo",
 		"revocation_endpoint":                   issuer + "/v1/oauth2/revoke",
 		"introspection_endpoint":                issuer + "/v1/oauth2/introspect",
-		"scopes_supported":                      []string{"openid", "email", "profile", "trading.read", "trading.write"},
+		"scopes_supported":                      []string{"openid", "email", "profile", "offline_access", "trading.read", "trading.write"},
 		"response_types_supported":              []string{"code"},
 		"grant_types_supported":                 []string{"authorization_code", "refresh_token", "client_credentials"},
 		"subject_types_supported":               []string{"public"},

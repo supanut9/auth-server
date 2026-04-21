@@ -27,9 +27,11 @@ Expected config areas:
 - support API settings
   - configure `SUPPORT_API_TOKEN` for `/v1/support` account summary and sign-out tooling
 - dev verification client seeding and local callback support
-  - seeds `dev-browser`, `community-web`, `dev-worker`, and `realtime-service`
+  - seeds `dev-browser`, `community-web`, `knowledge-web`, `dev-worker`, and `realtime-service`
   - `community-web` callback: `http://localhost:3006/api/auth/oauth2/callback/auth-server`
   - `community-web` secret: `community-web-secret`
+  - `knowledge-web` callback: `http://localhost:3007/api/auth/oauth2/callback/auth-server`
+  - `knowledge-web` secret: `knowledge-web-secret`
   - `realtime-service` secret: `dev-realtime-secret`
 
 Current local defaults:

@@ -57,6 +57,18 @@ func main() {
 		Status:        "active",
 	}
 
+	knowledgeWebClient := domain.OAuthClient{
+		ClientID:         "knowledge-web",
+		ClientType:       "confidential",
+		ClientSecretHash: hashSecret("knowledge-web-secret"),
+		DisplayName:      "Knowledge",
+		RedirectURIs: []string{
+			"http://localhost:3007/api/auth/oauth2/callback/auth-server",
+		},
+		AllowedScopes: "openid email profile offline_access",
+		Status:        "active",
+	}
+
 	confidentialSecret := "dev-worker-secret"
 	confidentialClient := domain.OAuthClient{
 		ClientID:         "dev-worker",
@@ -81,6 +93,7 @@ func main() {
 
 	upsertClient(ctx, db, repo, idGenerator, publicClient)
 	upsertClient(ctx, db, repo, idGenerator, communityWebClient)
+	upsertClient(ctx, db, repo, idGenerator, knowledgeWebClient)
 	upsertClient(ctx, db, repo, idGenerator, confidentialClient)
 	upsertClient(ctx, db, repo, idGenerator, realtimeServiceClient)
 
@@ -88,12 +101,15 @@ func main() {
 	fmt.Println("- public client_id: dev-browser")
 	fmt.Println("- confidential client_id: community-web")
 	fmt.Println("- confidential client_secret: community-web-secret")
+	fmt.Println("- confidential client_id: knowledge-web")
+	fmt.Println("- confidential client_secret: knowledge-web-secret")
 	fmt.Println("- confidential client_id: dev-worker")
 	fmt.Println("- confidential client_secret: dev-worker-secret")
 	fmt.Println("- confidential client_id: realtime-service")
 	fmt.Println("- confidential client_secret: dev-realtime-secret")
 	fmt.Println("- demo redirect_uri: http://localhost:8050/dev/callback")
 	fmt.Println("- community web redirect_uri: http://localhost:3006/api/auth/oauth2/callback/auth-server")
+	fmt.Println("- knowledge web redirect_uri: http://localhost:3007/api/auth/oauth2/callback/auth-server")
 }
 
 func upsertClient(ctx context.Context, db *gorm.DB, repo persistence.OAuthClientRepository, idGenerator port.IDGenerator, client domain.OAuthClient) {

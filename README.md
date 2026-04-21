@@ -119,12 +119,15 @@ The dev seed command creates:
 - public client: `dev-browser`
 - confidential client: `community-web`
 - confidential secret: `community-web-secret`
+- confidential client: `knowledge-web`
+- confidential secret: `knowledge-web-secret`
 - confidential client: `dev-worker`
 - confidential secret: `dev-worker-secret`
 - confidential client: `realtime-service`
 - confidential secret: `dev-realtime-secret`
 - demo redirect URI: `http://localhost:8050/dev/callback`
 - community web redirect URI: `http://localhost:3006/api/auth/oauth2/callback/auth-server`
+- knowledge web redirect URI: `http://localhost:3007/api/auth/oauth2/callback/auth-server`
 
 Redirect URIs are stored in `oauth_client_redirect_uris` as a one-to-many relation from `oauth_clients`.
 

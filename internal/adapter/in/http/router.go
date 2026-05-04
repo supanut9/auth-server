@@ -144,6 +144,7 @@ func (h Handler) openIDConfiguration(c *gin.Context) {
 		"scopes_supported":                      []string{"openid", "email", "profile", "offline_access", "trading.read", "trading.write"},
 		"response_types_supported":              []string{"code"},
 		"grant_types_supported":                 []string{"authorization_code", "refresh_token", "client_credentials"},
+		"prompt_values_supported":               []string{"login"},
 		"subject_types_supported":               []string{"public"},
 		"id_token_signing_alg_values_supported": []string{h.cfg.JWTSigningAlg},
 		"token_endpoint_auth_methods_supported": []string{"none", "client_secret_post", "client_secret_basic"},
@@ -167,6 +168,7 @@ func (h Handler) authorize(c *gin.Context) {
 	scope := splitProtocolList(c.Query("scope"))
 	state := c.Query("state")
 	nonce := c.Query("nonce")
+	prompt := c.Query("prompt")
 	codeChallenge := c.Query("code_challenge")
 	codeChallengeMethod := c.DefaultQuery("code_challenge_method", "plain")
 
@@ -204,10 +206,12 @@ func (h Handler) authorize(c *gin.Context) {
 	var accountID *string
 	var ssoSessionID *string
 	authTime := time.Now().UTC()
-	if session, err := h.currentSSOSession(c.Request.Context(), c); err == nil {
-		accountID = stringPtr(session.AccountID)
-		ssoSessionID = stringPtr(session.ID)
-		authTime = session.AuthenticatedAt
+	if prompt != "login" {
+		if session, err := h.currentSSOSession(c.Request.Context(), c); err == nil {
+			accountID = stringPtr(session.AccountID)
+			ssoSessionID = stringPtr(session.ID)
+			authTime = session.AuthenticatedAt
+		}
 	}
 
 	request, err := h.app.Flow.StartAuthorization(c.Request.Context(), flowapp.StartAuthorizationRequest{

@@ -35,10 +35,10 @@ func CORSMiddleware(cfg config.Config) gin.HandlerFunc {
 	allowedOrigin := strings.TrimRight(cfg.AuthUIBaseURL, "/")
 
 	return func(c *gin.Context) {
+		c.Header("Vary", "Origin")
 		origin := strings.TrimRight(c.GetHeader("Origin"), "/")
 		if origin == allowedOrigin {
 			c.Header("Access-Control-Allow-Origin", origin)
-			c.Header("Vary", "Origin")
 			c.Header("Access-Control-Allow-Credentials", "true")
 			c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
 			c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -573,6 +573,8 @@ type requestAccountHint struct {
 }
 
 func (h Handler) getAuthorizationRequest(c *gin.Context) {
+	c.Header("Cache-Control", "no-store")
+
 	requestID := c.Param("requestID")
 	request, err := h.app.Requests.FindByID(c.Request.Context(), requestID)
 	if err != nil {

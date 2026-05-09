@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -35,12 +37,13 @@ func main() {
 	repo := persistence.NewOAuthClientRepository(db, idGenerator, clock)
 
 	ctx := context.Background()
+	settings := loadSeedSettings()
 
 	publicClient := domain.OAuthClient{
 		ClientID:      "dev-browser",
 		ClientType:    "public",
 		DisplayName:   "Development Browser Client",
-		RedirectURIs:  []string{"http://localhost:8050/dev/callback"},
+		RedirectURIs:  []string{settings.devBrowserRedirectURI},
 		AllowedScopes: "openid email profile trading.read trading.write",
 		Status:        "active",
 	}
@@ -48,55 +51,47 @@ func main() {
 	communityWebClient := domain.OAuthClient{
 		ClientID:         "community-web",
 		ClientType:       "confidential",
-		ClientSecretHash: hashSecret("community-web-secret"),
+		ClientSecretHash: hashSecret(settings.communityWebClientSecret),
 		DisplayName:      "Community Web",
-		RedirectURIs: []string{
-			"http://localhost:3006/api/auth/oauth2/callback/auth-server",
-		},
-		AllowedScopes: "openid email profile offline_access",
-		Status:        "active",
+		RedirectURIs:     []string{settings.communityWebRedirectURI},
+		AllowedScopes:    "openid email profile offline_access",
+		Status:           "active",
 	}
 
 	knowledgeWebClient := domain.OAuthClient{
 		ClientID:         "knowledge-web",
 		ClientType:       "confidential",
-		ClientSecretHash: hashSecret("knowledge-web-secret"),
+		ClientSecretHash: hashSecret(settings.knowledgeWebClientSecret),
 		DisplayName:      "Knowledge",
-		RedirectURIs: []string{
-			"http://localhost:3007/api/auth/oauth2/callback/auth-server",
-		},
-		AllowedScopes: "openid email profile offline_access",
-		Status:        "active",
+		RedirectURIs:     []string{settings.knowledgeWebRedirectURI},
+		AllowedScopes:    "openid email profile offline_access",
+		Status:           "active",
 	}
 
 	languageWebClient := domain.OAuthClient{
 		ClientID:         "language-web",
 		ClientType:       "confidential",
-		ClientSecretHash: hashSecret("language-web-secret"),
+		ClientSecretHash: hashSecret(settings.languageWebClientSecret),
 		DisplayName:      "Language Coach",
-		RedirectURIs: []string{
-			"http://localhost:3008/api/auth/oauth2/callback/auth-server",
-		},
-		AllowedScopes: "openid email profile offline_access",
-		Status:        "active",
+		RedirectURIs:     []string{settings.languageWebRedirectURI},
+		AllowedScopes:    "openid email profile offline_access",
+		Status:           "active",
 	}
 
-	confidentialSecret := "dev-worker-secret"
 	confidentialClient := domain.OAuthClient{
 		ClientID:         "dev-worker",
 		ClientType:       "confidential",
-		ClientSecretHash: hashSecret(confidentialSecret),
+		ClientSecretHash: hashSecret(settings.devWorkerClientSecret),
 		DisplayName:      "Development Worker Client",
-		RedirectURIs:     []string{"http://localhost:8050/dev/callback"},
+		RedirectURIs:     []string{settings.devWorkerRedirectURI},
 		AllowedScopes:    "trading.read trading.write",
 		Status:           "active",
 	}
 
-	realtimeServiceSecret := "dev-realtime-secret"
 	realtimeServiceClient := domain.OAuthClient{
 		ClientID:         "realtime-service",
 		ClientType:       "confidential",
-		ClientSecretHash: hashSecret(realtimeServiceSecret),
+		ClientSecretHash: hashSecret(settings.realtimeServiceClientSecret),
 		DisplayName:      "Realtime Service",
 		RedirectURIs:     nil,
 		AllowedScopes:    "trading.read trading.write",
@@ -113,19 +108,55 @@ func main() {
 	fmt.Println("seeded oauth clients:")
 	fmt.Println("- public client_id: dev-browser")
 	fmt.Println("- confidential client_id: community-web")
-	fmt.Println("- confidential client_secret: community-web-secret")
+	fmt.Printf("- confidential client_secret: %s\n", settings.communityWebClientSecret)
 	fmt.Println("- confidential client_id: knowledge-web")
-	fmt.Println("- confidential client_secret: knowledge-web-secret")
+	fmt.Printf("- confidential client_secret: %s\n", settings.knowledgeWebClientSecret)
 	fmt.Println("- confidential client_id: language-web")
-	fmt.Println("- confidential client_secret: language-web-secret")
+	fmt.Printf("- confidential client_secret: %s\n", settings.languageWebClientSecret)
 	fmt.Println("- confidential client_id: dev-worker")
-	fmt.Println("- confidential client_secret: dev-worker-secret")
+	fmt.Printf("- confidential client_secret: %s\n", settings.devWorkerClientSecret)
 	fmt.Println("- confidential client_id: realtime-service")
-	fmt.Println("- confidential client_secret: dev-realtime-secret")
-	fmt.Println("- demo redirect_uri: http://localhost:8050/dev/callback")
-	fmt.Println("- community web redirect_uri: http://localhost:3006/api/auth/oauth2/callback/auth-server")
-	fmt.Println("- knowledge web redirect_uri: http://localhost:3007/api/auth/oauth2/callback/auth-server")
-	fmt.Println("- language web redirect_uri: http://localhost:3008/api/auth/oauth2/callback/auth-server")
+	fmt.Printf("- confidential client_secret: %s\n", settings.realtimeServiceClientSecret)
+	fmt.Printf("- demo redirect_uri: %s\n", settings.devBrowserRedirectURI)
+	fmt.Printf("- community web redirect_uri: %s\n", settings.communityWebRedirectURI)
+	fmt.Printf("- knowledge web redirect_uri: %s\n", settings.knowledgeWebRedirectURI)
+	fmt.Printf("- language web redirect_uri: %s\n", settings.languageWebRedirectURI)
+}
+
+type seedSettings struct {
+	devBrowserRedirectURI       string
+	communityWebRedirectURI     string
+	knowledgeWebRedirectURI     string
+	languageWebRedirectURI      string
+	devWorkerRedirectURI        string
+	communityWebClientSecret    string
+	knowledgeWebClientSecret    string
+	languageWebClientSecret     string
+	devWorkerClientSecret       string
+	realtimeServiceClientSecret string
+}
+
+func loadSeedSettings() seedSettings {
+	return seedSettings{
+		devBrowserRedirectURI:       envOrDefault("DEV_BROWSER_REDIRECT_URI", "http://localhost:8050/dev/callback"),
+		communityWebRedirectURI:     envOrDefault("COMMUNITY_WEB_REDIRECT_URI", "http://localhost:3006/api/auth/oauth2/callback/auth-server"),
+		knowledgeWebRedirectURI:     envOrDefault("KNOWLEDGE_WEB_REDIRECT_URI", "http://localhost:3007/api/auth/oauth2/callback/auth-server"),
+		languageWebRedirectURI:      envOrDefault("LANGUAGE_WEB_REDIRECT_URI", "http://localhost:3008/api/auth/oauth2/callback/auth-server"),
+		devWorkerRedirectURI:        envOrDefault("DEV_WORKER_REDIRECT_URI", "http://localhost:8050/dev/callback"),
+		communityWebClientSecret:    envOrDefault("COMMUNITY_WEB_CLIENT_SECRET", "community-web-secret"),
+		knowledgeWebClientSecret:    envOrDefault("KNOWLEDGE_WEB_CLIENT_SECRET", "knowledge-web-secret"),
+		languageWebClientSecret:     envOrDefault("LANGUAGE_WEB_CLIENT_SECRET", "language-web-secret"),
+		devWorkerClientSecret:       envOrDefault("DEV_WORKER_CLIENT_SECRET", "dev-worker-secret"),
+		realtimeServiceClientSecret: envOrDefault("REALTIME_SERVICE_CLIENT_SECRET", "dev-realtime-secret"),
+	}
+}
+
+func envOrDefault(key string, fallback string) string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	return value
 }
 
 func upsertClient(ctx context.Context, db *gorm.DB, repo persistence.OAuthClientRepository, idGenerator port.IDGenerator, client domain.OAuthClient) {

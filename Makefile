@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: dev-keys migrate seed-dev run test build check readyz smoke
+.PHONY: dev-keys migrate seed-dev seed-clients run test build check readyz smoke
 
 dev-keys:
 	mkdir -p secrets
@@ -11,6 +11,9 @@ migrate:
 	atlas migrate apply --env gorm
 
 seed-dev:
+	go run ./cmd/devseed
+
+seed-clients:
 	go run ./cmd/devseed
 
 run:

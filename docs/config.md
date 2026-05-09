@@ -32,7 +32,10 @@ Expected config areas:
   - `community-web` secret: `community-web-secret`
   - `knowledge-web` callback: `http://localhost:3007/api/auth/oauth2/callback/auth-server`
   - `knowledge-web` secret: `knowledge-web-secret`
+  - `language-web` callback: `http://localhost:3008/api/auth/oauth2/callback/auth-server`
+  - `language-web` secret: `language-web-secret`
   - `realtime-service` secret: `dev-realtime-secret`
+  - deployment overrides can be passed through env vars like `LANGUAGE_WEB_REDIRECT_URI`, `COMMUNITY_WEB_REDIRECT_URI`, and `LANGUAGE_WEB_CLIENT_SECRET`
 
 Current local defaults:
 

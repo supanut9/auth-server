@@ -96,12 +96,18 @@ cp .env.example .env
 make dev-keys
 ```
 
+For Vercel-oriented config scaffolding, start from `.env.vercel.example` instead of `.env.example`.
+
 3. apply migrations and seed demo clients:
 
 ```bash
 make migrate
 make seed-dev
 ```
+
+`make seed-clients` is an alias of `make seed-dev`. It becomes useful for deploys because
+`cmd/devseed` now accepts redirect URI and client-secret overrides from env vars such as
+`LANGUAGE_WEB_REDIRECT_URI` and `LANGUAGE_WEB_CLIENT_SECRET`.
 
 4. run the server:
 

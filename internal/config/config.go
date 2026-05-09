@@ -10,46 +10,48 @@ import (
 )
 
 type Config struct {
-	AppName                 string
-	AppEnv                  string
-	HTTPAddr                string
-	PublicBaseURL           string
-	AuthUIBaseURL           string
+	AppName                     string
+	AppEnv                      string
+	HTTPAddr                    string
+	PublicBaseURL               string
+	AuthUIBaseURL               string
 	PostLogoutRedirectAllowlist []string
-	DatabaseURL             string
-	RedisURL                string
-	JWTIssuer               string
-	JWTSigningAlg           string
-	JWTPrivateKeyPath       string
-	JWTPublicKeyPath        string
-	SSOCookieSecure         bool
-	SSOCookieSameSite       string
-	SSOCookieDomain         string
-	GoogleClientID          string
-	GoogleClientSecret      string
-	GoogleRedirectURL       string
-	GitHubClientID          string
-	GitHubClientSecret      string
-	GitHubRedirectURL       string
-	SMTPHost                string
-	SMTPPort                string
-	SMTPUsername            string
-	SMTPPassword            string
-	SMTPFrom                string
-	FixedOTPCode            string
-	SupportAPIToken         string
-	PlatformAudience        string
-	AccessTokenTTL          time.Duration
-	IDTokenTTL              time.Duration
-	RefreshAbsoluteTTL      time.Duration
-	RefreshInactiveTTL      time.Duration
-	OTPChallengeTTL         time.Duration
-	OTPMaxAttempts          int
-	OTPMaxResends           int
-	OTPResendCooldown       time.Duration
-	AuthorizationRequestTTL time.Duration
-	AuthorizationCodeTTL    time.Duration
-	SSOSessionTTL           time.Duration
+	DatabaseURL                 string
+	RedisURL                    string
+	JWTIssuer                   string
+	JWTSigningAlg               string
+	JWTPrivateKeyPath           string
+	JWTPrivateKeyPEM            string
+	JWTPublicKeyPath            string
+	JWTPublicKeyPEM             string
+	SSOCookieSecure             bool
+	SSOCookieSameSite           string
+	SSOCookieDomain             string
+	GoogleClientID              string
+	GoogleClientSecret          string
+	GoogleRedirectURL           string
+	GitHubClientID              string
+	GitHubClientSecret          string
+	GitHubRedirectURL           string
+	SMTPHost                    string
+	SMTPPort                    string
+	SMTPUsername                string
+	SMTPPassword                string
+	SMTPFrom                    string
+	FixedOTPCode                string
+	SupportAPIToken             string
+	PlatformAudience            string
+	AccessTokenTTL              time.Duration
+	IDTokenTTL                  time.Duration
+	RefreshAbsoluteTTL          time.Duration
+	RefreshInactiveTTL          time.Duration
+	OTPChallengeTTL             time.Duration
+	OTPMaxAttempts              int
+	OTPMaxResends               int
+	OTPResendCooldown           time.Duration
+	AuthorizationRequestTTL     time.Duration
+	AuthorizationCodeTTL        time.Duration
+	SSOSessionTTL               time.Duration
 }
 
 func Load() (Config, error) {
@@ -71,14 +73,6 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	jwtIssuer, err := mustEnv("JWT_ISSUER")
-	if err != nil {
-		return Config{}, err
-	}
-	jwtPrivateKeyPath, err := mustEnv("JWT_PRIVATE_KEY_PATH")
-	if err != nil {
-		return Config{}, err
-	}
-	jwtPublicKeyPath, err := mustEnv("JWT_PUBLIC_KEY_PATH")
 	if err != nil {
 		return Config{}, err
 	}
@@ -134,46 +128,48 @@ func Load() (Config, error) {
 	ssocookieDomain := strings.TrimSpace(getEnv("SSO_COOKIE_DOMAIN", ""))
 
 	cfg := Config{
-		AppName:                 getEnv("APP_NAME", "auth-server"),
-		AppEnv:                  appEnv,
-		HTTPAddr:                getEnv("HTTP_ADDR", ":8050"),
-		PublicBaseURL:           publicBaseURL,
-		AuthUIBaseURL:           authUIBaseURL,
+		AppName:                     getEnv("APP_NAME", "auth-server"),
+		AppEnv:                      appEnv,
+		HTTPAddr:                    getEnv("HTTP_ADDR", ":8050"),
+		PublicBaseURL:               publicBaseURL,
+		AuthUIBaseURL:               authUIBaseURL,
 		PostLogoutRedirectAllowlist: splitEnvList("POST_LOGOUT_REDIRECT_ALLOWLIST"),
-		DatabaseURL:             databaseURL,
-		RedisURL:                redisURL,
-		JWTIssuer:               jwtIssuer,
-		JWTSigningAlg:           getEnv("JWT_SIGNING_ALG", "RS256"),
-		JWTPrivateKeyPath:       jwtPrivateKeyPath,
-		JWTPublicKeyPath:        jwtPublicKeyPath,
-		SSOCookieSecure:         ssocookieSecure,
-		SSOCookieSameSite:       ssocookieSameSite,
-		SSOCookieDomain:         ssocookieDomain,
-		GoogleClientID:          getEnv("GOOGLE_CLIENT_ID", ""),
-		GoogleClientSecret:      getEnv("GOOGLE_CLIENT_SECRET", ""),
-		GoogleRedirectURL:       getEnv("GOOGLE_REDIRECT_URL", ""),
-		GitHubClientID:          getEnv("GITHUB_CLIENT_ID", ""),
-		GitHubClientSecret:      getEnv("GITHUB_CLIENT_SECRET", ""),
-		GitHubRedirectURL:       getEnv("GITHUB_REDIRECT_URL", ""),
-		SMTPHost:                getEnv("SMTP_HOST", ""),
-		SMTPPort:                getEnv("SMTP_PORT", "587"),
-		SMTPUsername:            getEnv("SMTP_USERNAME", ""),
-		SMTPPassword:            getEnv("SMTP_PASSWORD", ""),
-		SMTPFrom:                getEnv("SMTP_FROM", ""),
-		FixedOTPCode:            strings.TrimSpace(getEnv("FIXED_OTP_CODE", "")),
-		SupportAPIToken:         getEnv("SUPPORT_API_TOKEN", defaultSupportAPIToken(appEnv)),
-		PlatformAudience:        getEnv("PLATFORM_AUDIENCE", "platform-api"),
-		AccessTokenTTL:          accessTokenTTL,
-		IDTokenTTL:              idTokenTTL,
-		RefreshAbsoluteTTL:      refreshAbsoluteTTL,
-		RefreshInactiveTTL:      refreshInactiveTTL,
-		OTPChallengeTTL:         otpChallengeTTL,
-		OTPMaxAttempts:          otpMaxAttempts,
-		OTPMaxResends:           otpMaxResends,
-		OTPResendCooldown:       otpResendCooldown,
-		AuthorizationRequestTTL: authorizationRequestTTL,
-		AuthorizationCodeTTL:    authorizationCodeTTL,
-		SSOSessionTTL:           ssoSessionTTL,
+		DatabaseURL:                 databaseURL,
+		RedisURL:                    redisURL,
+		JWTIssuer:                   jwtIssuer,
+		JWTSigningAlg:               getEnv("JWT_SIGNING_ALG", "RS256"),
+		JWTPrivateKeyPath:           strings.TrimSpace(getEnv("JWT_PRIVATE_KEY_PATH", "")),
+		JWTPrivateKeyPEM:            strings.TrimSpace(getEnv("JWT_PRIVATE_KEY_PEM", "")),
+		JWTPublicKeyPath:            strings.TrimSpace(getEnv("JWT_PUBLIC_KEY_PATH", "")),
+		JWTPublicKeyPEM:             strings.TrimSpace(getEnv("JWT_PUBLIC_KEY_PEM", "")),
+		SSOCookieSecure:             ssocookieSecure,
+		SSOCookieSameSite:           ssocookieSameSite,
+		SSOCookieDomain:             ssocookieDomain,
+		GoogleClientID:              getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:          getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURL:           getEnv("GOOGLE_REDIRECT_URL", ""),
+		GitHubClientID:              getEnv("GITHUB_CLIENT_ID", ""),
+		GitHubClientSecret:          getEnv("GITHUB_CLIENT_SECRET", ""),
+		GitHubRedirectURL:           getEnv("GITHUB_REDIRECT_URL", ""),
+		SMTPHost:                    getEnv("SMTP_HOST", ""),
+		SMTPPort:                    getEnv("SMTP_PORT", "587"),
+		SMTPUsername:                getEnv("SMTP_USERNAME", ""),
+		SMTPPassword:                getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:                    getEnv("SMTP_FROM", ""),
+		FixedOTPCode:                strings.TrimSpace(getEnv("FIXED_OTP_CODE", "")),
+		SupportAPIToken:             getEnv("SUPPORT_API_TOKEN", defaultSupportAPIToken(appEnv)),
+		PlatformAudience:            getEnv("PLATFORM_AUDIENCE", "platform-api"),
+		AccessTokenTTL:              accessTokenTTL,
+		IDTokenTTL:                  idTokenTTL,
+		RefreshAbsoluteTTL:          refreshAbsoluteTTL,
+		RefreshInactiveTTL:          refreshInactiveTTL,
+		OTPChallengeTTL:             otpChallengeTTL,
+		OTPMaxAttempts:              otpMaxAttempts,
+		OTPMaxResends:               otpMaxResends,
+		OTPResendCooldown:           otpResendCooldown,
+		AuthorizationRequestTTL:     authorizationRequestTTL,
+		AuthorizationCodeTTL:        authorizationCodeTTL,
+		SSOSessionTTL:               ssoSessionTTL,
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -199,6 +195,9 @@ func (c Config) Validate() error {
 		return err
 	}
 	if err := validateCookiePolicy(c); err != nil {
+		return err
+	}
+	if err := validateJWTKeySources(c); err != nil {
 		return err
 	}
 
@@ -244,6 +243,16 @@ func (c Config) Validate() error {
 		return fmt.Errorf("invalid OTP_RESEND_COOLDOWN: must be greater than zero")
 	}
 
+	return nil
+}
+
+func validateJWTKeySources(c Config) error {
+	if strings.TrimSpace(c.JWTPrivateKeyPath) == "" && strings.TrimSpace(c.JWTPrivateKeyPEM) == "" {
+		return fmt.Errorf("missing required env: JWT_PRIVATE_KEY_PATH or JWT_PRIVATE_KEY_PEM")
+	}
+	if strings.TrimSpace(c.JWTPublicKeyPath) == "" && strings.TrimSpace(c.JWTPublicKeyPEM) == "" {
+		return fmt.Errorf("missing required env: JWT_PUBLIC_KEY_PATH or JWT_PUBLIC_KEY_PEM")
+	}
 	return nil
 }
 

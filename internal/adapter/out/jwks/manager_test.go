@@ -82,3 +82,51 @@ func TestManagerSignsAndPublishesJWKS(t *testing.T) {
 		t.Fatal("expected jwks json")
 	}
 }
+
+func TestManagerLoadsKeysFromPEMValues(t *testing.T) {
+	t.Parallel()
+
+	privateKey, publicKey, err := GenerateRSAKeyPair(2048)
+	if err != nil {
+		t.Fatalf("generate key pair: %v", err)
+	}
+
+	privatePEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+	})
+	publicDER, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		t.Fatalf("marshal public key: %v", err)
+	}
+	publicPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: publicDER,
+	})
+
+	manager, err := NewManagerWithSources("RS256", "", "", string(privatePEM), string(publicPEM))
+	if err != nil {
+		t.Fatalf("new manager with pem: %v", err)
+	}
+
+	signed, err := manager.Sign(map[string]any{
+		"iss": "http://localhost:8050",
+		"sub": "account-456",
+		"aud": "platform-api",
+		"exp": float64(4102444800),
+		"iat": float64(1700000000),
+	})
+	if err != nil {
+		t.Fatalf("sign jwt: %v", err)
+	}
+
+	parsed, err := jwt.Parse(signed.Token, func(token *jwt.Token) (any, error) {
+		return publicKey, nil
+	})
+	if err != nil {
+		t.Fatalf("parse jwt: %v", err)
+	}
+	if !parsed.Valid {
+		t.Fatal("expected signed jwt to be valid")
+	}
+}

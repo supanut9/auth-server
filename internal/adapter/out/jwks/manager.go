@@ -37,12 +37,16 @@ type jwkKey struct {
 }
 
 func NewManager(alg string, privateKeyPath string, publicKeyPath string) (Manager, error) {
-	privateKey, err := loadPrivateKey(privateKeyPath)
+	return NewManagerWithSources(alg, privateKeyPath, publicKeyPath, "", "")
+}
+
+func NewManagerWithSources(alg string, privateKeyPath string, publicKeyPath string, privateKeyPEM string, publicKeyPEM string) (Manager, error) {
+	privateKey, err := loadPrivateKeySource(privateKeyPath, privateKeyPEM)
 	if err != nil {
 		return Manager{}, err
 	}
 
-	publicKey, err := loadPublicKey(publicKeyPath)
+	publicKey, err := loadPublicKeySource(publicKeyPath, publicKeyPEM)
 	if err != nil {
 		return Manager{}, err
 	}
@@ -134,7 +138,17 @@ func loadPrivateKey(path string) (*rsa.PrivateKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read private key: %w", err)
 	}
+	return parsePrivateKey(raw)
+}
 
+func loadPrivateKeySource(path string, pemValue string) (*rsa.PrivateKey, error) {
+	if pemValue != "" {
+		return parsePrivateKey([]byte(pemValue))
+	}
+	return loadPrivateKey(path)
+}
+
+func parsePrivateKey(raw []byte) (*rsa.PrivateKey, error) {
 	block, _ := pem.Decode(raw)
 	if block == nil {
 		return nil, fmt.Errorf("decode private key PEM: no PEM block found")
@@ -162,7 +176,17 @@ func loadPublicKey(path string) (*rsa.PublicKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read public key: %w", err)
 	}
+	return parsePublicKey(raw)
+}
 
+func loadPublicKeySource(path string, pemValue string) (*rsa.PublicKey, error) {
+	if pemValue != "" {
+		return parsePublicKey([]byte(pemValue))
+	}
+	return loadPublicKey(path)
+}
+
+func parsePublicKey(raw []byte) (*rsa.PublicKey, error) {
 	block, _ := pem.Decode(raw)
 	if block == nil {
 		return nil, fmt.Errorf("decode public key PEM: no PEM block found")

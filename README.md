@@ -61,7 +61,10 @@ Root planning docs remain authoritative for phase 1:
 
 ## Dev Signing Keys
 
-The service expects RSA PEM files at the configured JWT key paths.
+The service expects RSA signing keys from one of these sources:
+
+- local/server hosts: `JWT_PRIVATE_KEY_PATH` and `JWT_PUBLIC_KEY_PATH`
+- secret-only hosts such as Vercel: `JWT_PRIVATE_KEY_PEM` and `JWT_PUBLIC_KEY_PEM`
 
 Example local generation:
 
@@ -70,6 +73,13 @@ mkdir -p secrets
 openssl genrsa -out secrets/jwt-private.pem 2048
 openssl rsa -in secrets/jwt-private.pem -pubout -out secrets/jwt-public.pem
 ```
+
+## Vercel Shape
+
+- `api/index.go` exposes a function-compatible entrypoint for Vercel
+- `vercel.json` rewrites every request to that handler and restores the original request path via `__vercel_path`
+- for Vercel, prefer storing the RSA key pair in `JWT_PRIVATE_KEY_PEM` and `JWT_PUBLIC_KEY_PEM` secrets instead of file paths
+- the service still requires real `DATABASE_URL`, `REDIS_URL`, provider credentials, and callback URLs that match the deployed auth origin
 
 ## Local Boot
 

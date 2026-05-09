@@ -56,6 +56,8 @@ func baseTestConfig() Config {
 		PublicBaseURL:           "https://auth.example",
 		AuthUIBaseURL:           "https://ui.example",
 		JWTIssuer:               "https://auth.example",
+		JWTPrivateKeyPEM:        "test-private-key",
+		JWTPublicKeyPEM:         "test-public-key",
 		SSOCookieSecure:         true,
 		SSOCookieSameSite:       "lax",
 		OTPMaxAttempts:          6,

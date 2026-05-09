@@ -68,10 +68,6 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	redisURL, err := mustEnv("REDIS_URL")
-	if err != nil {
-		return Config{}, err
-	}
 	jwtIssuer, err := mustEnv("JWT_ISSUER")
 	if err != nil {
 		return Config{}, err
@@ -135,7 +131,7 @@ func Load() (Config, error) {
 		AuthUIBaseURL:               authUIBaseURL,
 		PostLogoutRedirectAllowlist: splitEnvList("POST_LOGOUT_REDIRECT_ALLOWLIST"),
 		DatabaseURL:                 databaseURL,
-		RedisURL:                    redisURL,
+		RedisURL:                    strings.TrimSpace(getEnv("REDIS_URL", "")),
 		JWTIssuer:                   jwtIssuer,
 		JWTSigningAlg:               getEnv("JWT_SIGNING_ALG", "RS256"),
 		JWTPrivateKeyPath:           strings.TrimSpace(getEnv("JWT_PRIVATE_KEY_PATH", "")),

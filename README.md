@@ -8,7 +8,7 @@ Phase-1 authorization server for the platform.
 - Gin
 - GORM
 - PostgreSQL
-- Redis
+- Redis support wiring
 
 ## Local Defaults
 
@@ -79,7 +79,7 @@ openssl rsa -in secrets/jwt-private.pem -pubout -out secrets/jwt-public.pem
 - `api/index.go` exposes a function-compatible entrypoint for Vercel
 - `vercel.json` rewrites every request to that handler and restores the original request path via `__vercel_path`
 - for Vercel, prefer storing the RSA key pair in `JWT_PRIVATE_KEY_PEM` and `JWT_PUBLIC_KEY_PEM` secrets instead of file paths
-- the service still requires real `DATABASE_URL`, `REDIS_URL`, provider credentials, and callback URLs that match the deployed auth origin
+- the service requires a real `DATABASE_URL`; `REDIS_URL` is optional in the current runtime and can stay unset on Vercel until Redis-backed features are added
 
 ## Local Boot
 

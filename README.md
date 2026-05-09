@@ -107,7 +107,9 @@ make seed-dev
 
 `make seed-clients` is an alias of `make seed-dev`. It becomes useful for deploys because
 `cmd/devseed` now accepts redirect URI and client-secret overrides from env vars such as
-`LANGUAGE_WEB_REDIRECT_URI` and `LANGUAGE_WEB_CLIENT_SECRET`.
+`LANGUAGE_WEB_REDIRECT_URI`, `LANGUAGE_WEB_REDIRECT_URIS`, and `LANGUAGE_WEB_CLIENT_SECRET`.
+Use the plural `*_REDIRECT_URIS` form when one client needs both local and deployed callbacks;
+comma-separated and newline-separated lists are both accepted.
 
 4. run the server:
 
@@ -144,8 +146,16 @@ The dev seed command creates:
 - demo redirect URI: `http://localhost:8050/dev/callback`
 - community web redirect URI: `http://localhost:3006/api/auth/oauth2/callback/auth-server`
 - knowledge web redirect URI: `http://localhost:3007/api/auth/oauth2/callback/auth-server`
+- language web redirect URI: `http://localhost:3008/api/auth/oauth2/callback/auth-server`
 
 Redirect URIs are stored in `oauth_client_redirect_uris` as a one-to-many relation from `oauth_clients`.
+
+Example multi-environment reseed:
+
+```bash
+LANGUAGE_WEB_REDIRECT_URIS="http://localhost:3008/api/auth/oauth2/callback/auth-server,https://supanut9-lang-web.vercel.app/api/auth/oauth2/callback/auth-server" \
+go run ./cmd/devseed
+```
 
 Example authorization URL:
 

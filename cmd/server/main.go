@@ -5,7 +5,7 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 
-	"github.com/supanut9/auth-server/internal/httpserver"
+	"github.com/supanut9/auth-server/httpserver"
 )
 
 func main() {

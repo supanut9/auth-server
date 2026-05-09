@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/supanut9/auth-server/internal/httpserver"
+	"github.com/supanut9/auth-server/httpserver"
 )
 
 var (

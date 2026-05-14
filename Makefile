@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: dev-keys migrate seed-dev seed-clients run test build check readyz smoke
+.PHONY: dev-keys migrate seed-dev seed-clients run test build check readyz smoke semgrep trivy install-hooks hook-pre-commit hook-pre-push
 
 dev-keys:
 	mkdir -p secrets
@@ -33,3 +33,19 @@ readyz:
 
 smoke:
 	python3 scripts/smoke.py
+
+semgrep:
+	semgrep scan --config auto --error .
+
+trivy:
+	trivy filesystem --scanners vuln --severity HIGH,CRITICAL --exit-code 1 .
+
+install-hooks:
+	git config core.hooksPath .githooks
+
+hook-pre-commit:
+	$(MAKE) semgrep
+
+hook-pre-push:
+	$(MAKE) semgrep
+	$(MAKE) trivy

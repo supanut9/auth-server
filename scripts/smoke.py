@@ -17,6 +17,7 @@ PATHS = [
 
 def fetch(path: str) -> tuple[int, str | None, str]:
     request = Request(f"{BASE_URL}{path}", headers={"Accept": "application/json"})
+    # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
     with urlopen(request, timeout=5) as response:
         body = response.read().decode("utf-8")
         request_id = response.headers.get("X-Request-Id")

@@ -1,0 +1,29 @@
+name: Security
+
+on:
+  push: {}
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: Semgrep
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep scan --config auto --error .
+
+  trivy:
+    name: Trivy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/setup-trivy@v0.2.3
+        with:
+          cache: true
+          version: v0.70.0
+      - run: trivy filesystem --scanners vuln --severity HIGH,CRITICAL --exit-code 1 .

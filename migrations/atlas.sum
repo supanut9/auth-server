@@ -1,4 +1,4 @@
-h1:K1JnxmuikGw/HIpzScdyUsXXJxLekgGb0odFbV3LWIE=
+h1:fwTBiw4G0pp8uLS5LgHJQ8YC71nedhdlUnzV/udR22I=
 20260401121613_phase1_initial.sql h1:h7lLhYzgqrgfINIf+jjuIQtDF0cUcbp+ZFzdv/f5rwg=
 20260401165000_auth005_provider_otp.sql h1:16LfggQlkAfybXZrEHCRTQWnkybY2QlAOfMpL4CQijE=
 20260401165001_add_refresh_chain_scope.sql h1:cNxrWKzgvHyrk1AkxXLnUWIIPstYZn8L7dE+83gBypY=
@@ -8,3 +8,4 @@ h1:K1JnxmuikGw/HIpzScdyUsXXJxLekgGb0odFbV3LWIE=
 20260516070437_nullable_authorization_request_id.sql h1:TxjXnTA1lwK1RDKb3U6NxKQ1xb984I3+RYwV96qJaP0=
 20260516113543_drop_authorization_requests.sql h1:HHioZI1ksvGx03MKbBG+na8sBUN+iIJ31YUKMoGEn1g=
 20260516120513_add_client_logo_uri.sql h1:vji72SzcrvIChi6e5C+np9hhRt2GOnNoz4XJP8NqfdY=
+20260522162000_ensure_authorization_code_request_nullable.sql h1:9RYR/7Kf8YswGD99csXK4bbe/YowVYVUPkp9kOM6sFQ=

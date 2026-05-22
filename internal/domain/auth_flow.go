@@ -2,33 +2,10 @@ package domain
 
 import "time"
 
-type AuthorizationRequest struct {
-	ID                           string
-	ClientID                     string
-	AccountID                    *string
-	SSOSessionID                 *string
-	RedirectURI                  string
-	RequestedScopes              string
-	State                        string
-	Nonce                        *string
-	PKCECodeChallenge            string
-	PKCECodeChallengeMethod      string
-	PendingProviderName          string
-	PendingProviderAccountID     string
-	PendingProviderEmail         string
-	PendingProviderEmailVerified bool
-	PendingProviderDisplayName   string
-	PendingProviderAvatarURL     string
-	Stage                        string
-	ExpiresAt                    time.Time
-	CreatedAt                    time.Time
-	UpdatedAt                    time.Time
-}
-
 type AuthorizationCode struct {
 	ID                      string
 	CodeHash                string
-	AuthorizationRequestID  string
+	AuthorizationRequestID  *string
 	AccountID               string
 	ClientID                string
 	SSOSessionID            *string

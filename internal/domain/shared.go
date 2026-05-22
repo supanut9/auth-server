@@ -1,6 +1,9 @@
 package domain
 
 const (
+	ClientStatusActive                   = "active"
+	ClientTypePublic                     = "public"
+	ClientTypeConfidential               = "confidential"
 	AccountStatusActive                  = "active"
 	AccessTokenStatusActive              = "active"
 	AccessTokenStatusRevoked             = "revoked"

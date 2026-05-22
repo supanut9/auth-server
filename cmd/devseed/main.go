@@ -78,6 +78,36 @@ func main() {
 		Status:           "active",
 	}
 
+	interviewWebClient := domain.OAuthClient{
+		ClientID:         "interview-web",
+		ClientType:       "confidential",
+		ClientSecretHash: hashSecret(settings.interviewWebClientSecret),
+		DisplayName:      "Interview Prep",
+		RedirectURIs:     settings.interviewWebRedirectURIs,
+		AllowedScopes:    "openid email profile offline_access",
+		Status:           "active",
+	}
+
+	portalWebClient := domain.OAuthClient{
+		ClientID:         "portal-web",
+		ClientType:       "confidential",
+		ClientSecretHash: hashSecret(settings.portalWebClientSecret),
+		DisplayName:      "Portal",
+		RedirectURIs:     settings.portalWebRedirectURIs,
+		AllowedScopes:    "openid email profile offline_access",
+		Status:           "active",
+	}
+
+	tradingWebClient := domain.OAuthClient{
+		ClientID:         "trading-web",
+		ClientType:       "confidential",
+		ClientSecretHash: hashSecret(settings.tradingWebClientSecret),
+		DisplayName:      "Trading",
+		RedirectURIs:     settings.tradingWebRedirectURIs,
+		AllowedScopes:    "openid email profile offline_access",
+		Status:           "active",
+	}
+
 	confidentialClient := domain.OAuthClient{
 		ClientID:         "dev-worker",
 		ClientType:       "confidential",
@@ -85,6 +115,16 @@ func main() {
 		DisplayName:      "Development Worker Client",
 		RedirectURIs:     settings.devWorkerRedirectURIs,
 		AllowedScopes:    "trading.read trading.write",
+		Status:           "active",
+	}
+
+	cmsAdminClient := domain.OAuthClient{
+		ClientID:         "cms-admin",
+		ClientType:       "confidential",
+		ClientSecretHash: hashSecret(settings.cmsAdminClientSecret),
+		DisplayName:      "CMS Admin",
+		RedirectURIs:     settings.cmsAdminRedirectURIs,
+		AllowedScopes:    "openid email profile offline_access",
 		Status:           "active",
 	}
 
@@ -102,7 +142,11 @@ func main() {
 	upsertClient(ctx, db, repo, idGenerator, communityWebClient)
 	upsertClient(ctx, db, repo, idGenerator, knowledgeWebClient)
 	upsertClient(ctx, db, repo, idGenerator, languageWebClient)
+	upsertClient(ctx, db, repo, idGenerator, interviewWebClient)
+	upsertClient(ctx, db, repo, idGenerator, portalWebClient)
+	upsertClient(ctx, db, repo, idGenerator, tradingWebClient)
 	upsertClient(ctx, db, repo, idGenerator, confidentialClient)
+	upsertClient(ctx, db, repo, idGenerator, cmsAdminClient)
 	upsertClient(ctx, db, repo, idGenerator, realtimeServiceClient)
 
 	fmt.Println("seeded oauth clients:")
@@ -113,6 +157,12 @@ func main() {
 	fmt.Printf("- confidential client_secret: %s\n", settings.knowledgeWebClientSecret)
 	fmt.Println("- confidential client_id: language-web")
 	fmt.Printf("- confidential client_secret: %s\n", settings.languageWebClientSecret)
+	fmt.Println("- confidential client_id: interview-web")
+	fmt.Printf("- confidential client_secret: %s\n", settings.interviewWebClientSecret)
+	fmt.Println("- confidential client_id: portal-web")
+	fmt.Printf("- confidential client_secret: %s\n", settings.portalWebClientSecret)
+	fmt.Println("- confidential client_id: trading-web")
+	fmt.Printf("- confidential client_secret: %s\n", settings.tradingWebClientSecret)
 	fmt.Println("- confidential client_id: dev-worker")
 	fmt.Printf("- confidential client_secret: %s\n", settings.devWorkerClientSecret)
 	fmt.Println("- confidential client_id: realtime-service")
@@ -121,6 +171,9 @@ func main() {
 	fmt.Printf("- community web redirect_uris: %s\n", strings.Join(settings.communityWebRedirectURIs, ", "))
 	fmt.Printf("- knowledge web redirect_uris: %s\n", strings.Join(settings.knowledgeWebRedirectURIs, ", "))
 	fmt.Printf("- language web redirect_uris: %s\n", strings.Join(settings.languageWebRedirectURIs, ", "))
+	fmt.Printf("- interview web redirect_uris: %s\n", strings.Join(settings.interviewWebRedirectURIs, ", "))
+	fmt.Printf("- portal web redirect_uris: %s\n", strings.Join(settings.portalWebRedirectURIs, ", "))
+	fmt.Printf("- trading web redirect_uris: %s\n", strings.Join(settings.tradingWebRedirectURIs, ", "))
 }
 
 type seedSettings struct {
@@ -128,10 +181,18 @@ type seedSettings struct {
 	communityWebRedirectURIs    []string
 	knowledgeWebRedirectURIs    []string
 	languageWebRedirectURIs     []string
+	interviewWebRedirectURIs    []string
+	portalWebRedirectURIs       []string
+	tradingWebRedirectURIs      []string
+	cmsAdminRedirectURIs        []string
 	devWorkerRedirectURIs       []string
 	communityWebClientSecret    string
 	knowledgeWebClientSecret    string
 	languageWebClientSecret     string
+	interviewWebClientSecret    string
+	portalWebClientSecret       string
+	tradingWebClientSecret      string
+	cmsAdminClientSecret        string
 	devWorkerClientSecret       string
 	realtimeServiceClientSecret string
 }
@@ -142,10 +203,18 @@ func loadSeedSettings() seedSettings {
 		communityWebRedirectURIs:    redirectURIsFromEnv("COMMUNITY_WEB_REDIRECT_URIS", "COMMUNITY_WEB_REDIRECT_URI", "http://localhost:3006/api/auth/oauth2/callback/auth-server"),
 		knowledgeWebRedirectURIs:    redirectURIsFromEnv("KNOWLEDGE_WEB_REDIRECT_URIS", "KNOWLEDGE_WEB_REDIRECT_URI", "http://localhost:3007/api/auth/oauth2/callback/auth-server"),
 		languageWebRedirectURIs:     redirectURIsFromEnv("LANGUAGE_WEB_REDIRECT_URIS", "LANGUAGE_WEB_REDIRECT_URI", "http://localhost:3008/api/auth/oauth2/callback/auth-server"),
+		interviewWebRedirectURIs:    redirectURIsFromEnv("INTERVIEW_WEB_REDIRECT_URIS", "INTERVIEW_WEB_REDIRECT_URI", "http://localhost:4301/api/auth/oauth2/callback/auth-server"),
+		portalWebRedirectURIs:       redirectURIsFromEnv("PORTAL_WEB_REDIRECT_URIS", "PORTAL_WEB_REDIRECT_URI", "http://localhost:3009/api/auth/oauth2/callback/auth-server"),
+		tradingWebRedirectURIs:      redirectURIsFromEnv("TRADING_WEB_REDIRECT_URIS", "TRADING_WEB_REDIRECT_URI", "http://localhost:3011/api/auth/oauth2/callback/auth-server"),
+		cmsAdminRedirectURIs:        redirectURIsFromEnv("CMS_ADMIN_REDIRECT_URIS", "CMS_ADMIN_REDIRECT_URI", "http://localhost:4101/auth/callback"),
 		devWorkerRedirectURIs:       redirectURIsFromEnv("DEV_WORKER_REDIRECT_URIS", "DEV_WORKER_REDIRECT_URI", "http://localhost:8050/dev/callback"),
 		communityWebClientSecret:    envOrDefault("COMMUNITY_WEB_CLIENT_SECRET", "community-web-secret"),
 		knowledgeWebClientSecret:    envOrDefault("KNOWLEDGE_WEB_CLIENT_SECRET", "knowledge-web-secret"),
 		languageWebClientSecret:     envOrDefault("LANGUAGE_WEB_CLIENT_SECRET", "language-web-secret"),
+		interviewWebClientSecret:    envOrDefault("INTERVIEW_WEB_CLIENT_SECRET", "interview-web-secret"),
+		portalWebClientSecret:       envOrDefault("PORTAL_WEB_CLIENT_SECRET", "portal-web-secret"),
+		tradingWebClientSecret:      envOrDefault("TRADING_WEB_CLIENT_SECRET", "trading-web-secret"),
+		cmsAdminClientSecret:        envOrDefault("CMS_ADMIN_CLIENT_SECRET", "cms-admin-secret"),
 		devWorkerClientSecret:       envOrDefault("DEV_WORKER_CLIENT_SECRET", "dev-worker-secret"),
 		realtimeServiceClientSecret: envOrDefault("REALTIME_SERVICE_CLIENT_SECRET", "dev-realtime-secret"),
 	}

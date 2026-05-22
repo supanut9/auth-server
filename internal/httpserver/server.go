@@ -13,6 +13,7 @@ import (
 	"github.com/supanut9/auth-server/internal/application"
 	flowapp "github.com/supanut9/auth-server/internal/application/flow"
 	identityapp "github.com/supanut9/auth-server/internal/application/identity"
+	"github.com/supanut9/auth-server/internal/application/oauth"
 	tokenapp "github.com/supanut9/auth-server/internal/application/token"
 	"github.com/supanut9/auth-server/internal/config"
 	"github.com/supanut9/auth-server/internal/port"
@@ -69,7 +70,6 @@ func NewRouterFromEnv() (*gin.Engine, config.Config, error) {
 	accountRepository := persistence.NewAccountRepository(db, idGenerator, clock)
 	clientRepository := persistence.NewOAuthClientRepository(db, idGenerator, clock)
 	accountProviderRepository := persistence.NewAccountProviderRepository(db, idGenerator, clock)
-	authorizationRequestRepository := persistence.NewAuthorizationRequestRepository(db, idGenerator, clock)
 	authorizationCodeRepository := persistence.NewAuthorizationCodeRepository(db, idGenerator, clock)
 	consentGrantRepository := persistence.NewConsentGrantRepository(db, idGenerator, clock)
 	ssoSessionRepository := persistence.NewSSOSessionRepository(db, idGenerator, clock)
@@ -77,16 +77,24 @@ func NewRouterFromEnv() (*gin.Engine, config.Config, error) {
 	refreshTokenRepository := persistence.NewRefreshTokenRepository(db, idGenerator)
 	accessTokenRepository := persistence.NewAccessTokenRepository(db, idGenerator, clock)
 	otpChallengeRepository := persistence.NewOTPChallengeRepository(db, idGenerator, clock)
+	signedStateJTIRepository := persistence.NewSignedStateJTIRepository(db, clock)
+
+	envelopeSigner, err := oauth.NewEnvelopeSigner(
+		[]byte(cfg.FlowEnvelopeSecret),
+		cfg.FlowEnvelopeTTL,
+		persistence.JTIStoreAdapter{Repo: signedStateJTIRepository},
+	)
+	if err != nil {
+		return nil, config.Config{}, err
+	}
 
 	flowService := flowapp.NewService(
 		flowapp.Config{
-			AuthorizationRequestTTL: cfg.AuthorizationRequestTTL,
-			AuthorizationCodeTTL:    cfg.AuthorizationCodeTTL,
-			SSOSessionTTL:           cfg.SSOSessionTTL,
+			AuthorizationCodeTTL: cfg.AuthorizationCodeTTL,
+			SSOSessionTTL:        cfg.SSOSessionTTL,
 		},
 		clock,
 		idGenerator,
-		authorizationRequestRepository,
 		authorizationCodeRepository,
 		consentGrantRepository,
 		ssoSessionRepository,
@@ -111,7 +119,6 @@ func NewRouterFromEnv() (*gin.Engine, config.Config, error) {
 		otpCodeGenerator,
 		accountRepository,
 		accountProviderRepository,
-		authorizationRequestRepository,
 		otpChallengeRepository,
 		mailSender,
 		flowService,
@@ -151,12 +158,12 @@ func NewRouterFromEnv() (*gin.Engine, config.Config, error) {
 		Accounts:      accountRepository,
 		Clients:       clientRepository,
 		SSOSessions:   ssoSessionRepository,
-		Requests:      authorizationRequestRepository,
 		JWKS:          jwksManager,
 		Verifier:      jwksManager,
 		Providers:     providers,
 		RefreshChains: refreshTokenChainRepository,
 		RefreshTokens: refreshTokenRepository,
+		Envelope:      envelopeSigner,
 	}
 
 	router := gin.New()

@@ -2,20 +2,22 @@ package port
 
 import (
 	"context"
+	"time"
 
 	"github.com/supanut9/auth-server/internal/domain"
 )
-
-type AuthorizationRequestRepository interface {
-	Create(ctx context.Context, request domain.AuthorizationRequest) (domain.AuthorizationRequest, error)
-	FindByID(ctx context.Context, id string) (domain.AuthorizationRequest, error)
-	Update(ctx context.Context, request domain.AuthorizationRequest) (domain.AuthorizationRequest, error)
-}
 
 type AuthorizationCodeRepository interface {
 	Create(ctx context.Context, code domain.AuthorizationCode) (domain.AuthorizationCode, error)
 	FindByCodeHash(ctx context.Context, codeHash string) (domain.AuthorizationCode, error)
 	Update(ctx context.Context, code domain.AuthorizationCode) (domain.AuthorizationCode, error)
+}
+
+// SignedStateJTIRepository tracks consumed envelope JTIs (replay protection for
+// the OAuth `state` we sign and send to external providers).
+type SignedStateJTIRepository interface {
+	Insert(ctx context.Context, jti string, expiresAt time.Time) error
+	PruneExpired(ctx context.Context, now time.Time) error
 }
 
 type ConsentGrantRepository interface {

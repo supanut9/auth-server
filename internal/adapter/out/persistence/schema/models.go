@@ -40,6 +40,7 @@ type OAuthClientModel struct {
 	ClientType       string                        `gorm:"size:32;not null;index"`
 	ClientSecretHash string                        `gorm:"size:255;not null;default:''"`
 	DisplayName      string                        `gorm:"size:255;not null"`
+	LogoURI          string                        `gorm:"size:2048;not null;default:''"`
 	RedirectURIs     []OAuthClientRedirectURIModel `gorm:"foreignKey:ClientID;references:PublicClientID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	AllowedScopes    string                        `gorm:"type:text;not null"`
 	Status           string                        `gorm:"size:32;not null;index"`
@@ -64,53 +65,22 @@ func (OAuthClientRedirectURIModel) TableName() string {
 	return "oauth_client_redirect_uris"
 }
 
-type AuthorizationRequestModel struct {
-	ID                           string           `gorm:"type:uuid;primaryKey"`
-	ClientID                     string           `gorm:"size:128;not null;index"`
-	Client                       OAuthClientModel `gorm:"foreignKey:ClientID;references:PublicClientID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-	AccountID                    *string          `gorm:"type:uuid;index"`
-	Account                      *AccountModel    `gorm:"foreignKey:AccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	SSOSessionID                 *string          `gorm:"type:uuid;index"`
-	SSOSession                   *SSOSessionModel `gorm:"foreignKey:SSOSessionID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	RedirectURI                  string           `gorm:"size:2048;not null"`
-	RequestedScopes              string           `gorm:"type:text;not null"`
-	State                        string           `gorm:"size:512;not null"`
-	Nonce                        *string          `gorm:"size:512"`
-	PKCECodeChallenge            string           `gorm:"size:255;not null;default:''"`
-	PKCECodeChallengeMethod      string           `gorm:"size:32;not null;default:''"`
-	PendingProviderName          string           `gorm:"size:64;not null;default:''"`
-	PendingProviderAccountID     string           `gorm:"size:255;not null;default:''"`
-	PendingProviderEmail         string           `gorm:"size:320;not null;default:''"`
-	PendingProviderEmailVerified bool             `gorm:"not null;default:false"`
-	PendingProviderDisplayName   string           `gorm:"size:255;not null;default:''"`
-	PendingProviderAvatarURL     string           `gorm:"size:2048;not null;default:''"`
-	Stage                        string           `gorm:"size:64;not null;index"`
-	ExpiresAt                    time.Time        `gorm:"not null;index"`
-	CreatedAt                    time.Time        `gorm:"not null"`
-	UpdatedAt                    time.Time        `gorm:"not null"`
-}
-
-func (AuthorizationRequestModel) TableName() string {
-	return "authorization_requests"
-}
-
 type AuthorizationCodeModel struct {
-	ID                      string                    `gorm:"type:uuid;primaryKey"`
-	CodeHash                string                    `gorm:"size:255;not null;uniqueIndex"`
-	AuthorizationRequestID  string                    `gorm:"type:uuid;not null;index"`
-	AuthorizationRequest    AuthorizationRequestModel `gorm:"foreignKey:AuthorizationRequestID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-	AccountID               string                    `gorm:"type:uuid;not null;index"`
-	Account                 AccountModel              `gorm:"foreignKey:AccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-	ClientID                string                    `gorm:"size:128;not null;index"`
-	Client                  OAuthClientModel          `gorm:"foreignKey:ClientID;references:PublicClientID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
-	SSOSessionID            *string                   `gorm:"type:uuid;index"`
-	SSOSession              *SSOSessionModel          `gorm:"foreignKey:SSOSessionID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	RedirectURI             string                    `gorm:"size:2048;not null"`
-	GrantedScopes           string                    `gorm:"type:text;not null"`
-	PKCECodeChallenge       string                    `gorm:"size:255;not null;default:''"`
-	PKCECodeChallengeMethod string                    `gorm:"size:32;not null;default:''"`
-	AuthTime                time.Time                 `gorm:"not null"`
-	ExpiresAt               time.Time                 `gorm:"not null;index"`
+	ID                      string           `gorm:"type:uuid;primaryKey"`
+	CodeHash                string           `gorm:"size:255;not null;uniqueIndex"`
+	AuthorizationRequestID  *string          `gorm:"type:uuid;index"`
+	AccountID               string           `gorm:"type:uuid;not null;index"`
+	Account                 AccountModel     `gorm:"foreignKey:AccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	ClientID                string           `gorm:"size:128;not null;index"`
+	Client                  OAuthClientModel `gorm:"foreignKey:ClientID;references:PublicClientID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	SSOSessionID            *string          `gorm:"type:uuid;index"`
+	SSOSession              *SSOSessionModel `gorm:"foreignKey:SSOSessionID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	RedirectURI             string           `gorm:"size:2048;not null"`
+	GrantedScopes           string           `gorm:"type:text;not null"`
+	PKCECodeChallenge       string           `gorm:"size:255;not null;default:''"`
+	PKCECodeChallengeMethod string           `gorm:"size:32;not null;default:''"`
+	AuthTime                time.Time        `gorm:"not null"`
+	ExpiresAt               time.Time        `gorm:"not null;index"`
 	ConsumedAt              *time.Time
 	CreatedAt               time.Time `gorm:"not null"`
 }
@@ -194,15 +164,14 @@ func (ConsentGrantModel) TableName() string {
 }
 
 type OTPChallengeModel struct {
-	ID                     string                     `gorm:"type:uuid;primaryKey"`
-	AuthorizationRequestID *string                    `gorm:"type:uuid;index"`
-	AuthorizationRequest   *AuthorizationRequestModel `gorm:"foreignKey:AuthorizationRequestID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Email                  string                     `gorm:"size:320;not null;index"`
-	Purpose                string                     `gorm:"size:64;not null;index"`
-	CodeHash               string                     `gorm:"size:255;not null"`
-	AttemptCount           int                        `gorm:"type:integer;not null;default:0"`
-	ResendCount            int                        `gorm:"type:integer;not null;default:0"`
-	ExpiresAt              time.Time                  `gorm:"not null;index"`
+	ID                     string    `gorm:"type:uuid;primaryKey"`
+	AuthorizationRequestID *string   `gorm:"type:uuid;index"`
+	Email                  string    `gorm:"size:320;not null;index"`
+	Purpose                string    `gorm:"size:64;not null;index"`
+	CodeHash               string    `gorm:"size:255;not null"`
+	AttemptCount           int       `gorm:"type:integer;not null;default:0"`
+	ResendCount            int       `gorm:"type:integer;not null;default:0"`
+	ExpiresAt              time.Time `gorm:"not null;index"`
 	VerifiedAt             *time.Time
 	LastSentAt             time.Time `gorm:"not null;index"`
 	CreatedAt              time.Time `gorm:"not null"`
@@ -235,12 +204,24 @@ func (AccessTokenModel) TableName() string {
 	return "access_tokens"
 }
 
+// SignedStateJTIModel tracks already-consumed envelope JTIs so a stolen-and-replayed
+// provider callback URL can't authenticate twice. Inserted on first verify; rejected
+// on second. Pruned periodically by a background job (expiry-based).
+type SignedStateJTIModel struct {
+	JTI       string    `gorm:"primaryKey;size:64"`
+	ExpiresAt time.Time `gorm:"not null;index"`
+	CreatedAt time.Time `gorm:"not null"`
+}
+
+func (SignedStateJTIModel) TableName() string {
+	return "signed_state_jtis"
+}
+
 var Models = []any{
 	&AccountModel{},
 	&AccountProviderModel{},
 	&OAuthClientModel{},
 	&OAuthClientRedirectURIModel{},
-	&AuthorizationRequestModel{},
 	&AuthorizationCodeModel{},
 	&SSOSessionModel{},
 	&RefreshTokenChainModel{},
@@ -248,4 +229,5 @@ var Models = []any{
 	&ConsentGrantModel{},
 	&OTPChallengeModel{},
 	&AccessTokenModel{},
+	&SignedStateJTIModel{},
 }

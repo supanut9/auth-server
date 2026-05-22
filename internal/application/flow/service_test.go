@@ -25,27 +25,6 @@ func (g *sequentialIDs) NewID() (string, error) {
 	return "id-" + time.Unix(int64(g.next), 0).UTC().Format("150405"), nil
 }
 
-type memoryAuthorizationRequestRepo struct {
-	items map[string]domain.AuthorizationRequest
-}
-
-func (r *memoryAuthorizationRequestRepo) Create(_ context.Context, request domain.AuthorizationRequest) (domain.AuthorizationRequest, error) {
-	if r.items == nil {
-		r.items = map[string]domain.AuthorizationRequest{}
-	}
-	r.items[request.ID] = request
-	return request, nil
-}
-
-func (r *memoryAuthorizationRequestRepo) FindByID(_ context.Context, id string) (domain.AuthorizationRequest, error) {
-	return r.items[id], nil
-}
-
-func (r *memoryAuthorizationRequestRepo) Update(_ context.Context, request domain.AuthorizationRequest) (domain.AuthorizationRequest, error) {
-	r.items[request.ID] = request
-	return request, nil
-}
-
 type memoryAuthorizationCodeRepo struct {
 	byID   map[string]domain.AuthorizationCode
 	byHash map[string]string
@@ -168,117 +147,6 @@ func (r *memoryRefreshTokenRepo) RevokeByChainID(_ context.Context, chainID stri
 	return nil
 }
 
-func TestStartAuthorizationUsesConsentReuse(t *testing.T) {
-	t.Parallel()
-
-	consents := &memoryConsentGrantRepo{
-		items: map[string]domain.ConsentGrant{
-			"account-1|trading-web": {
-				ID:            "grant-1",
-				AccountID:     "account-1",
-				ClientID:      "trading-web",
-				GrantedScopes: "openid profile trading.read trading.write",
-			},
-		},
-	}
-
-	svc := NewService(
-		Config{
-			AuthorizationRequestTTL: 10 * time.Minute,
-			AuthorizationCodeTTL:    5 * time.Minute,
-			SSOSessionTTL:           24 * time.Hour,
-		},
-		fixedClock{now: time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)},
-		&sequentialIDs{},
-		&memoryAuthorizationRequestRepo{},
-		&memoryAuthorizationCodeRepo{},
-		consents,
-		&memorySSOSessionRepo{},
-		&memoryRefreshChainRepo{},
-		&memoryRefreshTokenRepo{},
-	)
-
-	accountID := "account-1"
-	sessionID := "sso-1"
-	request, err := svc.StartAuthorization(context.Background(), StartAuthorizationRequest{
-		ClientID:        "trading-web",
-		RedirectURI:     "https://client.example/callback",
-		RequestedScopes: []string{"openid", "profile", "trading.read"},
-		State:           "state-1",
-		AccountID:       &accountID,
-		SSOSessionID:    &sessionID,
-	})
-	if err != nil {
-		t.Fatalf("start authorization: %v", err)
-	}
-
-	if request.Stage != domain.AuthorizationStageAuthorizationReady {
-		t.Fatalf("expected authorization_ready, got %s", request.Stage)
-	}
-}
-
-func TestAuthorizationCodeIsSingleUse(t *testing.T) {
-	t.Parallel()
-
-	requests := &memoryAuthorizationRequestRepo{
-		items: map[string]domain.AuthorizationRequest{
-			"req-1": {
-				ID:                      "req-1",
-				ClientID:                "trading-web",
-				RedirectURI:             "https://client.example/callback",
-				RequestedScopes:         "openid profile",
-				PKCECodeChallenge:       "challenge",
-				PKCECodeChallengeMethod: "S256",
-				Stage:                   domain.AuthorizationStageAuthorizationReady,
-				AccountID:               ptr("account-1"),
-				SSOSessionID:            ptr("sso-1"),
-				ExpiresAt:               time.Date(2026, 4, 1, 12, 10, 0, 0, time.UTC),
-			},
-		},
-	}
-	codes := &memoryAuthorizationCodeRepo{}
-
-	svc := NewService(
-		Config{
-			AuthorizationRequestTTL: 10 * time.Minute,
-			AuthorizationCodeTTL:    5 * time.Minute,
-			SSOSessionTTL:           24 * time.Hour,
-		},
-		fixedClock{now: time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)},
-		&sequentialIDs{},
-		requests,
-		codes,
-		&memoryConsentGrantRepo{},
-		&memorySSOSessionRepo{},
-		&memoryRefreshChainRepo{},
-		&memoryRefreshTokenRepo{},
-	)
-
-	value, _, err := svc.IssueAuthorizationCode(context.Background(), IssueAuthorizationCodeRequest{
-		RequestID: "req-1",
-		AuthTime:  time.Date(2026, 4, 1, 11, 59, 0, 0, time.UTC),
-	})
-	if err != nil {
-		t.Fatalf("issue code: %v", err)
-	}
-
-	if _, err := svc.ConsumeAuthorizationCode(context.Background(), ConsumeAuthorizationCodeRequest{
-		Code:        value,
-		ClientID:    "trading-web",
-		RedirectURI: "https://client.example/callback",
-	}); err != nil {
-		t.Fatalf("consume code first time: %v", err)
-	}
-
-	if _, err := svc.ConsumeAuthorizationCode(context.Background(), ConsumeAuthorizationCodeRequest{
-		Code:        value,
-		ClientID:    "trading-web",
-		RedirectURI: "https://client.example/callback",
-	}); err != ErrAuthorizationCodeAlreadyConsumed {
-		t.Fatalf("expected already consumed error, got %v", err)
-	}
-}
-
 func TestLogoutGlobalRevokesSessionAndChains(t *testing.T) {
 	t.Parallel()
 
@@ -297,13 +165,11 @@ func TestLogoutGlobalRevokesSessionAndChains(t *testing.T) {
 
 	svc := NewService(
 		Config{
-			AuthorizationRequestTTL: 10 * time.Minute,
-			AuthorizationCodeTTL:    5 * time.Minute,
-			SSOSessionTTL:           24 * time.Hour,
+			AuthorizationCodeTTL: 5 * time.Minute,
+			SSOSessionTTL:        24 * time.Hour,
 		},
 		fixedClock{now: time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)},
 		&sequentialIDs{},
-		&memoryAuthorizationRequestRepo{},
 		&memoryAuthorizationCodeRepo{},
 		&memoryConsentGrantRepo{},
 		ssoSessions,

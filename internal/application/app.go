@@ -3,6 +3,7 @@ package application
 import (
 	"github.com/supanut9/auth-server/internal/application/flow"
 	"github.com/supanut9/auth-server/internal/application/identity"
+	"github.com/supanut9/auth-server/internal/application/oauth"
 	"github.com/supanut9/auth-server/internal/application/token"
 	"github.com/supanut9/auth-server/internal/port"
 )
@@ -15,10 +16,12 @@ type App struct {
 	Accounts      port.AccountRepository
 	Clients       port.OAuthClientRepository
 	SSOSessions   port.SSOSessionRepository
-	Requests      port.AuthorizationRequestRepository
 	JWKS          port.JWKSProvider
 	Verifier      port.JWTVerifier
 	Providers     map[string]port.IdentityProvider
 	RefreshChains port.RefreshTokenChainRepository
 	RefreshTokens port.RefreshTokenRepository
+	// Envelope signs OAuth `state` for external-provider bounces (Google/GitHub).
+	// Nil-safe: handlers that don't yet use it can ignore.
+	Envelope *oauth.EnvelopeSigner
 }

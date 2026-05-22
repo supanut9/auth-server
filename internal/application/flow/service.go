@@ -14,46 +14,36 @@ import (
 )
 
 type Config struct {
-	AuthorizationRequestTTL time.Duration
-	AuthorizationCodeTTL    time.Duration
-	SSOSessionTTL           time.Duration
+	AuthorizationCodeTTL time.Duration
+	SSOSessionTTL        time.Duration
 }
 
 type Service struct {
-	clock                   port.Clock
-	idGenerator             port.IDGenerator
-	authorizationRequests   port.AuthorizationRequestRepository
-	authorizationCodes      port.AuthorizationCodeRepository
-	consentGrants           port.ConsentGrantRepository
-	ssoSessions             port.SSOSessionRepository
-	refreshTokenChains      port.RefreshTokenChainRepository
-	refreshTokens           port.RefreshTokenRepository
-	authorizationRequestTTL time.Duration
-	authorizationCodeTTL    time.Duration
-	ssoSessionTTL           time.Duration
+	clock                port.Clock
+	idGenerator          port.IDGenerator
+	authorizationCodes   port.AuthorizationCodeRepository
+	consentGrants        port.ConsentGrantRepository
+	ssoSessions          port.SSOSessionRepository
+	refreshTokenChains   port.RefreshTokenChainRepository
+	refreshTokens        port.RefreshTokenRepository
+	authorizationCodeTTL time.Duration
+	ssoSessionTTL        time.Duration
 }
 
-type StartAuthorizationRequest struct {
+// IssueDirectCodeRequest is the stateless-flow input for issuing an
+// authorization code without going through an AuthorizationRequest record.
+// The caller (typically the new /authorize or /consent handlers in the
+// stateless flow) has already validated the OAuth params via oauth.Validate
+// and resolved the subject via the SSO session cookie.
+type IssueDirectCodeRequest struct {
+	AccountID               string
 	ClientID                string
+	SSOSessionID            *string
 	RedirectURI             string
-	RequestedScopes         []string
-	State                   string
-	Nonce                   *string
+	Scopes                  []string
 	PKCECodeChallenge       string
 	PKCECodeChallengeMethod string
-	AccountID               *string
-	SSOSessionID            *string
-}
-
-type AttachSessionRequest struct {
-	RequestID    string
-	AccountID    string
-	SSOSessionID string
-}
-
-type IssueAuthorizationCodeRequest struct {
-	RequestID string
-	AuthTime  time.Time
+	AuthTime                time.Time
 }
 
 type ConsumeAuthorizationCodeRequest struct {
@@ -66,7 +56,6 @@ func NewService(
 	cfg Config,
 	clock port.Clock,
 	idGenerator port.IDGenerator,
-	authorizationRequests port.AuthorizationRequestRepository,
 	authorizationCodes port.AuthorizationCodeRepository,
 	consentGrants port.ConsentGrantRepository,
 	ssoSessions port.SSOSessionRepository,
@@ -74,167 +63,43 @@ func NewService(
 	refreshTokens port.RefreshTokenRepository,
 ) Service {
 	return Service{
-		clock:                   clock,
-		idGenerator:             idGenerator,
-		authorizationRequests:   authorizationRequests,
-		authorizationCodes:      authorizationCodes,
-		consentGrants:           consentGrants,
-		ssoSessions:             ssoSessions,
-		refreshTokenChains:      refreshTokenChains,
-		refreshTokens:           refreshTokens,
-		authorizationRequestTTL: cfg.AuthorizationRequestTTL,
-		authorizationCodeTTL:    cfg.AuthorizationCodeTTL,
-		ssoSessionTTL:           cfg.SSOSessionTTL,
+		clock:                clock,
+		idGenerator:          idGenerator,
+		authorizationCodes:   authorizationCodes,
+		consentGrants:        consentGrants,
+		ssoSessions:          ssoSessions,
+		refreshTokenChains:   refreshTokenChains,
+		refreshTokens:        refreshTokens,
+		authorizationCodeTTL: cfg.AuthorizationCodeTTL,
+		ssoSessionTTL:        cfg.SSOSessionTTL,
 	}
 }
 
-func (s Service) StartAuthorization(ctx context.Context, req StartAuthorizationRequest) (domain.AuthorizationRequest, error) {
-	now := s.clock.Now().UTC()
-	scopes := normalizeScopes(req.RequestedScopes)
-
-	request := domain.AuthorizationRequest{
-		ClientID:                req.ClientID,
-		AccountID:               req.AccountID,
-		SSOSessionID:            req.SSOSessionID,
-		RedirectURI:             req.RedirectURI,
-		RequestedScopes:         strings.Join(scopes, " "),
-		State:                   req.State,
-		Nonce:                   req.Nonce,
-		PKCECodeChallenge:       req.PKCECodeChallenge,
-		PKCECodeChallengeMethod: req.PKCECodeChallengeMethod,
-		Stage:                   domain.AuthorizationStageLoginRequired,
-		ExpiresAt:               now.Add(s.authorizationRequestTTL),
-		CreatedAt:               now,
-		UpdatedAt:               now,
-	}
-
-	if req.AccountID != nil && req.SSOSessionID != nil {
-		grant, err := s.consentGrants.FindByAccountAndClient(ctx, *req.AccountID, req.ClientID)
-		if err == nil && scopeSubset(scopes, splitScopes(grant.GrantedScopes)) {
-			request.Stage = domain.AuthorizationStageAuthorizationReady
-		} else {
-			request.Stage = domain.AuthorizationStageConsentRequired
-		}
-	}
-
-	return s.authorizationRequests.Create(ctx, request)
-}
-
-func (s Service) MarkProviderRedirect(ctx context.Context, requestID string) (domain.AuthorizationRequest, error) {
-	request, err := s.authorizationRequests.FindByID(ctx, requestID)
-	if err != nil {
-		return domain.AuthorizationRequest{}, err
-	}
-	request.Stage = domain.AuthorizationStageProviderRedirect
-	return s.authorizationRequests.Update(ctx, request)
-}
-
-func (s Service) RequireOTP(ctx context.Context, requestID string) (domain.AuthorizationRequest, error) {
-	request, err := s.authorizationRequests.FindByID(ctx, requestID)
-	if err != nil {
-		return domain.AuthorizationRequest{}, err
-	}
-	request.Stage = domain.AuthorizationStageOTPRequired
-	return s.authorizationRequests.Update(ctx, request)
-}
-
-func (s Service) AttachAuthenticatedSession(ctx context.Context, req AttachSessionRequest) (domain.AuthorizationRequest, error) {
-	request, err := s.authorizationRequests.FindByID(ctx, req.RequestID)
-	if err != nil {
-		return domain.AuthorizationRequest{}, err
-	}
-	if s.clock.Now().UTC().After(request.ExpiresAt) {
-		request.Stage = domain.AuthorizationStageExpired
-		_, _ = s.authorizationRequests.Update(ctx, request)
-		return domain.AuthorizationRequest{}, ErrAuthorizationRequestExpired
-	}
-
-	request.AccountID = &req.AccountID
-	request.SSOSessionID = &req.SSOSessionID
-
-	grant, err := s.consentGrants.FindByAccountAndClient(ctx, req.AccountID, request.ClientID)
-	if err == nil && scopeSubset(splitScopes(request.RequestedScopes), splitScopes(grant.GrantedScopes)) {
-		request.Stage = domain.AuthorizationStageAuthorizationReady
-	} else {
-		request.Stage = domain.AuthorizationStageConsentRequired
-	}
-
-	return s.authorizationRequests.Update(ctx, request)
-}
-
-func (s Service) AcceptConsent(ctx context.Context, requestID string) (domain.AuthorizationRequest, error) {
-	request, err := s.authorizationRequests.FindByID(ctx, requestID)
-	if err != nil {
-		return domain.AuthorizationRequest{}, err
-	}
-	if request.AccountID == nil {
-		return domain.AuthorizationRequest{}, ErrAuthorizationRequestInvalidStage
-	}
-	if request.Stage != domain.AuthorizationStageConsentRequired {
-		return domain.AuthorizationRequest{}, ErrAuthorizationRequestInvalidStage
-	}
-
-	now := s.clock.Now().UTC()
-	existing, err := s.consentGrants.FindByAccountAndClient(ctx, *request.AccountID, request.ClientID)
-	grantScopes := splitScopes(request.RequestedScopes)
-	if err == nil {
-		grantScopes = unionScopes(grantScopes, splitScopes(existing.GrantedScopes))
-	}
-
-	_, err = s.consentGrants.Upsert(ctx, domain.ConsentGrant{
-		ID:            existing.ID,
-		AccountID:     *request.AccountID,
-		ClientID:      request.ClientID,
-		GrantedScopes: strings.Join(grantScopes, " "),
-		GrantedAt:     existing.GrantedAt,
-		LastUsedAt:    now,
-	})
-	if err != nil {
-		return domain.AuthorizationRequest{}, err
-	}
-
-	request.Stage = domain.AuthorizationStageAuthorizationReady
-	return s.authorizationRequests.Update(ctx, request)
-}
-
-func (s Service) RejectConsent(ctx context.Context, requestID string) (domain.AuthorizationRequest, error) {
-	request, err := s.authorizationRequests.FindByID(ctx, requestID)
-	if err != nil {
-		return domain.AuthorizationRequest{}, err
-	}
-	request.Stage = domain.AuthorizationStageFailed
-	return s.authorizationRequests.Update(ctx, request)
-}
-
-func (s Service) IssueAuthorizationCode(ctx context.Context, req IssueAuthorizationCodeRequest) (string, domain.AuthorizationCode, error) {
-	request, err := s.authorizationRequests.FindByID(ctx, req.RequestID)
-	if err != nil {
-		return "", domain.AuthorizationCode{}, err
-	}
-	if request.Stage != domain.AuthorizationStageAuthorizationReady || request.AccountID == nil {
+// IssueDirectCode issues an authorization code without referencing an
+// AuthorizationRequest record. Used by stateless-flow handlers where the
+// request lifecycle lives entirely in the URL (no server-side flow state to
+// reference). All security gates (param validation, consent grant check) must
+// be performed by the caller — this method only persists the code.
+func (s Service) IssueDirectCode(ctx context.Context, req IssueDirectCodeRequest) (string, domain.AuthorizationCode, error) {
+	if req.AccountID == "" || req.ClientID == "" || req.RedirectURI == "" {
 		return "", domain.AuthorizationCode{}, ErrAuthorizationRequestInvalidStage
 	}
-	if s.clock.Now().UTC().After(request.ExpiresAt) {
-		request.Stage = domain.AuthorizationStageExpired
-		_, _ = s.authorizationRequests.Update(ctx, request)
-		return "", domain.AuthorizationCode{}, ErrAuthorizationRequestExpired
-	}
-
 	value, hash, err := newOpaqueSecret()
 	if err != nil {
 		return "", domain.AuthorizationCode{}, err
 	}
 	now := s.clock.Now().UTC()
+	scopes := normalizeScopes(req.Scopes)
 	code := domain.AuthorizationCode{
 		CodeHash:                hash,
-		AuthorizationRequestID:  request.ID,
-		AccountID:               *request.AccountID,
-		ClientID:                request.ClientID,
-		SSOSessionID:            request.SSOSessionID,
-		RedirectURI:             request.RedirectURI,
-		GrantedScopes:           request.RequestedScopes,
-		PKCECodeChallenge:       request.PKCECodeChallenge,
-		PKCECodeChallengeMethod: request.PKCECodeChallengeMethod,
+		AuthorizationRequestID:  nil,
+		AccountID:               req.AccountID,
+		ClientID:                req.ClientID,
+		SSOSessionID:            req.SSOSessionID,
+		RedirectURI:             req.RedirectURI,
+		GrantedScopes:           strings.Join(scopes, " "),
+		PKCECodeChallenge:       req.PKCECodeChallenge,
+		PKCECodeChallengeMethod: req.PKCECodeChallengeMethod,
 		AuthTime:                req.AuthTime.UTC(),
 		ExpiresAt:               now.Add(s.authorizationCodeTTL),
 		CreatedAt:               now,
@@ -243,12 +108,6 @@ func (s Service) IssueAuthorizationCode(ctx context.Context, req IssueAuthorizat
 	if err != nil {
 		return "", domain.AuthorizationCode{}, err
 	}
-
-	request.Stage = domain.AuthorizationStageCompleted
-	if _, err := s.authorizationRequests.Update(ctx, request); err != nil {
-		return "", domain.AuthorizationCode{}, err
-	}
-
 	return value, code, nil
 }
 
@@ -278,6 +137,49 @@ func (s Service) ConsumeAuthorizationCode(ctx context.Context, req ConsumeAuthor
 
 	code.ConsumedAt = &now
 	return s.authorizationCodes.Update(ctx, code)
+}
+
+// UpsertConsentRequest is the stateless input to UpsertConsent. The caller is
+// expected to have already validated scopes against the client registration.
+type UpsertConsentRequest struct {
+	AccountID string
+	ClientID  string
+	Scopes    []string
+}
+
+// UpsertConsent records (or refreshes) a consent grant for the given account +
+// client + scope set. Used by the stateless /v1/auth/consent/accept handler.
+// Existing scopes are unioned with the new ones so revoking is an explicit
+// separate operation.
+func (s Service) UpsertConsent(ctx context.Context, req UpsertConsentRequest) (domain.ConsentGrant, error) {
+	now := s.clock.Now().UTC()
+	existing, err := s.consentGrants.FindByAccountAndClient(ctx, req.AccountID, req.ClientID)
+	grantScopes := normalizeScopes(req.Scopes)
+	if err == nil {
+		grantScopes = unionScopes(grantScopes, splitScopes(existing.GrantedScopes))
+	}
+	return s.consentGrants.Upsert(ctx, domain.ConsentGrant{
+		ID:            existing.ID,
+		AccountID:     req.AccountID,
+		ClientID:      req.ClientID,
+		GrantedScopes: strings.Join(grantScopes, " "),
+		GrantedAt:     existing.GrantedAt,
+		LastUsedAt:    now,
+	})
+}
+
+// HasConsentForScopes reports whether the given account has already granted
+// the given scopes (a superset is sufficient) for the given client. Used by
+// the stateless /authorize handler to skip the consent UI for returning users.
+func (s Service) HasConsentForScopes(ctx context.Context, accountID, clientID string, scopes []string) bool {
+	grant, err := s.consentGrants.FindByAccountAndClient(ctx, accountID, clientID)
+	if err != nil {
+		return false
+	}
+	if grant.RevokedAt != nil {
+		return false
+	}
+	return scopeSubset(normalizeScopes(scopes), splitScopes(grant.GrantedScopes))
 }
 
 func (s Service) StartSSOSession(ctx context.Context, accountID string, loginMethod string) (domain.SSOSession, error) {

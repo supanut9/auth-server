@@ -2,6 +2,7 @@
 .DS_Store
 bin/
 server
+devseed
 tmp/
 coverage.out
 secrets/

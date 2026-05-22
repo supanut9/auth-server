@@ -16,7 +16,6 @@ import (
 
 	"github.com/supanut9/auth-server/internal/application"
 	flowapp "github.com/supanut9/auth-server/internal/application/flow"
-	identityapp "github.com/supanut9/auth-server/internal/application/identity"
 	tokenapp "github.com/supanut9/auth-server/internal/application/token"
 	"github.com/supanut9/auth-server/internal/config"
 	"github.com/supanut9/auth-server/internal/domain"
@@ -56,28 +55,41 @@ func CORSMiddleware(cfg config.Config) gin.HandlerFunc {
 func RegisterRoutes(router *gin.Engine, cfg config.Config, db *gorm.DB, app application.App) {
 	handler := Handler{cfg: cfg, db: db, app: app}
 
+	// 20 OTP-endpoint hits per IP per minute — enough headroom for legit users
+	// to start/verify/resend several times, tight enough to neutralise
+	// brute-force or email-bomb attempts. Per-challenge attempt + resend caps
+	// inside the identity service catch the remaining slow attacks.
+	otpLimiter := NewRateLimiter(time.Minute, 20)
+
 	router.GET("/healthz", handler.healthz)
 	router.GET("/readyz", handler.readyz)
-	router.GET("/dev/callback", handler.devCallback)
+	// /dev/callback is a debug echo used by dev OAuth providers — info leak in
+	// production, so only mount it when we're not in prod.
+	if !strings.EqualFold(cfg.AppEnv, "production") {
+		router.GET("/dev/callback", handler.devCallback)
+	}
 	router.GET("/.well-known/openid-configuration", handler.openIDConfiguration)
 	router.GET("/.well-known/jwks.json", handler.jwks)
-	router.GET("/v1/oauth2/authorize", handler.authorize)
+	router.GET("/v1/oauth2/authorize", handler.authorizeStateless)
 	router.POST("/v1/oauth2/token", handler.token)
 	router.POST("/v1/oauth2/revoke", handler.revoke)
 	router.POST("/v1/oauth2/introspect", handler.introspect)
 	router.GET("/v1/oidc/userinfo", handler.userInfo)
+	router.GET("/v1/clients/:clientID/public-info", handler.clientPublicInfo)
 
 	auth := router.Group("/v1/auth")
-	auth.GET("/requests/:requestID", handler.getAuthorizationRequest)
-	auth.POST("/login/google", handler.startGoogleLogin)
-	auth.POST("/login/github", handler.startGitHubLogin)
-	auth.GET("/login/callback/google", handler.handleGoogleCallback)
-	auth.GET("/login/callback/github", handler.handleGitHubCallback)
-	auth.POST("/consent/accept", handler.acceptConsent)
-	auth.POST("/consent/reject", handler.rejectConsent)
-	auth.POST("/otp/start", handler.startOTP)
-	auth.POST("/otp/verify", handler.verifyOTP)
-	auth.POST("/otp/resend", handler.resendOTP)
+	auth.GET("/me", handler.currentUser)
+	auth.GET("/csrf", handler.csrfToken)
+	auth.POST("/login/google", handler.startGoogleLoginStateless)
+	auth.POST("/login/github", handler.startGitHubLoginStateless)
+	auth.GET("/login/callback/google", handler.handleGoogleCallbackStateless)
+	auth.GET("/login/callback/github", handler.handleGitHubCallbackStateless)
+	auth.POST("/consent/accept", handler.acceptConsentStateless)
+	auth.POST("/consent/reject", handler.rejectConsentStateless)
+	otpMiddleware := OTPRateLimitMiddleware(otpLimiter)
+	auth.POST("/otp/start", otpMiddleware, handler.startOTPStateless)
+	auth.POST("/otp/verify", otpMiddleware, handler.verifyOTPStateless)
+	auth.POST("/otp/resend", otpMiddleware, handler.resendOTPStateless)
 	auth.GET("/logout", handler.logoutLocal)
 	auth.GET("/logout/global", handler.logoutGlobal)
 
@@ -144,7 +156,7 @@ func (h Handler) openIDConfiguration(c *gin.Context) {
 		"scopes_supported":                      []string{"openid", "email", "profile", "offline_access", "trading.read", "trading.write"},
 		"response_types_supported":              []string{"code"},
 		"grant_types_supported":                 []string{"authorization_code", "refresh_token", "client_credentials"},
-		"prompt_values_supported":               []string{"login"},
+		"prompt_values_supported":               []string{"login", "none"},
 		"subject_types_supported":               []string{"public"},
 		"id_token_signing_alg_values_supported": []string{h.cfg.JWTSigningAlg},
 		"token_endpoint_auth_methods_supported": []string{"none", "client_secret_post", "client_secret_basic"},
@@ -159,93 +171,6 @@ func (h Handler) jwks(c *gin.Context) {
 	}
 
 	c.Data(http.StatusOK, "application/json", document)
-}
-
-func (h Handler) authorize(c *gin.Context) {
-	responseType := c.Query("response_type")
-	clientID := c.Query("client_id")
-	redirectURI := c.Query("redirect_uri")
-	scope := splitProtocolList(c.Query("scope"))
-	state := c.Query("state")
-	nonce := c.Query("nonce")
-	prompt := c.Query("prompt")
-	codeChallenge := c.Query("code_challenge")
-	codeChallengeMethod := c.DefaultQuery("code_challenge_method", "plain")
-
-	client, clientErr := h.app.Clients.FindByClientID(c.Request.Context(), clientID)
-	if clientErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_client"})
-		return
-	}
-
-	if responseType != "code" {
-		h.redirectOAuthError(c, redirectURI, state, "unsupported_response_type", "response_type must be code")
-		return
-	}
-	if redirectURI == "" || !containsValue(client.RedirectURIs, redirectURI) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "error_description": "redirect_uri is invalid"})
-		return
-	}
-	if state == "" {
-		h.redirectOAuthError(c, redirectURI, state, "invalid_request", "state is required")
-		return
-	}
-	if !scopeSubset(scope, splitProtocolList(client.AllowedScopes)) {
-		h.redirectOAuthError(c, redirectURI, state, "invalid_scope", "requested scopes are not allowed")
-		return
-	}
-	if containsValue(scope, "openid") && nonce == "" {
-		h.redirectOAuthError(c, redirectURI, state, "invalid_request", "nonce is required for openid")
-		return
-	}
-	if client.ClientType == "public" && codeChallenge == "" {
-		h.redirectOAuthError(c, redirectURI, state, "invalid_request", "code_challenge is required for public clients")
-		return
-	}
-
-	var accountID *string
-	var ssoSessionID *string
-	authTime := time.Now().UTC()
-	if prompt != "login" {
-		if session, err := h.currentSSOSession(c.Request.Context(), c); err == nil {
-			accountID = stringPtr(session.AccountID)
-			ssoSessionID = stringPtr(session.ID)
-			authTime = session.AuthenticatedAt
-		}
-	}
-
-	request, err := h.app.Flow.StartAuthorization(c.Request.Context(), flowapp.StartAuthorizationRequest{
-		ClientID:                client.ClientID,
-		RedirectURI:             redirectURI,
-		RequestedScopes:         scope,
-		State:                   state,
-		Nonce:                   optionalStringPtr(nonce),
-		PKCECodeChallenge:       codeChallenge,
-		PKCECodeChallengeMethod: codeChallengeMethod,
-		AccountID:               accountID,
-		SSOSessionID:            ssoSessionID,
-	})
-	if err != nil {
-		h.redirectOAuthError(c, redirectURI, state, "server_error", err.Error())
-		return
-	}
-
-	switch request.Stage {
-	case domain.AuthorizationStageAuthorizationReady:
-		codeValue, _, err := h.app.Flow.IssueAuthorizationCode(c.Request.Context(), flowapp.IssueAuthorizationCodeRequest{
-			RequestID: request.ID,
-			AuthTime:  authTime,
-		})
-		if err != nil {
-			h.redirectOAuthError(c, redirectURI, state, "server_error", err.Error())
-			return
-		}
-		h.redirectAuthorizationSuccess(c, redirectURI, codeValue, state)
-	case domain.AuthorizationStageConsentRequired:
-		c.Redirect(http.StatusFound, strings.TrimRight(h.cfg.AuthUIBaseURL, "/")+"/consent?request_id="+url.QueryEscape(request.ID))
-	default:
-		c.Redirect(http.StatusFound, strings.TrimRight(h.cfg.AuthUIBaseURL, "/")+"/login?request_id="+url.QueryEscape(request.ID))
-	}
 }
 
 func (h Handler) token(c *gin.Context) {
@@ -541,390 +466,6 @@ func (h Handler) introspectRefreshToken(c *gin.Context, tokenValue string) {
 	})
 }
 
-type authorizationRequestResponse struct {
-	RequestID             string              `json:"request_id"`
-	Stage                 string              `json:"stage"`
-	ExpiresAt             time.Time           `json:"expires_at"`
-	Client                requestClient       `json:"client"`
-	RequestedScopes       []string            `json:"requested_scopes"`
-	AvailableLoginMethods []string            `json:"available_login_methods"`
-	Consent               requestConsent      `json:"consent"`
-	OTP                   requestOTP          `json:"otp"`
-	AccountHint           *requestAccountHint `json:"account_hint"`
-}
-
-type requestClient struct {
-	ClientID    string `json:"client_id"`
-	DisplayName string `json:"display_name"`
-}
-
-type requestConsent struct {
-	Required bool `json:"required"`
-}
-
-type requestOTP struct {
-	Required    bool    `json:"required"`
-	MaskedEmail *string `json:"masked_email"`
-}
-
-type requestAccountHint struct {
-	DisplayName *string `json:"display_name"`
-	Email       *string `json:"email"`
-}
-
-func (h Handler) getAuthorizationRequest(c *gin.Context) {
-	c.Header("Cache-Control", "no-store")
-
-	requestID := c.Param("requestID")
-	request, err := h.app.Requests.FindByID(c.Request.Context(), requestID)
-	if err != nil {
-		h.renderLookupError(c, err)
-		return
-	}
-
-	client, err := h.app.Clients.FindByClientID(c.Request.Context(), request.ClientID)
-	if err != nil {
-		h.renderLookupError(c, err)
-		return
-	}
-
-	var accountHint *requestAccountHint
-	if request.AccountID != nil {
-		if account, err := h.app.Accounts.FindByID(c.Request.Context(), *request.AccountID); err == nil {
-			accountHint = &requestAccountHint{
-				DisplayName: stringPtr(account.DisplayName),
-				Email:       stringPtr(account.PrimaryVerifiedEmail),
-			}
-		}
-	} else if request.PendingProviderDisplayName != "" || request.PendingProviderEmail != "" {
-		accountHint = &requestAccountHint{
-			DisplayName: optionalStringPtr(request.PendingProviderDisplayName),
-			Email:       optionalStringPtr(request.PendingProviderEmail),
-		}
-	}
-
-	var maskedEmail *string
-	if request.PendingProviderEmail != "" {
-		value := maskEmail(request.PendingProviderEmail)
-		maskedEmail = &value
-	}
-
-	c.JSON(http.StatusOK, authorizationRequestResponse{
-		RequestID:             request.ID,
-		Stage:                 request.Stage,
-		ExpiresAt:             request.ExpiresAt,
-		Client:                requestClient{ClientID: client.ClientID, DisplayName: client.DisplayName},
-		RequestedScopes:       strings.Fields(request.RequestedScopes),
-		AvailableLoginMethods: []string{"google", "github", "email_otp"},
-		Consent:               requestConsent{Required: request.Stage == domain.AuthorizationStageConsentRequired},
-		OTP:                   requestOTP{Required: request.Stage == domain.AuthorizationStageOTPRequired, MaskedEmail: maskedEmail},
-		AccountHint:           accountHint,
-	})
-}
-
-type consentRequest struct {
-	RequestID string `json:"request_id" binding:"required"`
-}
-
-type providerLoginStartRequest struct {
-	RequestID string `json:"request_id" binding:"required"`
-}
-
-func (h Handler) startGoogleLogin(c *gin.Context) {
-	h.startProviderLogin(c, "google")
-}
-
-func (h Handler) startGitHubLogin(c *gin.Context) {
-	h.startProviderLogin(c, "github")
-}
-
-func (h Handler) startProviderLogin(c *gin.Context, providerName string) {
-	var req providerLoginStartRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-		return
-	}
-
-	request, err := h.app.Requests.FindByID(c.Request.Context(), req.RequestID)
-	if err != nil {
-		h.renderLookupError(c, err)
-		return
-	}
-	if time.Now().UTC().After(request.ExpiresAt) {
-		h.renderFlowError(c, flowapp.ErrAuthorizationRequestExpired)
-		return
-	}
-	if request.Stage != domain.AuthorizationStageLoginRequired && request.Stage != domain.AuthorizationStageProviderRedirect {
-		h.renderFlowError(c, flowapp.ErrAuthorizationRequestInvalidStage)
-		return
-	}
-	if _, ok := h.app.Providers[providerName]; !ok {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "provider_unavailable"})
-		return
-	}
-
-	if _, err := h.app.Flow.MarkProviderRedirect(c.Request.Context(), request.ID); err != nil {
-		h.renderFlowError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"authorization_url": h.providerAuthorizationURL(providerName, request.ID),
-	})
-}
-
-func (h Handler) handleGoogleCallback(c *gin.Context) {
-	h.handleProviderCallback(c, "google")
-}
-
-func (h Handler) handleGitHubCallback(c *gin.Context) {
-	h.handleProviderCallback(c, "github")
-}
-
-func (h Handler) handleProviderCallback(c *gin.Context, providerName string) {
-	requestID := c.Query("state")
-	code := c.Query("code")
-	if requestID == "" || code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-		return
-	}
-
-	provider, ok := h.app.Providers[providerName]
-	if !ok {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "provider_unavailable"})
-		return
-	}
-
-	request, err := h.app.Requests.FindByID(c.Request.Context(), requestID)
-	if err != nil {
-		h.renderLookupError(c, err)
-		return
-	}
-	if request.Stage != domain.AuthorizationStageProviderRedirect {
-		h.renderFlowError(c, flowapp.ErrAuthorizationRequestInvalidStage)
-		return
-	}
-	if time.Now().UTC().After(request.ExpiresAt) {
-		h.renderFlowError(c, flowapp.ErrAuthorizationRequestExpired)
-		return
-	}
-
-	profile, err := provider.ExchangeAuthorizationCode(c.Request.Context(), code, h.providerRedirectURI(providerName))
-	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "provider_error", "error_description": err.Error()})
-		return
-	}
-
-	_, _, session, request, err := h.app.Identity.HandleProviderLogin(c.Request.Context(), identityapp.ProviderLoginRequest{
-		RequestID:         requestID,
-		ProviderName:      providerName,
-		ProviderAccountID: profile.AccountID,
-		Email:             profile.Email,
-		EmailVerified:     profile.EmailVerified,
-		DisplayName:       profile.DisplayName,
-		AvatarURL:         profile.AvatarURL,
-	})
-	if err != nil {
-		if errors.Is(err, identityapp.ErrProviderEmailVerificationRequired) {
-			c.Redirect(http.StatusFound, strings.TrimRight(h.cfg.AuthUIBaseURL, "/")+"/otp?request_id="+url.QueryEscape(requestID))
-			return
-		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_grant", "error_description": err.Error()})
-		return
-	}
-
-	h.setSSOCookie(c, session.ID, session.ExpiresAt)
-	h.redirectPostAuthentication(c, request, session.AuthenticatedAt)
-}
-
-func (h Handler) acceptConsent(c *gin.Context) {
-	var req consentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-		return
-	}
-
-	request, err := h.app.Flow.AcceptConsent(c.Request.Context(), req.RequestID)
-	if err != nil {
-		h.renderFlowError(c, err)
-		return
-	}
-
-	if request.Stage == domain.AuthorizationStageAuthorizationReady {
-		authTime := time.Now().UTC()
-		if request.SSOSessionID != nil {
-			if session, err := h.currentSSOSession(c.Request.Context(), c); err == nil {
-				authTime = session.AuthenticatedAt
-			}
-		}
-
-		codeValue, _, err := h.app.Flow.IssueAuthorizationCode(c.Request.Context(), flowapp.IssueAuthorizationCodeRequest{
-			RequestID: request.ID,
-			AuthTime:  authTime,
-		})
-		if err != nil {
-			h.renderFlowError(c, err)
-			return
-		}
-		redirectTo, ok := h.authorizationSuccessURL(request.RedirectURI, codeValue, request.State)
-		if !ok {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"request_id":  request.ID,
-			"stage":       domain.AuthorizationStageCompleted,
-			"redirect_to": redirectTo,
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"request_id": request.ID,
-		"stage":      request.Stage,
-	})
-}
-
-func (h Handler) rejectConsent(c *gin.Context) {
-	var req consentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-		return
-	}
-
-	request, err := h.app.Flow.RejectConsent(c.Request.Context(), req.RequestID)
-	if err != nil {
-		h.renderFlowError(c, err)
-		return
-	}
-	redirectTo, ok := h.oauthErrorURL(request.RedirectURI, request.State, "access_denied", "user denied consent")
-	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"request_id":  request.ID,
-		"stage":       request.Stage,
-		"redirect_to": redirectTo,
-	})
-}
-
-type otpStartRequest struct {
-	RequestID string `json:"request_id" binding:"required"`
-	Email     string `json:"email"`
-}
-
-func (h Handler) startOTP(c *gin.Context) {
-	var req otpStartRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-		return
-	}
-
-	challenge, err := h.app.Identity.StartOTPChallenge(c.Request.Context(), identityapp.OTPStartRequest{
-		RequestID: req.RequestID,
-		Email:     req.Email,
-	})
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "error_description": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"request_id": challenge.AuthorizationRequestID,
-		"email":      maskEmail(challenge.Email),
-		"expires_at": challenge.ExpiresAt,
-	})
-}
-
-type otpVerifyRequest struct {
-	RequestID string `json:"request_id" binding:"required"`
-	Email     string `json:"email" binding:"required"`
-	Code      string `json:"code" binding:"required"`
-}
-
-func (h Handler) verifyOTP(c *gin.Context) {
-	var req otpVerifyRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-		return
-	}
-
-	account, _, session, request, err := h.app.Identity.VerifyOTPChallenge(c.Request.Context(), identityapp.OTPVerifyRequest{
-		RequestID: req.RequestID,
-		Email:     req.Email,
-		Code:      req.Code,
-	})
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_grant", "error_description": err.Error()})
-		return
-	}
-	if request.Stage != domain.AuthorizationStageAuthorizationReady && request.Stage != domain.AuthorizationStageConsentRequired {
-		h.renderFlowError(c, flowapp.ErrAuthorizationRequestInvalidStage)
-		return
-	}
-
-	h.setSSOCookie(c, session.ID, session.ExpiresAt)
-	response := gin.H{
-		"request_id": request.ID,
-		"stage":      request.Stage,
-		"account": gin.H{
-			"id":             account.ID,
-			"display_name":   account.DisplayName,
-			"email":          account.PrimaryVerifiedEmail,
-			"email_verified": true,
-		},
-	}
-
-	switch request.Stage {
-	case domain.AuthorizationStageAuthorizationReady:
-		codeValue, _, issueErr := h.app.Flow.IssueAuthorizationCode(c.Request.Context(), flowapp.IssueAuthorizationCodeRequest{
-			RequestID: request.ID,
-			AuthTime:  session.AuthenticatedAt,
-		})
-		if issueErr != nil {
-			h.renderFlowError(c, issueErr)
-			return
-		}
-		redirectTo, ok := h.authorizationSuccessURL(request.RedirectURI, codeValue, request.State)
-		if !ok {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-			return
-		}
-		response["stage"] = domain.AuthorizationStageCompleted
-		response["redirect_to"] = redirectTo
-	case domain.AuthorizationStageConsentRequired:
-		response["redirect_to"] = strings.TrimRight(h.cfg.AuthUIBaseURL, "/") + "/consent?request_id=" + url.QueryEscape(request.ID)
-	}
-
-	c.JSON(http.StatusOK, response)
-}
-
-func (h Handler) resendOTP(c *gin.Context) {
-	var req otpStartRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request"})
-		return
-	}
-
-	challenge, err := h.app.Identity.ResendOTPChallenge(c.Request.Context(), identityapp.OTPStartRequest{
-		RequestID: req.RequestID,
-		Email:     req.Email,
-	})
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "error_description": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"request_id": challenge.AuthorizationRequestID,
-		"email":      maskEmail(challenge.Email),
-		"expires_at": challenge.ExpiresAt,
-	})
-}
-
 func (h Handler) logoutLocal(c *gin.Context) {
 	chainID := c.Query("refresh_token_chain_id")
 	if err := h.app.Flow.LogoutLocal(c.Request.Context(), chainID); err != nil {
@@ -950,25 +491,6 @@ func (h Handler) logoutGlobal(c *gin.Context) {
 
 	h.clearSSOCookie(c)
 	c.Redirect(http.StatusFound, h.postLogoutRedirect(c.Query("post_logout_redirect_uri")))
-}
-
-func (h Handler) redirectPostAuthentication(c *gin.Context, request domain.AuthorizationRequest, authTime time.Time) {
-	switch request.Stage {
-	case domain.AuthorizationStageAuthorizationReady:
-		codeValue, _, err := h.app.Flow.IssueAuthorizationCode(c.Request.Context(), flowapp.IssueAuthorizationCodeRequest{
-			RequestID: request.ID,
-			AuthTime:  authTime,
-		})
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
-			return
-		}
-		h.redirectAuthorizationSuccess(c, request.RedirectURI, codeValue, request.State)
-	case domain.AuthorizationStageConsentRequired:
-		c.Redirect(http.StatusFound, strings.TrimRight(h.cfg.AuthUIBaseURL, "/")+"/consent?request_id="+url.QueryEscape(request.ID))
-	default:
-		c.Redirect(http.StatusFound, strings.TrimRight(h.cfg.AuthUIBaseURL, "/")+"/login?request_id="+url.QueryEscape(request.ID))
-	}
 }
 
 func (h Handler) setSSOCookie(c *gin.Context, value string, expiresAt time.Time) {
@@ -1192,27 +714,6 @@ func (h Handler) clientCredentials(c *gin.Context) (string, string) {
 		return "", ""
 	}
 	return username, password
-}
-
-func (h Handler) providerAuthorizationURL(providerName string, requestID string) string {
-	callback := h.providerRedirectURI(providerName)
-	values := url.Values{}
-	values.Set("client_id", h.providerClientID(providerName))
-	values.Set("redirect_uri", callback)
-	values.Set("response_type", "code")
-	values.Set("state", requestID)
-
-	switch providerName {
-	case "google":
-		values.Set("scope", "openid email profile")
-		values.Set("access_type", "offline")
-		return "https://accounts.google.com/o/oauth2/v2/auth?" + values.Encode()
-	case "github":
-		values.Set("scope", "read:user user:email")
-		return "https://github.com/login/oauth/authorize?" + values.Encode()
-	default:
-		return ""
-	}
 }
 
 func (h Handler) providerClientID(providerName string) string {

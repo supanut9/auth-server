@@ -52,6 +52,14 @@ type Config struct {
 	AuthorizationRequestTTL     time.Duration
 	AuthorizationCodeTTL        time.Duration
 	SSOSessionTTL               time.Duration
+	// FlowEnvelopeSecret signs the OAuth `state` we hand to external providers
+	// (Google/GitHub). Must be >= 32 bytes. In production this is loaded from a
+	// secret manager. In development a deterministic fallback derived from
+	// PUBLIC_BASE_URL is used so devs don't need to plumb a new env var.
+	FlowEnvelopeSecret string
+	// FlowEnvelopeTTL bounds how long a signed envelope is valid. Default 10m,
+	// matches typical OAuth state lifetimes.
+	FlowEnvelopeTTL time.Duration
 }
 
 func Load() (Config, error) {
@@ -116,6 +124,17 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	flowEnvelopeTTL, err := durationEnv("FLOW_ENVELOPE_TTL", 10*time.Minute)
+	if err != nil {
+		return Config{}, err
+	}
+	flowEnvelopeSecret := strings.TrimSpace(getEnv("FLOW_ENVELOPE_SECRET", ""))
+	if flowEnvelopeSecret == "" {
+		// Development fallback: deterministic per-deployment derivation so the
+		// signer can boot without a new env var. Production validates this
+		// length downstream and a real secret should be configured.
+		flowEnvelopeSecret = "dev-flow-envelope-secret-" + publicBaseURL + "-min-32-bytes"
+	}
 	ssocookieSecure, err := boolEnv("SSO_COOKIE_SECURE", defaultSSOCookieSecure(appEnv, publicBaseURL))
 	if err != nil {
 		return Config{}, err
@@ -166,6 +185,8 @@ func Load() (Config, error) {
 		AuthorizationRequestTTL:     authorizationRequestTTL,
 		AuthorizationCodeTTL:        authorizationCodeTTL,
 		SSOSessionTTL:               ssoSessionTTL,
+		FlowEnvelopeSecret:          flowEnvelopeSecret,
+		FlowEnvelopeTTL:             flowEnvelopeTTL,
 	}
 
 	if err := cfg.Validate(); err != nil {

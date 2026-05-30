@@ -39,12 +39,17 @@ type Config struct {
 	SMTPPassword                string
 	SMTPFrom                    string
 	FixedOTPCode                string
-	SupportAPIToken             string
+	// OTPTestHintAllowlist is the comma-separated list of email addresses that
+	// may use GET /v1/auth/otp/test-hint. The endpoint is refused entirely in
+	// production regardless of this list.
+	OTPTestHintAllowlist []string
+	SupportAPIToken      string
 	PlatformAudience            string
 	AccessTokenTTL              time.Duration
 	IDTokenTTL                  time.Duration
 	RefreshAbsoluteTTL          time.Duration
 	RefreshInactiveTTL          time.Duration
+	RefreshReuseGrace           time.Duration
 	OTPChallengeTTL             time.Duration
 	OTPMaxAttempts              int
 	OTPMaxResends               int
@@ -93,6 +98,13 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	refreshInactiveTTL, err := durationEnv("REFRESH_TOKEN_INACTIVE_TTL", 7*24*time.Hour)
+	if err != nil {
+		return Config{}, err
+	}
+	// Grace window during which a just-rotated refresh token may be presented
+	// again (e.g. concurrent requests from a serverless client) without being
+	// treated as reuse/theft. Reuse outside this window still revokes the chain.
+	refreshReuseGrace, err := durationEnv("REFRESH_TOKEN_REUSE_GRACE", 60*time.Second)
 	if err != nil {
 		return Config{}, err
 	}
@@ -172,12 +184,14 @@ func Load() (Config, error) {
 		SMTPPassword:                getEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:                    getEnv("SMTP_FROM", ""),
 		FixedOTPCode:                strings.TrimSpace(getEnv("FIXED_OTP_CODE", "")),
+		OTPTestHintAllowlist:        splitEnvList("OTP_TEST_HINT_ALLOWLIST"),
 		SupportAPIToken:             getEnv("SUPPORT_API_TOKEN", defaultSupportAPIToken(appEnv)),
 		PlatformAudience:            getEnv("PLATFORM_AUDIENCE", "platform-api"),
 		AccessTokenTTL:              accessTokenTTL,
 		IDTokenTTL:                  idTokenTTL,
 		RefreshAbsoluteTTL:          refreshAbsoluteTTL,
 		RefreshInactiveTTL:          refreshInactiveTTL,
+		RefreshReuseGrace:           refreshReuseGrace,
 		OTPChallengeTTL:             otpChallengeTTL,
 		OTPMaxAttempts:              otpMaxAttempts,
 		OTPMaxResends:               otpMaxResends,
@@ -245,6 +259,9 @@ func (c Config) Validate() error {
 	}
 	if c.FixedOTPCode != "" && strings.EqualFold(c.AppEnv, "production") {
 		return fmt.Errorf("FIXED_OTP_CODE must not be set in production")
+	}
+	if len(c.OTPTestHintAllowlist) > 0 && strings.EqualFold(c.AppEnv, "production") {
+		return fmt.Errorf("OTP_TEST_HINT_ALLOWLIST must not be set in production")
 	}
 	if strings.TrimSpace(c.SupportAPIToken) == "" {
 		return fmt.Errorf("missing required env: SUPPORT_API_TOKEN")

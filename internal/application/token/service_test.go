@@ -175,6 +175,80 @@ func TestIssueUserTokensAndRotateRefresh(t *testing.T) {
 	}
 }
 
+func TestRefreshReuseWithinGraceSucceeds(t *testing.T) {
+	t.Parallel()
+
+	signer := newTestSigner(t)
+	idGenerator := &sequentialIDs{}
+	accessRepo := &memoryAccessTokenRepo{}
+	chainRepo := &memoryRefreshTokenChainRepo{}
+	refreshRepo := &memoryRefreshTokenRepo{}
+
+	svc := NewService(
+		Config{
+			Issuer:                  "http://localhost:8050",
+			Audience:                "platform-api",
+			AccessTokenTTL:          10 * time.Minute,
+			IDTokenTTL:              10 * time.Minute,
+			RefreshTokenAbsoluteTTL: 30 * 24 * time.Hour,
+			RefreshTokenInactiveTTL: 7 * 24 * time.Hour,
+			RefreshReuseGrace:       60 * time.Second,
+		},
+		fixedClock{now: time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)},
+		idGenerator,
+		signer,
+		accessRepo,
+		chainRepo,
+		refreshRepo,
+	)
+
+	issued, err := svc.IssueUserTokens(context.Background(), UserTokenRequest{
+		AccountID:    "account-123",
+		ClientID:     "trading-web",
+		Scope:        []string{"openid", "profile"},
+		SSOSessionID: "sso-123",
+		AuthTime:     time.Date(2026, 4, 1, 11, 55, 0, 0, time.UTC),
+		Email:        "user@example.com",
+	})
+	if err != nil {
+		t.Fatalf("issue user tokens: %v", err)
+	}
+
+	// First refresh rotates the token.
+	first, err := svc.RefreshUserTokens(context.Background(), RefreshTokenRequest{
+		ClientID:     "trading-web",
+		RefreshToken: issued.RefreshToken,
+	})
+	if err != nil {
+		t.Fatalf("first refresh: %v", err)
+	}
+
+	// A concurrent retry re-presents the same (just-rotated) token within the
+	// grace window: it must succeed with a fresh token pair, not revoke.
+	second, err := svc.RefreshUserTokens(context.Background(), RefreshTokenRequest{
+		ClientID:     "trading-web",
+		RefreshToken: issued.RefreshToken,
+	})
+	if err != nil {
+		t.Fatalf("expected grace-window refresh to succeed, got %v", err)
+	}
+	if second.AccessToken == "" || second.RefreshToken == "" {
+		t.Fatal("expected fresh token pair from grace-window refresh")
+	}
+	if second.RefreshToken == first.RefreshToken {
+		t.Fatal("expected a distinct refresh token from the grace-window refresh")
+	}
+
+	// The chain must still be usable afterwards (not revoked): the latest
+	// rotated token refreshes cleanly.
+	if _, err := svc.RefreshUserTokens(context.Background(), RefreshTokenRequest{
+		ClientID:     "trading-web",
+		RefreshToken: second.RefreshToken,
+	}); err != nil {
+		t.Fatalf("expected chain to remain active after grace refresh, got %v", err)
+	}
+}
+
 func TestIssueClientCredentialsToken(t *testing.T) {
 	t.Parallel()
 

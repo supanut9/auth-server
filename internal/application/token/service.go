@@ -27,6 +27,7 @@ type Service struct {
 	idTokenTTL              time.Duration
 	refreshTokenAbsoluteTTL time.Duration
 	refreshTokenInactiveTTL time.Duration
+	refreshReuseGrace       time.Duration
 }
 
 type Config struct {
@@ -36,6 +37,7 @@ type Config struct {
 	IDTokenTTL              time.Duration
 	RefreshTokenAbsoluteTTL time.Duration
 	RefreshTokenInactiveTTL time.Duration
+	RefreshReuseGrace       time.Duration
 }
 
 type UserTokenRequest struct {
@@ -95,6 +97,7 @@ func NewService(
 		idTokenTTL:              cfg.IDTokenTTL,
 		refreshTokenAbsoluteTTL: cfg.RefreshTokenAbsoluteTTL,
 		refreshTokenInactiveTTL: cfg.RefreshTokenInactiveTTL,
+		refreshReuseGrace:       cfg.RefreshReuseGrace,
 	}
 }
 
@@ -276,10 +279,18 @@ func (s Service) RefreshUserTokens(ctx context.Context, req RefreshTokenRequest)
 	if current.RevokedAt != nil {
 		return IssuedTokens{}, ErrRefreshTokenRevoked
 	}
-	if current.UsedAt != nil {
-		_ = s.refreshTokens.RevokeByChainID(ctx, current.RefreshTokenChainID)
-		_ = s.refreshTokenChains.RevokeByID(ctx, current.RefreshTokenChainID)
-		return IssuedTokens{}, ErrRefreshTokenReuseDetected
+	alreadyUsed := current.UsedAt != nil
+	if alreadyUsed {
+		// A just-rotated token presented again within the grace window is a
+		// benign concurrent refresh (common from serverless clients firing
+		// parallel requests), not theft: mint a fresh set of tokens without
+		// revoking the chain. Reuse outside the grace window is still treated
+		// as theft and revokes the whole chain.
+		if s.refreshReuseGrace <= 0 || now.Sub(*current.UsedAt) > s.refreshReuseGrace {
+			_ = s.refreshTokens.RevokeByChainID(ctx, current.RefreshTokenChainID)
+			_ = s.refreshTokenChains.RevokeByID(ctx, current.RefreshTokenChainID)
+			return IssuedTokens{}, ErrRefreshTokenReuseDetected
+		}
 	}
 	if now.After(current.ExpiresAt) {
 		return IssuedTokens{}, ErrRefreshTokenExpired
@@ -336,10 +347,15 @@ func (s Service) RefreshUserTokens(ctx context.Context, req RefreshTokenRequest)
 		return IssuedTokens{}, err
 	}
 
-	current.UsedAt = &now
-	current.ReplacedByTokenID = &replacement.ID
-	if _, err := s.refreshTokens.Update(ctx, current); err != nil {
-		return IssuedTokens{}, err
+	// Only mark the presented token as used on its first rotation. Within the
+	// grace window it is already used (pointing at the first replacement); leave
+	// that record intact so reuse-detection outside the window still works.
+	if !alreadyUsed {
+		current.UsedAt = &now
+		current.ReplacedByTokenID = &replacement.ID
+		if _, err := s.refreshTokens.Update(ctx, current); err != nil {
+			return IssuedTokens{}, err
+		}
 	}
 
 	chain.LastUsedAt = now

@@ -113,6 +113,7 @@ func NewRouterFromEnv() (*gin.Engine, config.Config, error) {
 			OTPMaxAttempts:    cfg.OTPMaxAttempts,
 			OTPMaxResends:     cfg.OTPMaxResends,
 			OTPResendCooldown: cfg.OTPResendCooldown,
+			AppName:           cfg.AppName,
 		},
 		clock,
 		idGenerator,
@@ -132,6 +133,7 @@ func NewRouterFromEnv() (*gin.Engine, config.Config, error) {
 			IDTokenTTL:              cfg.IDTokenTTL,
 			RefreshTokenAbsoluteTTL: cfg.RefreshAbsoluteTTL,
 			RefreshTokenInactiveTTL: cfg.RefreshInactiveTTL,
+			RefreshReuseGrace:       cfg.RefreshReuseGrace,
 		},
 		clock,
 		idGenerator,
@@ -163,6 +165,7 @@ func NewRouterFromEnv() (*gin.Engine, config.Config, error) {
 		Providers:     providers,
 		RefreshChains: refreshTokenChainRepository,
 		RefreshTokens: refreshTokenRepository,
+		OTPChallenges: otpChallengeRepository,
 		Envelope:      envelopeSigner,
 	}
 

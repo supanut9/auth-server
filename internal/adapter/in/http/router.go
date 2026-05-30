@@ -90,6 +90,11 @@ func RegisterRoutes(router *gin.Engine, cfg config.Config, db *gorm.DB, app appl
 	auth.POST("/otp/start", otpMiddleware, handler.startOTPStateless)
 	auth.POST("/otp/verify", otpMiddleware, handler.verifyOTPStateless)
 	auth.POST("/otp/resend", otpMiddleware, handler.resendOTPStateless)
+	// INT-244: test-hint endpoint. Only mounted when not in production; the
+	// handler itself also hard-refuses in production (defence in depth).
+	if !strings.EqualFold(cfg.AppEnv, "production") {
+		auth.GET("/otp/test-hint", handler.testOTPHint)
+	}
 	auth.GET("/logout", handler.logoutLocal)
 	auth.GET("/logout/global", handler.logoutGlobal)
 

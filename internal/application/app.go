@@ -21,6 +21,9 @@ type App struct {
 	Providers     map[string]port.IdentityProvider
 	RefreshChains port.RefreshTokenChainRepository
 	RefreshTokens port.RefreshTokenRepository
+	// OTPChallenges is exposed for the non-production test-hint endpoint
+	// (INT-244). All other OTP operations go through Identity.
+	OTPChallenges port.OTPChallengeRepository
 	// Envelope signs OAuth `state` for external-provider bounces (Google/GitHub).
 	// Nil-safe: handlers that don't yet use it can ignore.
 	Envelope *oauth.EnvelopeSigner

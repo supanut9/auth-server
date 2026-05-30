@@ -97,6 +97,21 @@ func (r OTPChallengeRepository) FindByID(ctx context.Context, id string) (domain
 	return mapOTPChallengeModel(model), nil
 }
 
+// FindLatestActiveByEmail returns the most recent unverified, unexpired challenge
+// for the given email address. Used only by the non-production test-hint endpoint.
+func (r OTPChallengeRepository) FindLatestActiveByEmail(ctx context.Context, email string) (domain.OTPChallenge, error) {
+	var model OTPChallengeModel
+	now := r.clock.Now().UTC()
+	err := r.db.WithContext(ctx).
+		Where("email = ? AND verified_at IS NULL AND expires_at > ?", email, now).
+		Order("created_at DESC").
+		First(&model).Error
+	if err != nil {
+		return domain.OTPChallenge{}, err
+	}
+	return mapOTPChallengeModel(model), nil
+}
+
 func (r OTPChallengeRepository) RevokeByRequestID(ctx context.Context, requestID string) error {
 	return r.db.WithContext(ctx).
 		Model(&OTPChallengeModel{}).

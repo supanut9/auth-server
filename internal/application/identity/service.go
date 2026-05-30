@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/supanut9/auth-server/internal/adapter/out/mail"
 	"github.com/supanut9/auth-server/internal/application/flow"
 	"github.com/supanut9/auth-server/internal/domain"
 	"github.com/supanut9/auth-server/internal/port"
@@ -19,6 +20,9 @@ type Config struct {
 	OTPMaxAttempts    int
 	OTPMaxResends     int
 	OTPResendCooldown time.Duration
+	// AppName is embedded in OTP email subjects and headers.
+	// Defaults to "auth-server" when empty.
+	AppName string
 }
 
 type Service struct {
@@ -34,6 +38,7 @@ type Service struct {
 	otpMaxAttempts    int
 	otpMaxResends     int
 	otpResendCooldown time.Duration
+	appName           string
 }
 
 // ProviderLoginRequest is the internal input shape for resolving an account
@@ -106,6 +111,11 @@ func NewService(
 		otpCodeGenerator = randomOTPCodeGenerator{}
 	}
 
+	appName := strings.TrimSpace(cfg.AppName)
+	if appName == "" {
+		appName = "auth-server"
+	}
+
 	return Service{
 		clock:             clock,
 		idGenerator:       idGenerator,
@@ -119,6 +129,7 @@ func NewService(
 		otpMaxAttempts:    positiveIntOrDefault(cfg.OTPMaxAttempts, 6),
 		otpMaxResends:     positiveIntOrDefault(cfg.OTPMaxResends, 3),
 		otpResendCooldown: durationOrDefault(cfg.OTPResendCooldown, time.Minute),
+		appName:           appName,
 	}
 }
 
@@ -199,10 +210,16 @@ func (s Service) StartOTPChallengeStateless(ctx context.Context, req OTPStartSta
 	}
 
 	if s.mailSender != nil {
+		subject, text, html := mail.RenderOTPEmail(mail.OTPEmailData{
+			Code:      codeValue,
+			ExpiresAt: challenge.ExpiresAt,
+			AppName:   s.appName,
+		})
 		_ = s.mailSender.Send(ctx, port.MailMessage{
 			To:      email,
-			Subject: "Your verification code",
-			Text:    fmt.Sprintf("Your code is: %s", codeValue),
+			Subject: subject,
+			Text:    text,
+			HTML:    html,
 		})
 	}
 
@@ -323,10 +340,16 @@ func (s Service) ResendOTPChallengeStateless(ctx context.Context, req OTPResendS
 	}
 
 	if s.mailSender != nil {
+		subject, text, html := mail.RenderOTPEmail(mail.OTPEmailData{
+			Code:      codeValue,
+			ExpiresAt: updated.ExpiresAt,
+			AppName:   s.appName,
+		})
 		_ = s.mailSender.Send(ctx, port.MailMessage{
 			To:      challenge.Email,
-			Subject: "Your verification code",
-			Text:    fmt.Sprintf("Your code is: %s", codeValue),
+			Subject: subject,
+			Text:    text,
+			HTML:    html,
 		})
 	}
 

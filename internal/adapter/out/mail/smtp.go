@@ -113,14 +113,39 @@ func (s *SMTPSender) Send(ctx context.Context, message port.MailMessage) error {
 }
 
 func buildMessage(from string, message Message) string {
+	boundary := "----=_Part_MimeBoundary_AuthServer"
+
 	var builder strings.Builder
 	builder.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	builder.WriteString(fmt.Sprintf("To: %s\r\n", message.To))
 	builder.WriteString(fmt.Sprintf("Subject: %s\r\n", message.Subject))
 	builder.WriteString("MIME-Version: 1.0\r\n")
-	builder.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
-	builder.WriteString("\r\n")
-	builder.WriteString(message.Text)
-	builder.WriteString("\r\n")
+
+	if message.HTML != "" {
+		builder.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", boundary))
+		builder.WriteString("\r\n")
+
+		// Plain-text part
+		builder.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+		builder.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+		builder.WriteString("\r\n")
+		builder.WriteString(message.Text)
+		builder.WriteString("\r\n")
+
+		// HTML part
+		builder.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+		builder.WriteString("Content-Type: text/html; charset=UTF-8\r\n")
+		builder.WriteString("\r\n")
+		builder.WriteString(message.HTML)
+		builder.WriteString("\r\n")
+
+		builder.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
+	} else {
+		builder.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+		builder.WriteString("\r\n")
+		builder.WriteString(message.Text)
+		builder.WriteString("\r\n")
+	}
+
 	return builder.String()
 }

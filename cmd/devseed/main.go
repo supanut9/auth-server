@@ -108,6 +108,16 @@ func main() {
 		Status:           "active",
 	}
 
+	macroWebClient := domain.OAuthClient{
+		ClientID:         "macro-web",
+		ClientType:       "confidential",
+		ClientSecretHash: hashSecret(settings.macroWebClientSecret),
+		DisplayName:      "Macro",
+		RedirectURIs:     settings.macroWebRedirectURIs,
+		AllowedScopes:    "openid email profile offline_access",
+		Status:           "active",
+	}
+
 	confidentialClient := domain.OAuthClient{
 		ClientID:         "dev-worker",
 		ClientType:       "confidential",
@@ -145,6 +155,7 @@ func main() {
 	upsertClient(ctx, db, repo, idGenerator, interviewWebClient)
 	upsertClient(ctx, db, repo, idGenerator, portalWebClient)
 	upsertClient(ctx, db, repo, idGenerator, tradingWebClient)
+	upsertClient(ctx, db, repo, idGenerator, macroWebClient)
 	upsertClient(ctx, db, repo, idGenerator, confidentialClient)
 	upsertClient(ctx, db, repo, idGenerator, cmsAdminClient)
 	upsertClient(ctx, db, repo, idGenerator, realtimeServiceClient)
@@ -163,6 +174,7 @@ func main() {
 	fmt.Printf("- confidential client_secret: %s\n", settings.portalWebClientSecret)
 	fmt.Println("- confidential client_id: trading-web")
 	fmt.Printf("- confidential client_secret: %s\n", settings.tradingWebClientSecret)
+	fmt.Printf("- macro web client_secret: %s\n", settings.macroWebClientSecret)
 	fmt.Println("- confidential client_id: dev-worker")
 	fmt.Printf("- confidential client_secret: %s\n", settings.devWorkerClientSecret)
 	fmt.Println("- confidential client_id: realtime-service")
@@ -174,6 +186,7 @@ func main() {
 	fmt.Printf("- interview web redirect_uris: %s\n", strings.Join(settings.interviewWebRedirectURIs, ", "))
 	fmt.Printf("- portal web redirect_uris: %s\n", strings.Join(settings.portalWebRedirectURIs, ", "))
 	fmt.Printf("- trading web redirect_uris: %s\n", strings.Join(settings.tradingWebRedirectURIs, ", "))
+	fmt.Printf("- macro web redirect_uris: %s\n", strings.Join(settings.macroWebRedirectURIs, ", "))
 }
 
 type seedSettings struct {
@@ -184,6 +197,7 @@ type seedSettings struct {
 	interviewWebRedirectURIs    []string
 	portalWebRedirectURIs       []string
 	tradingWebRedirectURIs      []string
+	macroWebRedirectURIs        []string
 	cmsAdminRedirectURIs        []string
 	devWorkerRedirectURIs       []string
 	communityWebClientSecret    string
@@ -192,6 +206,7 @@ type seedSettings struct {
 	interviewWebClientSecret    string
 	portalWebClientSecret       string
 	tradingWebClientSecret      string
+	macroWebClientSecret        string
 	cmsAdminClientSecret        string
 	devWorkerClientSecret       string
 	realtimeServiceClientSecret string
@@ -206,6 +221,7 @@ func loadSeedSettings() seedSettings {
 		interviewWebRedirectURIs:    redirectURIsFromEnv("INTERVIEW_WEB_REDIRECT_URIS", "INTERVIEW_WEB_REDIRECT_URI", "http://localhost:4301/api/auth/oauth2/callback/auth-server"),
 		portalWebRedirectURIs:       redirectURIsFromEnv("PORTAL_WEB_REDIRECT_URIS", "PORTAL_WEB_REDIRECT_URI", "http://localhost:3009/api/auth/oauth2/callback/auth-server"),
 		tradingWebRedirectURIs:      redirectURIsFromEnv("TRADING_WEB_REDIRECT_URIS", "TRADING_WEB_REDIRECT_URI", "http://localhost:3011/api/auth/oauth2/callback/auth-server"),
+		macroWebRedirectURIs:        redirectURIsFromEnv("MACRO_WEB_REDIRECT_URIS", "MACRO_WEB_REDIRECT_URI", "http://localhost:3013/api/auth/oauth2/callback/auth-server"),
 		cmsAdminRedirectURIs:        redirectURIsFromEnv("CMS_ADMIN_REDIRECT_URIS", "CMS_ADMIN_REDIRECT_URI", "http://localhost:4101/auth/callback"),
 		devWorkerRedirectURIs:       redirectURIsFromEnv("DEV_WORKER_REDIRECT_URIS", "DEV_WORKER_REDIRECT_URI", "http://localhost:8050/dev/callback"),
 		communityWebClientSecret:    envOrDefault("COMMUNITY_WEB_CLIENT_SECRET", "community-web-secret"),
@@ -214,6 +230,7 @@ func loadSeedSettings() seedSettings {
 		interviewWebClientSecret:    envOrDefault("INTERVIEW_WEB_CLIENT_SECRET", "interview-web-secret"),
 		portalWebClientSecret:       envOrDefault("PORTAL_WEB_CLIENT_SECRET", "portal-web-secret"),
 		tradingWebClientSecret:      envOrDefault("TRADING_WEB_CLIENT_SECRET", "trading-web-secret"),
+		macroWebClientSecret:        envOrDefault("MACRO_WEB_CLIENT_SECRET", "macro-web-secret"),
 		cmsAdminClientSecret:        envOrDefault("CMS_ADMIN_CLIENT_SECRET", "cms-admin-secret"),
 		devWorkerClientSecret:       envOrDefault("DEV_WORKER_CLIENT_SECRET", "dev-worker-secret"),
 		realtimeServiceClientSecret: envOrDefault("REALTIME_SERVICE_CLIENT_SECRET", "dev-realtime-secret"),

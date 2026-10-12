@@ -118,6 +118,16 @@ func main() {
 		Status:           "active",
 	}
 
+	portfolioManagerWebClient := domain.OAuthClient{
+		ClientID:         "portfolio-manager-web",
+		ClientType:       "confidential",
+		ClientSecretHash: hashSecret(settings.portfolioManagerWebClientSecret),
+		DisplayName:      "Folio",
+		RedirectURIs:     settings.portfolioManagerWebRedirectURIs,
+		AllowedScopes:    "openid email profile offline_access",
+		Status:           "active",
+	}
+
 	confidentialClient := domain.OAuthClient{
 		ClientID:         "dev-worker",
 		ClientType:       "confidential",
@@ -156,6 +166,7 @@ func main() {
 	upsertClient(ctx, db, repo, idGenerator, portalWebClient)
 	upsertClient(ctx, db, repo, idGenerator, tradingWebClient)
 	upsertClient(ctx, db, repo, idGenerator, macroWebClient)
+	upsertClient(ctx, db, repo, idGenerator, portfolioManagerWebClient)
 	upsertClient(ctx, db, repo, idGenerator, confidentialClient)
 	upsertClient(ctx, db, repo, idGenerator, cmsAdminClient)
 	upsertClient(ctx, db, repo, idGenerator, realtimeServiceClient)
@@ -175,6 +186,7 @@ func main() {
 	fmt.Println("- confidential client_id: trading-web")
 	fmt.Printf("- confidential client_secret: %s\n", settings.tradingWebClientSecret)
 	fmt.Printf("- macro web client_secret: %s\n", settings.macroWebClientSecret)
+	fmt.Printf("- portfolio manager web client_secret: %s\n", settings.portfolioManagerWebClientSecret)
 	fmt.Println("- confidential client_id: dev-worker")
 	fmt.Printf("- confidential client_secret: %s\n", settings.devWorkerClientSecret)
 	fmt.Println("- confidential client_id: realtime-service")
@@ -187,53 +199,58 @@ func main() {
 	fmt.Printf("- portal web redirect_uris: %s\n", strings.Join(settings.portalWebRedirectURIs, ", "))
 	fmt.Printf("- trading web redirect_uris: %s\n", strings.Join(settings.tradingWebRedirectURIs, ", "))
 	fmt.Printf("- macro web redirect_uris: %s\n", strings.Join(settings.macroWebRedirectURIs, ", "))
+	fmt.Printf("- portfolio manager web redirect_uris: %s\n", strings.Join(settings.portfolioManagerWebRedirectURIs, ", "))
 }
 
 type seedSettings struct {
-	devBrowserRedirectURIs      []string
-	communityWebRedirectURIs    []string
-	knowledgeWebRedirectURIs    []string
-	languageWebRedirectURIs     []string
-	interviewWebRedirectURIs    []string
-	portalWebRedirectURIs       []string
-	tradingWebRedirectURIs      []string
-	macroWebRedirectURIs        []string
-	cmsAdminRedirectURIs        []string
-	devWorkerRedirectURIs       []string
-	communityWebClientSecret    string
-	knowledgeWebClientSecret    string
-	languageWebClientSecret     string
-	interviewWebClientSecret    string
-	portalWebClientSecret       string
-	tradingWebClientSecret      string
-	macroWebClientSecret        string
-	cmsAdminClientSecret        string
-	devWorkerClientSecret       string
-	realtimeServiceClientSecret string
+	devBrowserRedirectURIs          []string
+	communityWebRedirectURIs        []string
+	knowledgeWebRedirectURIs        []string
+	languageWebRedirectURIs         []string
+	interviewWebRedirectURIs        []string
+	portalWebRedirectURIs           []string
+	tradingWebRedirectURIs          []string
+	macroWebRedirectURIs            []string
+	portfolioManagerWebRedirectURIs []string
+	cmsAdminRedirectURIs            []string
+	devWorkerRedirectURIs           []string
+	communityWebClientSecret        string
+	knowledgeWebClientSecret        string
+	languageWebClientSecret         string
+	interviewWebClientSecret        string
+	portalWebClientSecret           string
+	tradingWebClientSecret          string
+	macroWebClientSecret            string
+	portfolioManagerWebClientSecret string
+	cmsAdminClientSecret            string
+	devWorkerClientSecret           string
+	realtimeServiceClientSecret     string
 }
 
 func loadSeedSettings() seedSettings {
 	return seedSettings{
-		devBrowserRedirectURIs:      redirectURIsFromEnv("DEV_BROWSER_REDIRECT_URIS", "DEV_BROWSER_REDIRECT_URI", "http://localhost:8050/dev/callback"),
-		communityWebRedirectURIs:    redirectURIsFromEnv("COMMUNITY_WEB_REDIRECT_URIS", "COMMUNITY_WEB_REDIRECT_URI", "http://localhost:3006/api/auth/oauth2/callback/auth-server"),
-		knowledgeWebRedirectURIs:    redirectURIsFromEnv("KNOWLEDGE_WEB_REDIRECT_URIS", "KNOWLEDGE_WEB_REDIRECT_URI", "http://localhost:3007/api/auth/oauth2/callback/auth-server"),
-		languageWebRedirectURIs:     redirectURIsFromEnv("LANGUAGE_WEB_REDIRECT_URIS", "LANGUAGE_WEB_REDIRECT_URI", "http://localhost:3008/api/auth/oauth2/callback/auth-server"),
-		interviewWebRedirectURIs:    redirectURIsFromEnv("INTERVIEW_WEB_REDIRECT_URIS", "INTERVIEW_WEB_REDIRECT_URI", "http://localhost:4301/api/auth/oauth2/callback/auth-server"),
-		portalWebRedirectURIs:       redirectURIsFromEnv("PORTAL_WEB_REDIRECT_URIS", "PORTAL_WEB_REDIRECT_URI", "http://localhost:3009/api/auth/oauth2/callback/auth-server"),
-		tradingWebRedirectURIs:      redirectURIsFromEnv("TRADING_WEB_REDIRECT_URIS", "TRADING_WEB_REDIRECT_URI", "http://localhost:3011/api/auth/oauth2/callback/auth-server"),
-		macroWebRedirectURIs:        redirectURIsFromEnv("MACRO_WEB_REDIRECT_URIS", "MACRO_WEB_REDIRECT_URI", "http://localhost:3013/api/auth/oauth2/callback/auth-server"),
-		cmsAdminRedirectURIs:        redirectURIsFromEnv("CMS_ADMIN_REDIRECT_URIS", "CMS_ADMIN_REDIRECT_URI", "http://localhost:4101/auth/callback"),
-		devWorkerRedirectURIs:       redirectURIsFromEnv("DEV_WORKER_REDIRECT_URIS", "DEV_WORKER_REDIRECT_URI", "http://localhost:8050/dev/callback"),
-		communityWebClientSecret:    envOrDefault("COMMUNITY_WEB_CLIENT_SECRET", "community-web-secret"),
-		knowledgeWebClientSecret:    envOrDefault("KNOWLEDGE_WEB_CLIENT_SECRET", "knowledge-web-secret"),
-		languageWebClientSecret:     envOrDefault("LANGUAGE_WEB_CLIENT_SECRET", "language-web-secret"),
-		interviewWebClientSecret:    envOrDefault("INTERVIEW_WEB_CLIENT_SECRET", "interview-web-secret"),
-		portalWebClientSecret:       envOrDefault("PORTAL_WEB_CLIENT_SECRET", "portal-web-secret"),
-		tradingWebClientSecret:      envOrDefault("TRADING_WEB_CLIENT_SECRET", "trading-web-secret"),
-		macroWebClientSecret:        envOrDefault("MACRO_WEB_CLIENT_SECRET", "macro-web-secret"),
-		cmsAdminClientSecret:        envOrDefault("CMS_ADMIN_CLIENT_SECRET", "cms-admin-secret"),
-		devWorkerClientSecret:       envOrDefault("DEV_WORKER_CLIENT_SECRET", "dev-worker-secret"),
-		realtimeServiceClientSecret: envOrDefault("REALTIME_SERVICE_CLIENT_SECRET", "dev-realtime-secret"),
+		devBrowserRedirectURIs:          redirectURIsFromEnv("DEV_BROWSER_REDIRECT_URIS", "DEV_BROWSER_REDIRECT_URI", "http://localhost:8050/dev/callback"),
+		communityWebRedirectURIs:        redirectURIsFromEnv("COMMUNITY_WEB_REDIRECT_URIS", "COMMUNITY_WEB_REDIRECT_URI", "http://localhost:3006/api/auth/oauth2/callback/auth-server"),
+		knowledgeWebRedirectURIs:        redirectURIsFromEnv("KNOWLEDGE_WEB_REDIRECT_URIS", "KNOWLEDGE_WEB_REDIRECT_URI", "http://localhost:3007/api/auth/oauth2/callback/auth-server"),
+		languageWebRedirectURIs:         redirectURIsFromEnv("LANGUAGE_WEB_REDIRECT_URIS", "LANGUAGE_WEB_REDIRECT_URI", "http://localhost:3008/api/auth/oauth2/callback/auth-server"),
+		interviewWebRedirectURIs:        redirectURIsFromEnv("INTERVIEW_WEB_REDIRECT_URIS", "INTERVIEW_WEB_REDIRECT_URI", "http://localhost:4301/api/auth/oauth2/callback/auth-server"),
+		portalWebRedirectURIs:           redirectURIsFromEnv("PORTAL_WEB_REDIRECT_URIS", "PORTAL_WEB_REDIRECT_URI", "http://localhost:3009/api/auth/oauth2/callback/auth-server"),
+		tradingWebRedirectURIs:          redirectURIsFromEnv("TRADING_WEB_REDIRECT_URIS", "TRADING_WEB_REDIRECT_URI", "http://localhost:3011/api/auth/oauth2/callback/auth-server"),
+		macroWebRedirectURIs:            redirectURIsFromEnv("MACRO_WEB_REDIRECT_URIS", "MACRO_WEB_REDIRECT_URI", "http://localhost:3013/api/auth/oauth2/callback/auth-server"),
+		portfolioManagerWebRedirectURIs: redirectURIsFromEnv("PORTFOLIO_MANAGER_WEB_REDIRECT_URIS", "PORTFOLIO_MANAGER_WEB_REDIRECT_URI", "http://localhost:3014/api/auth/oauth2/callback/auth-server"),
+		cmsAdminRedirectURIs:            redirectURIsFromEnv("CMS_ADMIN_REDIRECT_URIS", "CMS_ADMIN_REDIRECT_URI", "http://localhost:4101/auth/callback"),
+		devWorkerRedirectURIs:           redirectURIsFromEnv("DEV_WORKER_REDIRECT_URIS", "DEV_WORKER_REDIRECT_URI", "http://localhost:8050/dev/callback"),
+		communityWebClientSecret:        envOrDefault("COMMUNITY_WEB_CLIENT_SECRET", "community-web-secret"),
+		knowledgeWebClientSecret:        envOrDefault("KNOWLEDGE_WEB_CLIENT_SECRET", "knowledge-web-secret"),
+		languageWebClientSecret:         envOrDefault("LANGUAGE_WEB_CLIENT_SECRET", "language-web-secret"),
+		interviewWebClientSecret:        envOrDefault("INTERVIEW_WEB_CLIENT_SECRET", "interview-web-secret"),
+		portalWebClientSecret:           envOrDefault("PORTAL_WEB_CLIENT_SECRET", "portal-web-secret"),
+		tradingWebClientSecret:          envOrDefault("TRADING_WEB_CLIENT_SECRET", "trading-web-secret"),
+		macroWebClientSecret:            envOrDefault("MACRO_WEB_CLIENT_SECRET", "macro-web-secret"),
+		portfolioManagerWebClientSecret: envOrDefault("PORTFOLIO_MANAGER_WEB_CLIENT_SECRET", "portfolio-manager-web-secret"),
+		cmsAdminClientSecret:            envOrDefault("CMS_ADMIN_CLIENT_SECRET", "cms-admin-secret"),
+		devWorkerClientSecret:           envOrDefault("DEV_WORKER_CLIENT_SECRET", "dev-worker-secret"),
+		realtimeServiceClientSecret:     envOrDefault("REALTIME_SERVICE_CLIENT_SECRET", "dev-realtime-secret"),
 	}
 }
 

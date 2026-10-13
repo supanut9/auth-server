@@ -158,18 +158,31 @@ func main() {
 		Status:           "active",
 	}
 
-	upsertClient(ctx, db, repo, idGenerator, publicClient)
-	upsertClient(ctx, db, repo, idGenerator, communityWebClient)
-	upsertClient(ctx, db, repo, idGenerator, knowledgeWebClient)
-	upsertClient(ctx, db, repo, idGenerator, languageWebClient)
-	upsertClient(ctx, db, repo, idGenerator, interviewWebClient)
-	upsertClient(ctx, db, repo, idGenerator, portalWebClient)
-	upsertClient(ctx, db, repo, idGenerator, tradingWebClient)
-	upsertClient(ctx, db, repo, idGenerator, macroWebClient)
-	upsertClient(ctx, db, repo, idGenerator, portfolioManagerWebClient)
-	upsertClient(ctx, db, repo, idGenerator, confidentialClient)
-	upsertClient(ctx, db, repo, idGenerator, cmsAdminClient)
-	upsertClient(ctx, db, repo, idGenerator, realtimeServiceClient)
+	clients := []domain.OAuthClient{
+		publicClient,
+		communityWebClient,
+		knowledgeWebClient,
+		languageWebClient,
+		interviewWebClient,
+		portalWebClient,
+		tradingWebClient,
+		macroWebClient,
+		portfolioManagerWebClient,
+		confidentialClient,
+		cmsAdminClient,
+		realtimeServiceClient,
+	}
+	// DEVSEED_CLIENTS limits the run to the named client IDs. Use it whenever
+	// seeding a shared (deployed) database: an unfiltered run resets EVERY
+	// client's secret and redirect URIs to this process's env/defaults.
+	only := clientFilterFromEnv("DEVSEED_CLIENTS")
+	for _, client := range selectClients(clients, only) {
+		upsertClient(ctx, db, repo, idGenerator, client)
+	}
+	if len(only) > 0 {
+		fmt.Printf("seeded only: %s\n", strings.Join(only, ", "))
+		return
+	}
 
 	fmt.Println("seeded oauth clients:")
 	fmt.Println("- public client_id: dev-browser")
@@ -252,6 +265,37 @@ func loadSeedSettings() seedSettings {
 		devWorkerClientSecret:           envOrDefault("DEV_WORKER_CLIENT_SECRET", "dev-worker-secret"),
 		realtimeServiceClientSecret:     envOrDefault("REALTIME_SERVICE_CLIENT_SECRET", "dev-realtime-secret"),
 	}
+}
+
+func clientFilterFromEnv(key string) []string {
+	var ids []string
+	for _, part := range strings.FieldsFunc(os.Getenv(key), func(r rune) bool { return r == ',' || r == '\n' || r == ' ' }) {
+		if part = strings.TrimSpace(part); part != "" {
+			ids = append(ids, part)
+		}
+	}
+	return ids
+}
+
+// selectClients returns the clients whose IDs are in only, or all of them when
+// only is empty. An unknown ID is fatal so a typo never silently seeds nothing.
+func selectClients(clients []domain.OAuthClient, only []string) []domain.OAuthClient {
+	if len(only) == 0 {
+		return clients
+	}
+	byID := make(map[string]domain.OAuthClient, len(clients))
+	for _, c := range clients {
+		byID[c.ClientID] = c
+	}
+	selected := make([]domain.OAuthClient, 0, len(only))
+	for _, id := range only {
+		c, ok := byID[id]
+		if !ok {
+			log.Fatalf("DEVSEED_CLIENTS: unknown client %q", id)
+		}
+		selected = append(selected, c)
+	}
+	return selected
 }
 
 func envOrDefault(key string, fallback string) string {

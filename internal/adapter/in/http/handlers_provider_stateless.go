@@ -120,6 +120,11 @@ func (h Handler) providerAuthorizationURLWithState(providerName, state string) s
 	values.Set("redirect_uri", h.providerRedirectURI(providerName))
 	values.Set("response_type", "code")
 	values.Set("state", state)
+	// The provider step only runs from the login screen (no SSO session, or the client asked
+	// for prompt=login), i.e. the user is actively choosing how to sign in. Ask the provider
+	// to show its account chooser instead of silently reusing the browser's signed-in
+	// account; otherwise "sign out, then sign in as someone else" is impossible.
+	values.Set("prompt", "select_account")
 	switch providerName {
 	case "google":
 		values.Set("scope", "openid email profile")

@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"context"
+	"errors"
 
 	"github.com/supanut9/auth-server/internal/domain"
 	"github.com/supanut9/auth-server/internal/port"
@@ -71,6 +72,9 @@ func (r RefreshTokenChainRepository) FindByID(ctx context.Context, id string) (d
 	if err := r.db.WithContext(ctx).
 		Where("id = ?", id).
 		First(&model).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return domain.RefreshTokenChain{}, port.ErrRefreshTokenChainNotFound
+		}
 		return domain.RefreshTokenChain{}, err
 	}
 

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"sort"
 	"strings"
 	"time"
@@ -196,8 +197,18 @@ func (s Service) StartSSOSession(ctx context.Context, accountID string, loginMet
 	})
 }
 
-func (s Service) LogoutLocal(ctx context.Context, refreshTokenChainID string) error {
-	if refreshTokenChainID == "" {
+func (s Service) LogoutLocal(ctx context.Context, ssoSessionID string, refreshTokenChainID string) error {
+	if ssoSessionID == "" || refreshTokenChainID == "" {
+		return nil
+	}
+	chain, err := s.refreshTokenChains.FindByID(ctx, refreshTokenChainID)
+	if errors.Is(err, port.ErrRefreshTokenChainNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if chain.SSOSessionID != ssoSessionID {
 		return nil
 	}
 	if err := s.refreshTokens.RevokeByChainID(ctx, refreshTokenChainID); err != nil {

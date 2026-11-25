@@ -24,6 +24,8 @@ import (
 
 const ssoCookieName = "auth_sso_session"
 
+var errInactiveSSOSession = errors.New("inactive sso session")
+
 type Handler struct {
 	cfg config.Config
 	db  *gorm.DB
@@ -472,10 +474,19 @@ func (h Handler) introspectRefreshToken(c *gin.Context, tokenValue string) {
 }
 
 func (h Handler) logoutLocal(c *gin.Context) {
-	chainID := c.Query("refresh_token_chain_id")
-	if err := h.app.Flow.LogoutLocal(c.Request.Context(), chainID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
-		return
+	if chainID := c.Query("refresh_token_chain_id"); chainID != "" {
+		ctx := c.Request.Context()
+		session, err := h.currentSSOSession(ctx, c)
+		switch {
+		case err == nil:
+			err = h.app.Flow.LogoutLocal(ctx, session.ID, chainID)
+		case errors.Is(err, http.ErrNoCookie), errors.Is(err, gorm.ErrRecordNotFound), errors.Is(err, errInactiveSSOSession):
+			err = nil
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
+			return
+		}
 	}
 
 	redirectTarget := h.postLogoutRedirect(c.Query("post_logout_redirect_uri"))
@@ -545,7 +556,7 @@ func (h Handler) currentSSOSession(ctx context.Context, c *gin.Context) (domain.
 		return domain.SSOSession{}, err
 	}
 	if session.Status != domain.SSOSessionStatusActive || time.Now().UTC().After(session.ExpiresAt) || session.RevokedAt != nil {
-		return domain.SSOSession{}, fmt.Errorf("inactive sso session")
+		return domain.SSOSession{}, errInactiveSSOSession
 	}
 	return session, nil
 }

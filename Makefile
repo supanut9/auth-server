@@ -49,3 +49,22 @@ hook-pre-commit:
 hook-pre-push:
 	$(MAKE) semgrep
 	$(MAKE) trivy
+
+.PHONY: rs-fmt rs-lint rs-test rs-deny rs-core-deps rs-check
+
+rs-fmt:
+	cargo fmt --all --check
+
+rs-lint:
+	cargo clippy --workspace --all-targets -- -D warnings
+
+rs-test:
+	cargo test --workspace
+
+rs-deny:
+	cargo deny check
+
+rs-core-deps:
+	./scripts/check-core-deps.sh
+
+rs-check: rs-fmt rs-lint rs-test rs-deny rs-core-deps

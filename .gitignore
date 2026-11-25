@@ -1,6 +1,7 @@
 .env
 .DS_Store
 bin/
+!/src/bin/
 server
 devseed
 tmp/
@@ -9,3 +10,4 @@ secrets/
 .vercel
 contract-tests/target/
 contract-tests/.keys/
+/target/

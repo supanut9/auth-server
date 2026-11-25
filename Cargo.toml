@@ -1,0 +1,60 @@
+[workspace]
+members = [".", "crates/auth-core", "crates/auth-adapters", "crates/auth-http"]
+exclude = ["contract-tests"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+
+[workspace.dependencies]
+auth-http = { path = "crates/auth-http" }
+
+axum = "0.8.9"
+tower = "0.5.3"
+tokio = { version = "1.54.1", features = ["full"] }
+vercel_runtime = { version = "2.4.1", features = ["axum"] }
+uuid = { version = "1.29.3", features = ["v4", "v7", "serde"] }
+serde_json = "1.0.154"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+must_use_candidate = "warn"
+redundant_closure_for_method_calls = "warn"
+unnested_or_patterns = "warn"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = 3
+
+[package]
+name = "auth-server"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+autobins = false
+
+[dependencies]
+auth-http.workspace = true
+axum.workspace = true
+tokio.workspace = true
+tower.workspace = true
+vercel_runtime.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "auth"
+path = "api/auth.rs"
+
+[[bin]]
+name = "server"
+path = "src/bin/server.rs"
+
+[[bin]]
+name = "devseed"
+path = "src/bin/devseed.rs"

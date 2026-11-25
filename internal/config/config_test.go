@@ -6,6 +6,58 @@ import (
 	"time"
 )
 
+func TestLoadFlowEnvelopeSecret(t *testing.T) {
+	const publicBaseURL = "https://auth.example"
+	for key, value := range map[string]string{
+		"PUBLIC_BASE_URL":         publicBaseURL,
+		"AUTH_UI_BASE_URL":        "https://ui.example",
+		"DATABASE_URL":            "postgres://localhost/auth_test",
+		"JWT_ISSUER":              publicBaseURL,
+		"JWT_PRIVATE_KEY_PEM":     "test-private-key",
+		"JWT_PUBLIC_KEY_PEM":      "test-public-key",
+		"SUPPORT_API_TOKEN":       "test-support-token",
+		"FIXED_OTP_CODE":          "",
+		"OTP_TEST_HINT_ALLOWLIST": "",
+	} {
+		t.Setenv(key, value)
+	}
+
+	validSecret := strings.Repeat("é", 16)
+	tests := []struct {
+		name       string
+		appEnv     string
+		secret     string
+		wantSecret string
+		wantErr    bool
+	}{
+		{name: "production missing", appEnv: "production", wantErr: true},
+		{name: "production blank", appEnv: "production", secret: " \t", wantErr: true},
+		{name: "production short", appEnv: "Production", secret: " " + strings.Repeat("x", 31) + " ", wantErr: true},
+		{name: "production valid", appEnv: "production", secret: " " + validSecret + " ", wantSecret: validSecret},
+		{name: "development missing", appEnv: "development", wantSecret: "dev-flow-envelope-secret-" + publicBaseURL + "-min-32-bytes"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("APP_ENV", tt.appEnv)
+			t.Setenv("FLOW_ENVELOPE_SECRET", tt.secret)
+
+			cfg, err := Load()
+			if tt.wantErr {
+				if err == nil || !strings.Contains(err.Error(), "FLOW_ENVELOPE_SECRET") {
+					t.Fatalf("expected FLOW_ENVELOPE_SECRET validation error, got %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.FlowEnvelopeSecret != tt.wantSecret {
+				t.Fatal("unexpected flow envelope secret")
+			}
+		})
+	}
+}
+
 func TestValidateRejectsInvalidSSOCookieSameSite(t *testing.T) {
 	t.Parallel()
 

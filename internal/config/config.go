@@ -42,25 +42,25 @@ type Config struct {
 	// OTPTestHintAllowlist is the comma-separated list of email addresses that
 	// may use GET /v1/auth/otp/test-hint. The endpoint is refused entirely in
 	// production regardless of this list.
-	OTPTestHintAllowlist []string
-	SupportAPIToken      string
-	PlatformAudience            string
-	AccessTokenTTL              time.Duration
-	IDTokenTTL                  time.Duration
-	RefreshAbsoluteTTL          time.Duration
-	RefreshInactiveTTL          time.Duration
-	RefreshReuseGrace           time.Duration
-	OTPChallengeTTL             time.Duration
-	OTPMaxAttempts              int
-	OTPMaxResends               int
-	OTPResendCooldown           time.Duration
-	AuthorizationRequestTTL     time.Duration
-	AuthorizationCodeTTL        time.Duration
-	SSOSessionTTL               time.Duration
+	OTPTestHintAllowlist    []string
+	SupportAPIToken         string
+	PlatformAudience        string
+	AccessTokenTTL          time.Duration
+	IDTokenTTL              time.Duration
+	RefreshAbsoluteTTL      time.Duration
+	RefreshInactiveTTL      time.Duration
+	RefreshReuseGrace       time.Duration
+	OTPChallengeTTL         time.Duration
+	OTPMaxAttempts          int
+	OTPMaxResends           int
+	OTPResendCooldown       time.Duration
+	AuthorizationRequestTTL time.Duration
+	AuthorizationCodeTTL    time.Duration
+	SSOSessionTTL           time.Duration
 	// FlowEnvelopeSecret signs the OAuth `state` we hand to external providers
-	// (Google/GitHub). Must be >= 32 bytes. In production this is loaded from a
-	// secret manager. In development a deterministic fallback derived from
-	// PUBLIC_BASE_URL is used so devs don't need to plumb a new env var.
+	// (Google/GitHub). Production requires a configured secret of at least 32
+	// bytes. Other environments can use a deterministic fallback derived from
+	// PUBLIC_BASE_URL.
 	FlowEnvelopeSecret string
 	// FlowEnvelopeTTL bounds how long a signed envelope is valid. Default 10m,
 	// matches typical OAuth state lifetimes.
@@ -141,10 +141,8 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	flowEnvelopeSecret := strings.TrimSpace(getEnv("FLOW_ENVELOPE_SECRET", ""))
-	if flowEnvelopeSecret == "" {
-		// Development fallback: deterministic per-deployment derivation so the
-		// signer can boot without a new env var. Production validates this
-		// length downstream and a real secret should be configured.
+	if flowEnvelopeSecret == "" && !strings.EqualFold(appEnv, "production") {
+		// Non-production fallback derived from PUBLIC_BASE_URL.
 		flowEnvelopeSecret = "dev-flow-envelope-secret-" + publicBaseURL + "-min-32-bytes"
 	}
 	ssocookieSecure, err := boolEnv("SSO_COOKIE_SECURE", defaultSSOCookieSecure(appEnv, publicBaseURL))
@@ -275,6 +273,9 @@ func (c Config) Validate() error {
 	}
 	if c.OTPResendCooldown <= 0 {
 		return fmt.Errorf("invalid OTP_RESEND_COOLDOWN: must be greater than zero")
+	}
+	if strings.EqualFold(c.AppEnv, "production") && len(strings.TrimSpace(c.FlowEnvelopeSecret)) < 32 {
+		return fmt.Errorf("FLOW_ENVELOPE_SECRET must be set to at least 32 bytes in production")
 	}
 
 	return nil

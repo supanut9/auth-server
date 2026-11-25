@@ -58,6 +58,7 @@ Deployment baseline:
 - if SMTP is enabled, `SMTP_FROM` must be set and `SMTP_PORT` must be a valid port number
 - if `SSO_COOKIE_SAME_SITE=none`, `SSO_COOKIE_SECURE` must be `true`
 - `SUPPORT_API_TOKEN` must be configured; development falls back to `dev-support-token`
+- Set `FLOW_ENVELOPE_SECRET` to a random value of at least 32 bytes after trimming whitespace when `APP_ENV=production`. In other environments, an unset or blank value uses the deterministic fallback derived from `PUBLIC_BASE_URL`.
 - OTP settings must remain positive and finite
 - run `make smoke` after local or deploy startup to confirm request IDs, health, discovery, and JWKS responses
 - `X-Request-Id` is emitted on every response and surfaced in `/healthz` and `/readyz`

@@ -39,13 +39,20 @@ func StructuredLogger() gin.HandlerFunc {
 			}
 		}
 
+		var path string
+		if param.Request != nil && param.Request.URL != nil {
+			path = param.Request.URL.Path
+		} else {
+			path, _, _ = strings.Cut(param.Path, "?")
+		}
+
 		entry := map[string]any{
 			"time":       param.TimeStamp.UTC().Format(time.RFC3339Nano),
 			"status":     param.StatusCode,
 			"latency_ms": param.Latency.Milliseconds(),
 			"client_ip":  param.ClientIP,
 			"method":     param.Method,
-			"path":       param.Path,
+			"path":       path,
 			"request_id": requestID,
 		}
 		if param.ErrorMessage != "" {

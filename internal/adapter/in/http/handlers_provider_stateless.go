@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
 	flowapp "github.com/supanut9/auth-server/internal/application/flow"
 	identityapp "github.com/supanut9/auth-server/internal/application/identity"
 	"github.com/supanut9/auth-server/internal/application/oauth"
+	"github.com/supanut9/auth-server/internal/domain"
 )
 
 // authorizeRequestBody is the canonical OAuth-param payload action handlers
@@ -211,7 +211,7 @@ func (h Handler) handleProviderCallbackStateless(c *gin.Context, providerName st
 	}
 
 	h.setSSOCookie(c, result.Session.ID, result.Session.ExpiresAt)
-	h.redirectPostAuthenticationStateless(c, validated, result.Session.ID, result.Session.AuthenticatedAt)
+	h.redirectPostAuthenticationStateless(c, validated, result.Session)
 }
 
 func (h Handler) handleGoogleCallbackStateless(c *gin.Context) {
@@ -225,34 +225,17 @@ func (h Handler) handleGitHubCallbackStateless(c *gin.Context) {
 // redirectPostAuthenticationStateless decides where the user goes after a
 // fresh authentication: directly to the client if consent is already granted,
 // otherwise to auth-ui /consent with the OAuth params preserved.
-func (h Handler) redirectPostAuthenticationStateless(c *gin.Context, validated oauth.Validated, sessionID string, authTime time.Time) {
-	accountID := ""
-	if session, err := h.currentSSOSession(c.Request.Context(), c); err == nil {
-		accountID = session.AccountID
-	}
-	if accountID == "" {
-		// fall back to a fresh lookup via cookie that we just set
-		if session, err := h.app.SSOSessions.FindByID(c.Request.Context(), sessionID); err == nil {
-			accountID = session.AccountID
-		}
-	}
-	if accountID == "" {
-		// Best-effort: should never happen since we just set the SSO cookie.
-		c.Redirect(http.StatusFound, h.authUIRoute("/consent", oauthValuesFromValidated(validated)))
-		return
-	}
-
-	if h.app.Flow.HasConsentForScopes(c.Request.Context(), accountID, validated.Client.ClientID, validated.Scopes) {
-		ssoSessionID := sessionID
+func (h Handler) redirectPostAuthenticationStateless(c *gin.Context, validated oauth.Validated, session domain.SSOSession) {
+	if session.AccountID != "" && h.app.Flow.HasConsentForScopes(c.Request.Context(), session.AccountID, validated.Client.ClientID, validated.Scopes) {
 		codeValue, _, err := h.app.Flow.IssueDirectCode(c.Request.Context(), flowapp.IssueDirectCodeRequest{
-			AccountID:               accountID,
+			AccountID:               session.AccountID,
 			ClientID:                validated.Client.ClientID,
-			SSOSessionID:            &ssoSessionID,
+			SSOSessionID:            &session.ID,
 			RedirectURI:             validated.Request.RedirectURI,
 			Scopes:                  validated.Scopes,
 			PKCECodeChallenge:       validated.Request.CodeChallenge,
 			PKCECodeChallengeMethod: validated.Request.CodeChallengeMethod,
-			AuthTime:                authTime,
+			AuthTime:                session.AuthenticatedAt,
 		})
 		if err != nil {
 			h.redirectOAuthError(c, validated.Request.RedirectURI, validated.Request.State, "server_error", err.Error())

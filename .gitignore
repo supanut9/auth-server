@@ -7,3 +7,5 @@ tmp/
 coverage.out
 secrets/
 .vercel
+contract-tests/target/
+contract-tests/.keys/

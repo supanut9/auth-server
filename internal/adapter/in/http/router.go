@@ -500,7 +500,7 @@ func (h Handler) logoutGlobal(c *gin.Context) {
 		return
 	}
 
-	if err := h.app.Flow.LogoutGlobal(c.Request.Context(), ssoSessionID, nil); err != nil {
+	if err := h.app.Flow.LogoutGlobal(c.Request.Context(), ssoSessionID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error"})
 		return
 	}

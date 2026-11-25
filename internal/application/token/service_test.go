@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/supanut9/auth-server/internal/adapter/out/jwks"
 	"github.com/supanut9/auth-server/internal/domain"
+	"github.com/supanut9/auth-server/internal/port"
 )
 
 type fixedClock struct {
@@ -39,6 +41,21 @@ func (r *memoryAccessTokenRepo) Create(_ context.Context, record domain.AccessTo
 	return record, nil
 }
 
+var errSSOSessionNotFound = errors.New("session not found")
+
+type memorySSOSessionRepo struct {
+	port.SSOSessionRepository
+	sessions map[string]domain.SSOSession
+}
+
+func (r *memorySSOSessionRepo) FindByID(_ context.Context, id string) (domain.SSOSession, error) {
+	session, ok := r.sessions[id]
+	if !ok {
+		return domain.SSOSession{}, errSSOSessionNotFound
+	}
+	return session, nil
+}
+
 type memoryRefreshTokenChainRepo struct {
 	chains map[string]domain.RefreshTokenChain
 }
@@ -53,6 +70,16 @@ func (r *memoryRefreshTokenChainRepo) Create(_ context.Context, chain domain.Ref
 
 func (r *memoryRefreshTokenChainRepo) FindByID(_ context.Context, id string) (domain.RefreshTokenChain, error) {
 	return r.chains[id], nil
+}
+
+func (r *memoryRefreshTokenChainRepo) ListActiveIDsBySSOSessionID(_ context.Context, ssoSessionID string) ([]string, error) {
+	var ids []string
+	for id, chain := range r.chains {
+		if chain.SSOSessionID == ssoSessionID && chain.Status == domain.RefreshTokenChainStatusActive && chain.RevokedAt == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids, nil
 }
 
 func (r *memoryRefreshTokenChainRepo) Update(_ context.Context, chain domain.RefreshTokenChain) (domain.RefreshTokenChain, error) {
@@ -113,6 +140,10 @@ func TestIssueUserTokensAndRotateRefresh(t *testing.T) {
 	accessRepo := &memoryAccessTokenRepo{}
 	chainRepo := &memoryRefreshTokenChainRepo{}
 	refreshRepo := &memoryRefreshTokenRepo{}
+	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	sessions := &memorySSOSessionRepo{sessions: map[string]domain.SSOSession{
+		"sso-123": {ID: "sso-123", Status: domain.SSOSessionStatusActive, ExpiresAt: now.Add(time.Hour)},
+	}}
 
 	svc := NewService(
 		Config{
@@ -123,10 +154,11 @@ func TestIssueUserTokensAndRotateRefresh(t *testing.T) {
 			RefreshTokenAbsoluteTTL: 30 * 24 * time.Hour,
 			RefreshTokenInactiveTTL: 7 * 24 * time.Hour,
 		},
-		fixedClock{now: time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)},
+		fixedClock{now: now},
 		idGenerator,
 		signer,
 		accessRepo,
+		sessions,
 		chainRepo,
 		refreshRepo,
 	)
@@ -175,6 +207,89 @@ func TestIssueUserTokensAndRotateRefresh(t *testing.T) {
 	}
 }
 
+func TestRefreshRequiresActiveSSOSession(t *testing.T) {
+	t.Parallel()
+
+	const sessionID = "sso-123"
+	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	signer := newTestSigner(t)
+	for _, tc := range []struct {
+		name      string
+		status    string
+		revokedAt *time.Time
+		expiresAt time.Time
+		wantErr   error
+	}{
+		{name: "active", status: domain.SSOSessionStatusActive, expiresAt: now.Add(time.Hour)},
+		{name: "revoked status", status: domain.SSOSessionStatusRevoked, expiresAt: now.Add(time.Hour), wantErr: ErrRefreshTokenSessionInactive},
+		{name: "revocation timestamp", status: domain.SSOSessionStatusActive, revokedAt: &now, expiresAt: now.Add(time.Hour), wantErr: ErrRefreshTokenSessionInactive},
+		{name: "expired", status: domain.SSOSessionStatusActive, expiresAt: now.Add(-time.Minute), wantErr: ErrRefreshTokenSessionInactive},
+		{name: "at expiry", status: domain.SSOSessionStatusActive, expiresAt: now, wantErr: ErrRefreshTokenSessionInactive},
+		{name: "missing", wantErr: errSSOSessionNotFound},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			accessRepo := &memoryAccessTokenRepo{}
+			sessions := &memorySSOSessionRepo{sessions: map[string]domain.SSOSession{
+				sessionID: {ID: sessionID, Status: domain.SSOSessionStatusActive, ExpiresAt: now.Add(time.Hour)},
+			}}
+			svc := NewService(
+				Config{
+					Issuer:                  "http://localhost:8050",
+					Audience:                "platform-api",
+					AccessTokenTTL:          10 * time.Minute,
+					IDTokenTTL:              10 * time.Minute,
+					RefreshTokenAbsoluteTTL: 30 * 24 * time.Hour,
+					RefreshTokenInactiveTTL: 7 * 24 * time.Hour,
+				},
+				fixedClock{now: now},
+				&sequentialIDs{},
+				signer,
+				accessRepo,
+				sessions,
+				&memoryRefreshTokenChainRepo{},
+				&memoryRefreshTokenRepo{},
+			)
+			issued, err := svc.IssueUserTokens(ctx, UserTokenRequest{
+				AccountID:    "account-123",
+				ClientID:     "trading-web",
+				SSOSessionID: sessionID,
+				AuthTime:     now,
+			})
+			if err != nil {
+				t.Fatalf("issue user tokens: %v", err)
+			}
+
+			if tc.status == "" {
+				delete(sessions.sessions, sessionID)
+			} else {
+				sessions.sessions[sessionID] = domain.SSOSession{
+					ID:        sessionID,
+					Status:    tc.status,
+					RevokedAt: tc.revokedAt,
+					ExpiresAt: tc.expiresAt,
+				}
+			}
+			refreshed, err := svc.RefreshUserTokens(ctx, RefreshTokenRequest{
+				ClientID:     "trading-web",
+				RefreshToken: issued.RefreshToken,
+			})
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("refresh error = %v, want %v", err, tc.wantErr)
+			}
+			if tc.wantErr != nil {
+				if refreshed != (IssuedTokens{}) || len(accessRepo.records) != 1 {
+					t.Fatal("expected inactive session to produce no new tokens")
+				}
+				return
+			}
+			if refreshed.AccessToken == "" || refreshed.RefreshToken == "" {
+				t.Fatal("expected refreshed token pair")
+			}
+		})
+	}
+}
+
 func TestRefreshReuseWithinGraceSucceeds(t *testing.T) {
 	t.Parallel()
 
@@ -183,6 +298,10 @@ func TestRefreshReuseWithinGraceSucceeds(t *testing.T) {
 	accessRepo := &memoryAccessTokenRepo{}
 	chainRepo := &memoryRefreshTokenChainRepo{}
 	refreshRepo := &memoryRefreshTokenRepo{}
+	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	sessions := &memorySSOSessionRepo{sessions: map[string]domain.SSOSession{
+		"sso-123": {ID: "sso-123", Status: domain.SSOSessionStatusActive, ExpiresAt: now.Add(time.Hour)},
+	}}
 
 	svc := NewService(
 		Config{
@@ -194,10 +313,11 @@ func TestRefreshReuseWithinGraceSucceeds(t *testing.T) {
 			RefreshTokenInactiveTTL: 7 * 24 * time.Hour,
 			RefreshReuseGrace:       60 * time.Second,
 		},
-		fixedClock{now: time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)},
+		fixedClock{now: now},
 		idGenerator,
 		signer,
 		accessRepo,
+		sessions,
 		chainRepo,
 		refreshRepo,
 	)
@@ -269,6 +389,7 @@ func TestIssueClientCredentialsToken(t *testing.T) {
 		idGenerator,
 		signer,
 		accessRepo,
+		nil,
 		&memoryRefreshTokenChainRepo{},
 		&memoryRefreshTokenRepo{},
 	)

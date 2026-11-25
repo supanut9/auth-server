@@ -17,6 +17,7 @@ type RefreshTokenChainRepository interface {
 	Create(ctx context.Context, chain domain.RefreshTokenChain) (domain.RefreshTokenChain, error)
 	// FindByID returns ErrRefreshTokenChainNotFound when the chain does not exist.
 	FindByID(ctx context.Context, id string) (domain.RefreshTokenChain, error)
+	ListActiveIDsBySSOSessionID(ctx context.Context, ssoSessionID string) ([]string, error)
 	Update(ctx context.Context, chain domain.RefreshTokenChain) (domain.RefreshTokenChain, error)
 	RevokeByID(ctx context.Context, id string) error
 }

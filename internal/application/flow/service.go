@@ -217,11 +217,16 @@ func (s Service) LogoutLocal(ctx context.Context, ssoSessionID string, refreshTo
 	return s.refreshTokenChains.RevokeByID(ctx, refreshTokenChainID)
 }
 
-func (s Service) LogoutGlobal(ctx context.Context, ssoSessionID string, refreshTokenChainIDs []string) error {
-	if ssoSessionID != "" {
-		if err := s.ssoSessions.RevokeByID(ctx, ssoSessionID); err != nil {
-			return err
-		}
+func (s Service) LogoutGlobal(ctx context.Context, ssoSessionID string) error {
+	if ssoSessionID == "" {
+		return nil
+	}
+	if err := s.ssoSessions.RevokeByID(ctx, ssoSessionID); err != nil {
+		return err
+	}
+	refreshTokenChainIDs, err := s.refreshTokenChains.ListActiveIDsBySSOSessionID(ctx, ssoSessionID)
+	if err != nil {
+		return err
 	}
 	for _, chainID := range refreshTokenChainIDs {
 		if err := s.refreshTokens.RevokeByChainID(ctx, chainID); err != nil {

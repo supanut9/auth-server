@@ -112,6 +112,16 @@ func (r *memoryRefreshChainRepo) FindByID(_ context.Context, id string) (domain.
 	return r.items[id], nil
 }
 
+func (r *memoryRefreshChainRepo) ListActiveIDsBySSOSessionID(_ context.Context, ssoSessionID string) ([]string, error) {
+	var ids []string
+	for id, chain := range r.items {
+		if chain.SSOSessionID == ssoSessionID && chain.Status == domain.RefreshTokenChainStatusActive && chain.RevokedAt == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids, nil
+}
+
 func (r *memoryRefreshChainRepo) Update(_ context.Context, chain domain.RefreshTokenChain) (domain.RefreshTokenChain, error) {
 	r.items[chain.ID] = chain
 	return chain, nil
@@ -127,7 +137,7 @@ func (r *memoryRefreshChainRepo) RevokeByID(_ context.Context, id string) error 
 }
 
 type memoryRefreshTokenRepo struct {
-	revokedChains []string
+	items map[string]domain.RefreshToken
 }
 
 func (r *memoryRefreshTokenRepo) Create(_ context.Context, token domain.RefreshToken) (domain.RefreshToken, error) {
@@ -143,7 +153,13 @@ func (r *memoryRefreshTokenRepo) Update(_ context.Context, token domain.RefreshT
 }
 
 func (r *memoryRefreshTokenRepo) RevokeByChainID(_ context.Context, chainID string) error {
-	r.revokedChains = append(r.revokedChains, chainID)
+	now := time.Now().UTC()
+	for id, token := range r.items {
+		if token.RefreshTokenChainID == chainID {
+			token.RevokedAt = &now
+			r.items[id] = token
+		}
+	}
 	return nil
 }
 
@@ -152,16 +168,25 @@ func TestLogoutGlobalRevokesSessionAndChains(t *testing.T) {
 
 	ssoSessions := &memorySSOSessionRepo{
 		items: map[string]domain.SSOSession{
-			"sso-1": {ID: "sso-1", Status: domain.SSOSessionStatusActive},
+			"sso-1": {ID: "sso-1", AccountID: "account-1", Status: domain.SSOSessionStatusActive},
+			"sso-2": {ID: "sso-2", AccountID: "account-1", Status: domain.SSOSessionStatusActive},
 		},
 	}
 	refreshChains := &memoryRefreshChainRepo{
 		items: map[string]domain.RefreshTokenChain{
-			"chain-1": {ID: "chain-1", Status: domain.RefreshTokenChainStatusActive},
-			"chain-2": {ID: "chain-2", Status: domain.RefreshTokenChainStatusActive},
+			"chain-1": {ID: "chain-1", AccountID: "account-1", SSOSessionID: "sso-1", Status: domain.RefreshTokenChainStatusActive},
+			"chain-2": {ID: "chain-2", AccountID: "account-1", SSOSessionID: "sso-1", Status: domain.RefreshTokenChainStatusActive},
+			"chain-3": {ID: "chain-3", AccountID: "account-1", SSOSessionID: "sso-2", Status: domain.RefreshTokenChainStatusActive},
 		},
 	}
-	refreshTokens := &memoryRefreshTokenRepo{}
+	refreshTokens := &memoryRefreshTokenRepo{
+		items: map[string]domain.RefreshToken{
+			"token-1": {ID: "token-1", RefreshTokenChainID: "chain-1"},
+			"token-2": {ID: "token-2", RefreshTokenChainID: "chain-1"},
+			"token-3": {ID: "token-3", RefreshTokenChainID: "chain-2"},
+			"token-4": {ID: "token-4", RefreshTokenChainID: "chain-3"},
+		},
+	}
 
 	svc := NewService(
 		Config{
@@ -177,18 +202,31 @@ func TestLogoutGlobalRevokesSessionAndChains(t *testing.T) {
 		refreshTokens,
 	)
 
-	if err := svc.LogoutGlobal(context.Background(), "sso-1", []string{"chain-1", "chain-2"}); err != nil {
+	if err := svc.LogoutGlobal(context.Background(), "sso-1"); err != nil {
 		t.Fatalf("logout global: %v", err)
 	}
 
-	if ssoSessions.items["sso-1"].Status != domain.SSOSessionStatusRevoked {
-		t.Fatal("expected sso session revoked")
+	if session := ssoSessions.items["sso-1"]; session.Status != domain.SSOSessionStatusRevoked || session.RevokedAt == nil {
+		t.Fatal("expected session sso-1 revoked")
 	}
-	if refreshChains.items["chain-1"].Status != domain.RefreshTokenChainStatusRevoked {
-		t.Fatal("expected refresh chain 1 revoked")
+	if session := ssoSessions.items["sso-2"]; session.Status != domain.SSOSessionStatusActive || session.RevokedAt != nil {
+		t.Fatal("expected session sso-2 to stay active")
 	}
-	if len(refreshTokens.revokedChains) != 2 {
-		t.Fatalf("expected refresh token revocations, got %d", len(refreshTokens.revokedChains))
+	for _, id := range []string{"chain-1", "chain-2"} {
+		if chain := refreshChains.items[id]; chain.Status != domain.RefreshTokenChainStatusRevoked || chain.RevokedAt == nil {
+			t.Errorf("expected chain %s revoked", id)
+		}
+	}
+	if chain := refreshChains.items["chain-3"]; chain.Status != domain.RefreshTokenChainStatusActive || chain.RevokedAt != nil {
+		t.Error("expected chain chain-3 to stay active")
+	}
+	for _, id := range []string{"token-1", "token-2", "token-3"} {
+		if refreshTokens.items[id].RevokedAt == nil {
+			t.Errorf("expected refresh token %s revoked", id)
+		}
+	}
+	if refreshTokens.items["token-4"].RevokedAt != nil {
+		t.Error("expected refresh token token-4 to stay active")
 	}
 }
 

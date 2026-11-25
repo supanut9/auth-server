@@ -19,6 +19,7 @@ type Service struct {
 	idGenerator             port.IDGenerator
 	signer                  port.JWTSigner
 	accessTokenRepository   port.AccessTokenRepository
+	ssoSessions             port.SSOSessionRepository
 	refreshTokenChains      port.RefreshTokenChainRepository
 	refreshTokens           port.RefreshTokenRepository
 	issuer                  string
@@ -81,6 +82,7 @@ func NewService(
 	idGenerator port.IDGenerator,
 	signer port.JWTSigner,
 	accessTokenRepository port.AccessTokenRepository,
+	ssoSessions port.SSOSessionRepository,
 	refreshTokenChains port.RefreshTokenChainRepository,
 	refreshTokens port.RefreshTokenRepository,
 ) Service {
@@ -89,6 +91,7 @@ func NewService(
 		idGenerator:             idGenerator,
 		signer:                  signer,
 		accessTokenRepository:   accessTokenRepository,
+		ssoSessions:             ssoSessions,
 		refreshTokenChains:      refreshTokenChains,
 		refreshTokens:           refreshTokens,
 		issuer:                  cfg.Issuer,
@@ -308,6 +311,14 @@ func (s Service) RefreshUserTokens(ctx context.Context, req RefreshTokenRequest)
 	}
 	if now.After(chain.AbsoluteExpiresAt) || now.After(chain.InactiveExpiresAt) {
 		return IssuedTokens{}, ErrRefreshTokenExpired
+	}
+
+	session, err := s.ssoSessions.FindByID(ctx, chain.SSOSessionID)
+	if err != nil {
+		return IssuedTokens{}, err
+	}
+	if session.Status != domain.SSOSessionStatusActive || session.RevokedAt != nil || !now.Before(session.ExpiresAt) {
+		return IssuedTokens{}, ErrRefreshTokenSessionInactive
 	}
 
 	scope := splitScopes(chain.Scope)

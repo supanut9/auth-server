@@ -81,6 +81,15 @@ func (r RefreshTokenChainRepository) FindByID(ctx context.Context, id string) (d
 	return mapRefreshTokenChainModel(model), nil
 }
 
+func (r RefreshTokenChainRepository) ListActiveIDsBySSOSessionID(ctx context.Context, ssoSessionID string) ([]string, error) {
+	var ids []string
+	err := r.db.WithContext(ctx).
+		Model(&RefreshTokenChainModel{}).
+		Where("sso_session_id = ? AND status = ? AND revoked_at IS NULL", ssoSessionID, domain.RefreshTokenChainStatusActive).
+		Pluck("id", &ids).Error
+	return ids, err
+}
+
 func (r RefreshTokenChainRepository) Update(ctx context.Context, chain domain.RefreshTokenChain) (domain.RefreshTokenChain, error) {
 	chain.UpdatedAt = r.clock.Now().UTC()
 

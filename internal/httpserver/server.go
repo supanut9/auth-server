@@ -139,6 +139,7 @@ func NewRouterFromEnv() (*gin.Engine, config.Config, error) {
 		idGenerator,
 		jwksManager,
 		accessTokenRepository,
+		ssoSessionRepository,
 		refreshTokenChainRepository,
 		refreshTokenRepository,
 	)

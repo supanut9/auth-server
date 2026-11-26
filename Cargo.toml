@@ -59,8 +59,14 @@ publish = false
 autobins = false
 
 [dependencies]
+auth-adapters.workspace = true
+auth-core.workspace = true
 auth-http.workspace = true
 axum.workspace = true
+base64.workspace = true
+dotenvy = "0.15.7"
+sha2.workspace = true
+sqlx.workspace = true
 tokio.workspace = true
 tower.workspace = true
 vercel_runtime.workspace = true

@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE oauth_clients\n           SET client_type = $1, client_secret_hash = $2, display_name = $3,\n               allowed_scopes = $4, status = $5, updated_at = $6\n           WHERE client_id = $7",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Text",
+        "Varchar",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ee85e9b0014b72fa20eaecc9e28852ab695f75a736893e0fdbb4102156cbc2af"
+}

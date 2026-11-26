@@ -42,7 +42,7 @@ if curl_local --output /dev/null "$AUTH_BASE_URL/healthz" 2>/dev/null; then
 fi
 
 compose() {
-    docker compose --env-file /dev/null -f ../docker-compose.yml "$@"
+    docker compose --env-file /dev/null -f "${CONTRACT_COMPOSE_FILE:-../docker-compose.yml}" "$@"
 }
 
 mkdir -p -- "$contract_dir/.keys"
@@ -119,8 +119,26 @@ test_env() {
         DEV_WORKER_CLIENT_SECRET="$CONTRACT_WORKER_CLIENT_SECRET" \
         LANGUAGE_WEB_REDIRECT_URI="$CONTRACT_MALFORMED_REDIRECT_URI" \
         DEVSEED_CLIENTS="$CONTRACT_BROWSER_CLIENT_ID,$CONTRACT_WEB_CLIENT_ID,$CONTRACT_WORKER_CLIENT_ID,$CONTRACT_INACTIVE_CLIENT_ID,$CONTRACT_MALFORMED_CLIENT_ID" \
-        go run -exec "\"$scratch/launch\"" "$@"
+        "${run_cmd[@]}" "$(impl_target "$1")"
 }
+
+# AUTH_IMPL=go (default) runs ./cmd/<name> with go run; AUTH_IMPL=rust runs
+# the prebuilt Rust binaries of the same name. Both start in the empty
+# scratch directory so neither autoloads the repo .env.
+case "${AUTH_IMPL:-go}" in
+    go)
+        run_cmd=(go run -exec "\"$scratch/launch\"")
+        impl_target() { printf '%s' "$1"; }
+        ;;
+    rust)
+        cargo build --quiet --locked --bin server --bin devseed
+        rust_bin_dir="$(cargo metadata --format-version 1 --no-deps | sed -E 's/.*"target_directory":"([^"]+)".*/\1/')/debug"
+        run_cmd=("$scratch/launch")
+        impl_target() { printf '%s' "$rust_bin_dir/$(basename -- "$1")"; }
+        ;;
+    *) echo "AUTH_IMPL must be go or rust" >&2; exit 1 ;;
+esac
+echo "Contract target implementation: ${AUTH_IMPL:-go}"
 
 flow_secret="$(openssl rand -hex 32)"
 if ! test_env ./cmd/devseed >"$scratch/devseed.log" 2>&1; then

@@ -58,6 +58,7 @@ async fn issue_direct_code_matches_go_random_vectors() {
                 scopes: vec!["openid".to_owned()],
                 pkce_code_challenge: String::new(),
                 pkce_code_challenge_method: String::new(),
+                nonce: String::new(),
                 auth_time: NOW,
             })
             .await

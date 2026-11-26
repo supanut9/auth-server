@@ -171,6 +171,8 @@ async fn verify_with_consent_issues_code_for_the_verified_account() {
     let stored = h.db.code(&code);
     let session_id = reply.sso_cookie().expect("SSO cookie");
     assert_eq!(stored.account_id, "acct-b");
+    // The authorization request's nonce rides on the code (AUTH-041).
+    assert_eq!(stored.nonce, "n");
     assert_eq!(
         stored
             .sso_session_id

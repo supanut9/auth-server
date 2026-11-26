@@ -72,7 +72,6 @@ These Go quirks are deliberately kept so the differential tests stay meaningful.
 - PKCE is checked after the code is consumed.
 - ID tokens pass introspection and userinfo.
 - Inactive clients pass the token, revoke and introspect endpoints.
-- There is no `nonce` in the ID token.
 - Token `iss` is untrimmed while discovery's `issuer` is trimmed.
 - OTP email is case-sensitive, and the code compare is not constant-time.
 - Resend can revive an expired OTP challenge.

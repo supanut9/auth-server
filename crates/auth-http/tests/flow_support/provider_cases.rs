@@ -305,6 +305,8 @@ async fn callback_issues_code_for_the_fresh_session_not_the_cookie() {
     let new_session = reply.sso_cookie().expect("SSO cookie");
     assert_ne!(new_session, "sess-a");
     assert_eq!(stored.account_id, "acct-b");
+    // The authorization request's nonce rides on the code (AUTH-041).
+    assert_eq!(stored.nonce, "n");
     assert_eq!(
         stored
             .sso_session_id

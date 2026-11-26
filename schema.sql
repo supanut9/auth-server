@@ -180,6 +180,7 @@ CREATE TABLE "authorization_codes" (
   "expires_at" timestamptz NOT NULL,
   "consumed_at" timestamptz NULL,
   "created_at" timestamptz NOT NULL,
+  "nonce" text NOT NULL DEFAULT '',
   PRIMARY KEY ("id"),
   CONSTRAINT "fk_authorization_codes_account" FOREIGN KEY ("account_id") REFERENCES "accounts" ("id") ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT "fk_authorization_codes_client" FOREIGN KEY ("client_id") REFERENCES "oauth_clients" ("client_id") ON UPDATE CASCADE ON DELETE RESTRICT,

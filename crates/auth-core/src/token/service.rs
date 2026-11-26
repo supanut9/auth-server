@@ -51,6 +51,9 @@ pub struct UserTokenRequest {
     /// The authorization code row ID in production.
     pub device_session_id: String,
     pub auth_time: OffsetDateTime,
+    /// The authorization request's OIDC `nonce`, from the consumed code.
+    /// Echoed in the ID token only when non-empty; never in the access token.
+    pub nonce: String,
     pub email: String,
     /// Copied into the ID token. The HTTP handler always passes `true`.
     pub email_verified: bool,
@@ -67,6 +70,7 @@ impl fmt::Debug for UserTokenRequest {
             .field("sso_session_id", &self.sso_session_id)
             .field("device_session_id", &self.device_session_id)
             .field("auth_time", &self.auth_time)
+            .field("nonce", &self.nonce)
             .field("email", &"[redacted]")
             .field("email_verified", &self.email_verified)
             .field("name", &"[redacted]")
@@ -282,6 +286,11 @@ impl TokenService {
         id_claims.insert("email_verified".into(), Value::from(req.email_verified));
         id_claims.insert("name".into(), Value::from(req.name.as_str()));
         id_claims.insert("picture".into(), Value::from(req.picture.as_str()));
+        // OIDC Core 3.1.3.6: echo the authorization request's nonce; omit the
+        // claim when none was sent.
+        if !req.nonce.is_empty() {
+            id_claims.insert("nonce".into(), Value::from(req.nonce.as_str()));
+        }
         let id_token = self.signer.sign(&id_claims)?;
 
         let chain_id = ChainId::new(self.ids.new_id());

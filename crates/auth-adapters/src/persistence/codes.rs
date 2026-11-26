@@ -65,8 +65,9 @@ impl PgAuthorizationCodeRepository {
                 r#"INSERT INTO authorization_codes
                     (id, code_hash, authorization_request_id, account_id, client_id,
                      sso_session_id, redirect_uri, granted_scopes, pkce_code_challenge,
-                     pkce_code_challenge_method, auth_time, expires_at, consumed_at, created_at)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                     pkce_code_challenge_method, nonce, auth_time, expires_at, consumed_at,
+                     created_at)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                    ON CONFLICT (id) DO UPDATE SET
                      code_hash = EXCLUDED.code_hash,
                      authorization_request_id = EXCLUDED.authorization_request_id,
@@ -77,6 +78,7 @@ impl PgAuthorizationCodeRepository {
                      granted_scopes = EXCLUDED.granted_scopes,
                      pkce_code_challenge = EXCLUDED.pkce_code_challenge,
                      pkce_code_challenge_method = EXCLUDED.pkce_code_challenge_method,
+                     nonce = EXCLUDED.nonce,
                      auth_time = EXCLUDED.auth_time,
                      expires_at = EXCLUDED.expires_at,
                      consumed_at = EXCLUDED.consumed_at,
@@ -91,6 +93,7 @@ impl PgAuthorizationCodeRepository {
                 code.granted_scopes,
                 code.pkce_code_challenge,
                 code.pkce_code_challenge_method,
+                code.nonce,
                 code.auth_time,
                 code.expires_at,
                 code.consumed_at,
@@ -103,8 +106,9 @@ impl PgAuthorizationCodeRepository {
                 r#"INSERT INTO authorization_codes
                     (id, code_hash, authorization_request_id, account_id, client_id,
                      sso_session_id, redirect_uri, granted_scopes, pkce_code_challenge,
-                     pkce_code_challenge_method, auth_time, expires_at, consumed_at, created_at)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"#,
+                     pkce_code_challenge_method, nonce, auth_time, expires_at, consumed_at,
+                     created_at)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"#,
                 p.id,
                 code.code_hash,
                 p.authorization_request_id,
@@ -115,6 +119,7 @@ impl PgAuthorizationCodeRepository {
                 code.granted_scopes,
                 code.pkce_code_challenge,
                 code.pkce_code_challenge_method,
+                code.nonce,
                 code.auth_time,
                 code.expires_at,
                 code.consumed_at,
@@ -151,7 +156,8 @@ impl AuthorizationCodeRepository for PgAuthorizationCodeRepository {
         let row = sqlx::query!(
             r#"SELECT id, code_hash, authorization_request_id, account_id, client_id,
                       sso_session_id, redirect_uri, granted_scopes, pkce_code_challenge,
-                      pkce_code_challenge_method, auth_time, expires_at, consumed_at, created_at
+                      pkce_code_challenge_method, nonce, auth_time, expires_at, consumed_at,
+                      created_at
                FROM authorization_codes
                WHERE code_hash = $1
                ORDER BY id
@@ -174,6 +180,7 @@ impl AuthorizationCodeRepository for PgAuthorizationCodeRepository {
             granted_scopes: row.granted_scopes,
             pkce_code_challenge: row.pkce_code_challenge,
             pkce_code_challenge_method: row.pkce_code_challenge_method,
+            nonce: row.nonce,
             auth_time: row.auth_time,
             expires_at: row.expires_at,
             consumed_at: row.consumed_at,
@@ -200,10 +207,11 @@ impl AuthorizationCodeRepository for PgAuthorizationCodeRepository {
                  granted_scopes = $8,
                  pkce_code_challenge = $9,
                  pkce_code_challenge_method = $10,
-                 auth_time = $11,
-                 expires_at = $12,
-                 consumed_at = $13,
-                 created_at = $14
+                 nonce = $11,
+                 auth_time = $12,
+                 expires_at = $13,
+                 consumed_at = $14,
+                 created_at = $15
                WHERE id = $1"#,
             p.id,
             code.code_hash,
@@ -215,6 +223,7 @@ impl AuthorizationCodeRepository for PgAuthorizationCodeRepository {
             code.granted_scopes,
             code.pkce_code_challenge,
             code.pkce_code_challenge_method,
+            code.nonce,
             code.auth_time,
             code.expires_at,
             code.consumed_at,
@@ -339,6 +348,7 @@ mod tests {
         input.created_at = datetime!(2026-05-16 10:00:00 UTC);
         input.sso_session_id = Some(SessionId::new(SESSION));
         input.authorization_request_id = Some("01900000-0000-7000-8000-00000000d001".into());
+        input.nonce = "n-0S6_WzA2Mj".into();
         let created = repo.create(input.clone()).await.unwrap();
         assert_eq!(created, input);
         assert_eq!(repo.find_by_code_hash("h2").await.unwrap(), input);
@@ -352,6 +362,7 @@ mod tests {
         stored.consumed_at = Some(datetime!(2026-05-16 12:00:30 UTC));
         stored.sso_session_id = Some(SessionId::new(SESSION));
         stored.granted_scopes = "openid".into();
+        stored.nonce = "n-0S6_WzA2Mj".into();
         repo.update(stored.clone()).await.unwrap();
         assert_eq!(repo.find_by_code_hash("h3").await.unwrap(), stored);
 

@@ -134,6 +134,7 @@ async fn authorization_code_end_to_end_with_real_keys() {
         id["auth_time"],
         (NOW - Duration::minutes(5)).unix_timestamp()
     );
+    assert!(id.get("nonce").is_none(), "no nonce on the code, no claim");
     let chain = fixture.chains.all().pop().unwrap();
     assert_eq!(chain.sso_session_id, session);
     assert_eq!(chain.client_id, BROWSER);
@@ -220,6 +221,43 @@ async fn authorization_code_end_to_end_with_real_keys() {
     )
     .await
     .assert_json(StatusCode::BAD_REQUEST, INVALID_GRANT);
+}
+
+/// AUTH-041 (OIDC Core 3.1.3.6): the token endpoint passes the consumed
+/// code's nonce on; it lands in the ID token only, never the access token.
+#[tokio::test]
+async fn authorization_code_echoes_the_request_nonce_in_the_id_token() {
+    let fixture = Fixture::new();
+    let router = fixture.router();
+    let (account, session) = fixture.login("ada@example.com");
+    let code = fixture
+        .issue_code_with_nonce(
+            &account,
+            &session,
+            BROWSER,
+            &["openid"],
+            &s256_challenge(VERIFIER),
+            "S256",
+            "n-0S6_WzA2Mj",
+        )
+        .await;
+
+    let reply = exchange(&router, &code, VERIFIER).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.body);
+    let tokens = reply.json();
+    let id = fixture
+        .jwks
+        .verify(tokens["id_token"].as_str().unwrap())
+        .unwrap();
+    assert_eq!(id["nonce"], "n-0S6_WzA2Mj");
+    let access = fixture
+        .jwks
+        .verify(tokens["access_token"].as_str().unwrap())
+        .unwrap();
+    assert!(
+        access.get("nonce").is_none(),
+        "nonce must stay out of the access token"
+    );
 }
 
 #[tokio::test]
@@ -679,6 +717,7 @@ async fn user_tokens(
             sso_session_id: session.clone(),
             device_session_id: "device".to_owned(),
             auth_time: NOW,
+            nonce: String::new(),
             email: "ada@example.com".to_owned(),
             email_verified: true,
             name: "Ada".to_owned(),

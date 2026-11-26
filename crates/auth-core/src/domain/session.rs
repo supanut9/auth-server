@@ -52,6 +52,9 @@ pub struct AuthorizationCode {
     pub granted_scopes: String,
     pub pkce_code_challenge: String,
     pub pkce_code_challenge_method: String,
+    /// OIDC `nonce` from the authorization request, echoed in the ID token;
+    /// empty when none was sent.
+    pub nonce: String,
     pub auth_time: OffsetDateTime,
     pub expires_at: OffsetDateTime,
     pub consumed_at: Option<OffsetDateTime>,
@@ -71,6 +74,7 @@ impl Default for AuthorizationCode {
             granted_scopes: String::new(),
             pkce_code_challenge: String::new(),
             pkce_code_challenge_method: String::new(),
+            nonce: String::new(),
             auth_time: ZERO_TIME,
             expires_at: ZERO_TIME,
             consumed_at: None,

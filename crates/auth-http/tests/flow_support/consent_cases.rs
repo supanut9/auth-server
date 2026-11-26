@@ -44,6 +44,8 @@ async fn accept_upserts_consent_and_returns_code_redirect() {
     let code = code_from(json["redirect_to"].as_str().unwrap(), CALLBACK, "st 1&x");
     let stored = h.db.code(&code);
     assert_eq!(stored.account_id, "acct-a");
+    // The authorization request's nonce rides on the code (AUTH-041).
+    assert_eq!(stored.nonce, "n");
     assert_eq!(
         stored
             .sso_session_id

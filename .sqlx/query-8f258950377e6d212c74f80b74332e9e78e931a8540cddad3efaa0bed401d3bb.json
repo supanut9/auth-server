@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO authorization_codes\n                    (id, code_hash, authorization_request_id, account_id, client_id,\n                     sso_session_id, redirect_uri, granted_scopes, pkce_code_challenge,\n                     pkce_code_challenge_method, nonce, auth_time, expires_at, consumed_at,\n                     created_at)\n                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)\n                   ON CONFLICT (id) DO UPDATE SET\n                     code_hash = EXCLUDED.code_hash,\n                     authorization_request_id = EXCLUDED.authorization_request_id,\n                     account_id = EXCLUDED.account_id,\n                     client_id = EXCLUDED.client_id,\n                     sso_session_id = EXCLUDED.sso_session_id,\n                     redirect_uri = EXCLUDED.redirect_uri,\n                     granted_scopes = EXCLUDED.granted_scopes,\n                     pkce_code_challenge = EXCLUDED.pkce_code_challenge,\n                     pkce_code_challenge_method = EXCLUDED.pkce_code_challenge_method,\n                     nonce = EXCLUDED.nonce,\n                     auth_time = EXCLUDED.auth_time,\n                     expires_at = EXCLUDED.expires_at,\n                     consumed_at = EXCLUDED.consumed_at,\n                     created_at = EXCLUDED.created_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Uuid",
+        "Varchar",
+        "Text",
+        "Varchar",
+        "Varchar",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8f258950377e6d212c74f80b74332e9e78e931a8540cddad3efaa0bed401d3bb"
+}

@@ -161,6 +161,7 @@ async fn authorization_code_grant(state: &AppState, request: &TokenRequest) -> R
                 .unwrap_or_else(SessionId::default),
             device_session_id: code.id.to_string(),
             auth_time: code.auth_time,
+            nonce: code.nonce.clone(),
             email: account.primary_verified_email,
             email_verified: true,
             name: account.display_name,

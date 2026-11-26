@@ -66,6 +66,9 @@ pub struct IssueDirectCodeRequest {
     pub scopes: Vec<String>,
     pub pkce_code_challenge: String,
     pub pkce_code_challenge_method: String,
+    /// The authorization request's OIDC `nonce` (empty when none was sent),
+    /// stored on the code for the ID token.
+    pub nonce: String,
     pub auth_time: OffsetDateTime,
 }
 
@@ -186,6 +189,7 @@ impl FlowService {
             granted_scopes: scopes.to_string(),
             pkce_code_challenge: req.pkce_code_challenge,
             pkce_code_challenge_method: req.pkce_code_challenge_method,
+            nonce: req.nonce,
             auth_time: req.auth_time.to_offset(UtcOffset::UTC),
             expires_at: now.saturating_add(self.config.authorization_code_ttl),
             created_at: now,

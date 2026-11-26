@@ -30,6 +30,7 @@ fn issue_request() -> IssueDirectCodeRequest {
         scopes: strings(&[" profile", "openid", "", "openid", "email "]),
         pkce_code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM".to_owned(),
         pkce_code_challenge_method: "S256".to_owned(),
+        nonce: String::new(),
         auth_time: datetime!(2026-04-01 18:59:30 +7),
     }
 }
@@ -131,6 +132,7 @@ async fn issue_direct_code_persists_hash_and_normalized_fields() {
         granted_scopes: "email openid profile".to_owned(),
         pkce_code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM".to_owned(),
         pkce_code_challenge_method: "S256".to_owned(),
+        nonce: String::new(),
         auth_time: datetime!(2026-04-01 11:59:30 UTC),
         expires_at: NOW + Duration::minutes(5),
         consumed_at: None,
@@ -199,6 +201,34 @@ async fn issue_direct_code_propagates_random_and_repository_failures() {
         .await
         .expect_err("create");
     assert!(is_repo_other(&error, "codes.create failed"));
+}
+
+/// Go `TestIssueDirectCodeKeepsNonceForTheTokenExchange` (AUTH-041): the
+/// authorization request's nonce is stored on the code and comes back from
+/// the consume step, which hands it to the token service.
+#[tokio::test]
+async fn issue_direct_code_keeps_nonce_for_the_token_exchange() {
+    let h = Harness::new();
+    let (value, code) = h
+        .service
+        .issue_direct_code(IssueDirectCodeRequest {
+            nonce: "n-0S6_WzA2Mj".to_owned(),
+            ..issue_request()
+        })
+        .await
+        .expect("issue code");
+    assert_eq!(code.nonce, "n-0S6_WzA2Mj");
+    assert_eq!(h.codes.get("code-1").nonce, "n-0S6_WzA2Mj");
+
+    let consumed = h
+        .service
+        .consume_authorization_code(consume_request(&value))
+        .await
+        .expect("consume code");
+    assert_eq!(
+        consumed.nonce, "n-0S6_WzA2Mj",
+        "expected the code to carry the nonce"
+    );
 }
 
 // ---------------------------------------------------------------- consume

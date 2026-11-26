@@ -104,6 +104,8 @@ async fn user_tokens() {
                 device_session_id: s(req, "device_session_id").to_owned(),
                 auth_time: OffsetDateTime::parse(s(req, "auth_time_rfc3339"), &Rfc3339)
                     .expect("auth_time"),
+                // The Go vectors predate AUTH-041 and carry no nonce.
+                nonce: String::new(),
                 email: s(req, "email").to_owned(),
                 email_verified: req["email_verified"].as_bool().expect("email_verified"),
                 name: s(req, "name").to_owned(),
@@ -186,6 +188,7 @@ async fn refresh_token_grant() {
             sso_session_id: SessionId::new(s(initial, "sso_session_id")),
             device_session_id: String::new(),
             auth_time: now,
+            nonce: String::new(),
             email: "refresh@example.com".into(),
             email_verified: false,
             name: String::new(),

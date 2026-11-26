@@ -190,6 +190,8 @@ async fn session_with_consent_issues_code_with_session_auth_time() {
     assert_eq!(stored.granted_scopes, "email openid profile");
     assert_eq!(stored.redirect_uri, CALLBACK);
     assert_eq!(stored.pkce_code_challenge_method, "S256");
+    // The authorization request's nonce rides on the code (AUTH-041).
+    assert_eq!(stored.nonce, "n");
     assert!(reply.set_cookies().is_empty());
 
     // prompt=none with consent also gets a code.

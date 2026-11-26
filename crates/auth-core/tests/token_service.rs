@@ -29,6 +29,7 @@ fn user_request() -> UserTokenRequest {
         sso_session_id: SessionId::new(SESSION_ID),
         device_session_id: "device-123".into(),
         auth_time: datetime!(2026-04-01 11:55 UTC),
+        nonce: String::new(),
         email: "user@example.com".into(),
         email_verified: true,
         name: "Trader".into(),
@@ -371,6 +372,46 @@ async fn issue_user_tokens_claims_and_rows() {
     assert_eq!(record.expires_at, NOW + Duration::minutes(10));
     assert_eq!(record.status, AccessTokenStatus::Active);
     assert_eq!(record.created_at, NOW);
+}
+
+/// Go `TestIDTokenEchoesNonce` (AUTH-041, OIDC Core 3.1.3.6): a nonce sent on
+/// the authorization request comes back in the ID token. Without one the claim
+/// is omitted, not `""`; it never reaches the access token.
+#[tokio::test]
+async fn id_token_echoes_nonce() {
+    for (name, nonce) in [("with nonce", "n-0S6_WzA2Mj"), ("without nonce", "")] {
+        let h = Harness::standard(Duration::ZERO);
+        h.service
+            .issue_user_tokens(UserTokenRequest {
+                scope: vec!["openid".into()],
+                nonce: nonce.to_owned(),
+                ..user_request()
+            })
+            .await
+            .unwrap_or_else(|e| panic!("{name}: issue user tokens: {e}"));
+
+        let recorded = h.signer.recorded();
+        assert_eq!(recorded.len(), 2, "{name}: access then id token");
+        assert!(
+            !recorded[0].contains_key("nonce"),
+            "{name}: nonce must stay out of the access token"
+        );
+        if nonce.is_empty() {
+            assert!(
+                !recorded[1].contains_key("nonce"),
+                "{name}: expected no nonce claim, got {:?}",
+                recorded[1].get("nonce")
+            );
+            continue;
+        }
+        assert_eq!(recorded[1]["nonce"], nonce, "{name}");
+        // Sorted like Go's map marshalling: "nonce" lands between "name" and "picture".
+        assert_eq!(
+            h.signer.claims_json(1),
+            r#"{"aud":"trading-web","auth_time":1775044500,"email":"user@example.com","email_verified":true,"exp":1775045400,"iat":1775044800,"iss":"http://localhost:8050","name":"Trader","nonce":"n-0S6_WzA2Mj","picture":"https://example.com/avatar.png","sub":"account-123"}"#,
+            "{name}"
+        );
+    }
 }
 
 #[tokio::test]

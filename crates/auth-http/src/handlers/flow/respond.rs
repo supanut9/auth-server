@@ -123,7 +123,9 @@ pub async fn has_consent(
 }
 
 /// Go `Flow.IssueDirectCode` for `session` (its account, ID and
-/// `authenticated_at`) and the validated request. Returns the code value.
+/// `authenticated_at`) and the validated request (including its `nonce`).
+/// Shared by all four code-issuing paths: authorize, provider post-auth,
+/// OTP verify and consent accept. Returns the code value.
 pub async fn issue_code(
     state: &AppState,
     session: &SsoSession,
@@ -140,6 +142,7 @@ pub async fn issue_code(
             scopes: validated.scopes().as_slice().to_vec(),
             pkce_code_challenge: request.code_challenge.clone(),
             pkce_code_challenge_method: request.code_challenge_method.clone(),
+            nonce: request.nonce.clone(),
             auth_time: session.authenticated_at,
         })
         .await?;

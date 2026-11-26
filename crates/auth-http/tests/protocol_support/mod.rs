@@ -891,6 +891,22 @@ impl Fixture {
         challenge: &str,
         method: &str,
     ) -> String {
+        self.issue_code_with_nonce(account, session, client, scopes, challenge, method, "")
+            .await
+    }
+
+    /// [`Self::issue_code`] with the authorization request's OIDC `nonce`.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn issue_code_with_nonce(
+        &self,
+        account: &AccountId,
+        session: &SessionId,
+        client: &str,
+        scopes: &[&str],
+        challenge: &str,
+        method: &str,
+        nonce: &str,
+    ) -> String {
         let (code, _) = self
             .state
             .flow
@@ -902,6 +918,7 @@ impl Fixture {
                 scopes: scopes.iter().map(|s| (*s).to_owned()).collect(),
                 pkce_code_challenge: challenge.to_owned(),
                 pkce_code_challenge_method: method.to_owned(),
+                nonce: nonce.to_owned(),
                 auth_time: NOW - Duration::minutes(5),
             })
             .await

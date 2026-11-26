@@ -403,3 +403,14 @@ impl FlowService {
         Ok(())
     }
 }
+
+#[async_trait::async_trait]
+impl crate::identity::SsoSessionStarter for FlowService {
+    async fn start_sso_session(
+        &self,
+        account_id: &AccountId,
+        login_method: &str,
+    ) -> Result<SsoSession, FlowError> {
+        FlowService::start_sso_session(self, account_id, login_method).await
+    }
+}

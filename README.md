@@ -52,12 +52,17 @@ Root planning docs remain authoritative for phase 1:
 
 ## Migrations
 
-- use Atlas to generate migration files from the GORM models
+- the desired schema lives in `schema.sql` (Atlas desired-state SQL); `migrations/` holds the versioned files that are actually applied
+- use Atlas to generate migration files from `schema.sql`
 - do not handwrite migration SQL by default
-- current workflow:
-  - `atlas schema inspect --env gorm --url env://src`
-  - `atlas migrate diff <name> --env gorm`
-  - `atlas migrate apply --env gorm`
+- current workflow (`atlas.hcl` env `schema`):
+  1. edit `schema.sql`
+  2. `atlas migrate diff <name> --env schema`
+  3. review the generated file in `migrations/` (and the updated `atlas.sum`)
+  4. `atlas migrate apply --env schema --url "$DATABASE_URL"` (or `make migrate`)
+- `make schema-check` validates `atlas.sum` and fails if `schema.sql` and `migrations/` disagree
+- the `schema` env's dev database is `docker://postgres/17-alpine/dev` (same image as the workspace compose file). Without Docker, add `--dev-url` pointing at an empty scratch database
+- the `gorm` env (GORM models loaded through `cmd/atlasloader`) stays only until the Go code is removed at the Rust cutover. Do not use it for new migrations
 
 ## Dev Signing Keys
 

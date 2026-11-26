@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: dev-keys migrate seed-dev seed-clients run test build check readyz smoke semgrep trivy install-hooks hook-pre-commit hook-pre-push
+.PHONY: dev-keys migrate schema-check seed-dev seed-clients run test build check readyz smoke semgrep trivy install-hooks hook-pre-commit hook-pre-push
 
 dev-keys:
 	mkdir -p secrets
@@ -8,7 +8,14 @@ dev-keys:
 	openssl rsa -in secrets/jwt-private.pem -pubout -out secrets/jwt-public.pem
 
 migrate:
-	atlas migrate apply --env gorm
+	atlas migrate apply --env schema
+
+# Fails unless schema.sql and migrations/ describe the same schema.
+schema-check:
+	atlas migrate validate --env schema
+	@out="$$(atlas schema diff --env schema --from file://migrations --to file://schema.sql 2>&1)"; \
+		echo "$$out"; \
+		grep -q "Schemas are synced" <<<"$$out"
 
 seed-dev:
 	go run ./cmd/devseed

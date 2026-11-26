@@ -65,6 +65,8 @@ Those belong to `auth-ui`.
 - keep handlers thin
 - put flow rules in application/domain services, not Gin handlers
 - avoid putting business logic in GORM hooks
-- generate migration files from the GORM data model with Atlas
-- do not handwrite migration SQL by default
+- the durable schema source of truth is `schema.sql` (Atlas desired state); the GORM models and `cmd/atlasloader` (`atlas.hcl` env `gorm`) remain only until the Go code is removed at the Rust cutover
+- change the schema by editing `schema.sql`, then generate the migration with `atlas migrate diff <name> --env schema`, review it, and apply with `atlas migrate apply --env schema`
+- do not handwrite migration SQL by default, and never edit existing files in `migrations/` or `atlas.sum` by hand
+- run `make schema-check` after schema work; `schema.sql` and `migrations/` must stay in sync
 - do not rely on GORM `AutoMigrate` as the durable schema workflow

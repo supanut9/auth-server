@@ -17,9 +17,6 @@ use auth_adapters::config::Config;
 use auth_adapters::persistence::clients::PgOAuthClientRepository;
 use auth_core::domain::{ClientId, ClientStatus, ClientType, OAuthClient};
 use auth_core::ports::{Clock, IdGenerator, OAuthClientRepository};
-use base64::Engine as _;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::types::Uuid;
@@ -163,7 +160,10 @@ impl SeedClient {
 
     /// Stored secret hash; empty for the public client (as in Go).
     fn secret_hash(&self) -> String {
-        self.secret.as_deref().map(hash_secret).unwrap_or_default()
+        self.secret
+            .as_deref()
+            .map(auth_core::crypto::client_secret_storage)
+            .unwrap_or_default()
     }
 
     fn to_domain(&self) -> OAuthClient {
@@ -289,18 +289,6 @@ fn split_redirect_uris(value: &str) -> Vec<String> {
         .filter(|uri| !uri.is_empty() && seen.insert(*uri))
         .map(str::to_owned)
         .collect()
-}
-
-/// Go `hashSecret`: `sha256:` + base64url_nopad(SHA-256(secret)), the
-/// `oauth_clients.client_secret_hash` storage format.
-///
-/// Private helper: `auth_core::crypto` has no client-secret hashing yet
-/// (AUTH-029). Switch to it once it lands.
-fn hash_secret(secret: &str) -> String {
-    format!(
-        "sha256:{}",
-        URL_SAFE_NO_PAD.encode(Sha256::digest(secret.as_bytes()))
-    )
 }
 
 /// Wall clock (Go `system.NewClock`).
@@ -797,7 +785,7 @@ mod tests {
                 "Community Web",
                 user,
                 cb(3006),
-                hash_secret("community-web-secret"),
+                auth_core::crypto::client_secret_storage("community-web-secret"),
             ),
             (
                 "knowledge-web",
@@ -805,7 +793,7 @@ mod tests {
                 "Knowledge",
                 user,
                 cb(3007),
-                hash_secret("knowledge-web-secret"),
+                auth_core::crypto::client_secret_storage("knowledge-web-secret"),
             ),
             (
                 "language-web",
@@ -813,7 +801,7 @@ mod tests {
                 "Language Coach",
                 user,
                 cb(3008),
-                hash_secret("language-web-secret"),
+                auth_core::crypto::client_secret_storage("language-web-secret"),
             ),
             (
                 "interview-web",
@@ -821,7 +809,7 @@ mod tests {
                 "Interview Prep",
                 user,
                 cb(4301),
-                hash_secret("interview-web-secret"),
+                auth_core::crypto::client_secret_storage("interview-web-secret"),
             ),
             (
                 "portal-web",
@@ -829,7 +817,7 @@ mod tests {
                 "Portal",
                 user,
                 cb(3009),
-                hash_secret("portal-web-secret"),
+                auth_core::crypto::client_secret_storage("portal-web-secret"),
             ),
             (
                 "trading-web",
@@ -837,7 +825,7 @@ mod tests {
                 "Trading",
                 user,
                 cb(3011),
-                hash_secret("trading-web-secret"),
+                auth_core::crypto::client_secret_storage("trading-web-secret"),
             ),
             (
                 "macro-web",
@@ -845,7 +833,7 @@ mod tests {
                 "Macro",
                 user,
                 cb(3013),
-                hash_secret("macro-web-secret"),
+                auth_core::crypto::client_secret_storage("macro-web-secret"),
             ),
             (
                 "portfolio-manager-web",
@@ -853,7 +841,7 @@ mod tests {
                 "Folio",
                 user,
                 cb(3014),
-                hash_secret("portfolio-manager-web-secret"),
+                auth_core::crypto::client_secret_storage("portfolio-manager-web-secret"),
             ),
             (
                 "dev-worker",
@@ -861,7 +849,7 @@ mod tests {
                 "Development Worker Client",
                 trading,
                 dev,
-                hash_secret("dev-worker-secret"),
+                auth_core::crypto::client_secret_storage("dev-worker-secret"),
             ),
             (
                 "cms-admin",
@@ -869,7 +857,7 @@ mod tests {
                 "CMS Admin",
                 user,
                 vec!["http://localhost:4101/auth/callback".to_owned()],
-                hash_secret("cms-admin-secret"),
+                auth_core::crypto::client_secret_storage("cms-admin-secret"),
             ),
             (
                 "realtime-service",
@@ -877,7 +865,7 @@ mod tests {
                 "Realtime Service",
                 trading,
                 vec![],
-                hash_secret("dev-realtime-secret"),
+                auth_core::crypto::client_secret_storage("dev-realtime-secret"),
             ),
         ];
         assert_eq!(rows, want);
@@ -1003,7 +991,11 @@ mod tests {
         assert_eq!(secrets.len(), stored.len());
         assert!(secrets.len() >= 4, "expected golden cases, got {secrets:?}");
         for (secret, stored) in secrets.iter().zip(&stored) {
-            assert_eq!(&hash_secret(secret), stored, "secret {secret:?}");
+            assert_eq!(
+                &auth_core::crypto::client_secret_storage(secret),
+                stored,
+                "secret {secret:?}"
+            );
         }
         // Non-ASCII input is hashed as UTF-8 bytes.
         assert!(secrets.iter().any(|secret| !secret.is_ascii()));
@@ -1114,7 +1106,7 @@ mod tests {
         let community = row(&rows, "community-web");
         assert_eq!(
             community.client_secret_hash,
-            hash_secret("community-web-secret")
+            auth_core::crypto::client_secret_storage("community-web-secret")
         );
         assert!(community.client_secret_hash.starts_with("sha256:"));
         assert_eq!(community.client_secret_hash.len(), "sha256:".len() + 43);
@@ -1176,7 +1168,10 @@ mod tests {
         assert_eq!(after.id, before.id);
         assert_eq!(after.created_at, before.created_at);
         assert_eq!(after.logo_uri, "https://cdn.test/logo.png");
-        assert_eq!(after.client_secret_hash, hash_secret("rotated"));
+        assert_eq!(
+            after.client_secret_hash,
+            auth_core::crypto::client_secret_storage("rotated")
+        );
         assert_eq!(after.display_name, "Language Coach");
         assert_eq!(after.status, "active");
         assert_eq!(after.client_type, "confidential");
@@ -1239,7 +1234,10 @@ mod tests {
                     assert_eq!(a.id, b.id);
                 }
                 "realtime-service" => {
-                    assert_eq!(a.client_secret_hash, hash_secret("rt"));
+                    assert_eq!(
+                        a.client_secret_hash,
+                        auth_core::crypto::client_secret_storage("rt")
+                    );
                     assert!(a.redirect_uris.is_empty());
                 }
                 _ => assert_eq!(a, b, "{} changed", a.client_id),
@@ -1247,7 +1245,7 @@ mod tests {
         }
         assert_eq!(
             row(&after, "macro-web").client_secret_hash,
-            hash_secret("prod-macro")
+            auth_core::crypto::client_secret_storage("prod-macro")
         );
         assert_eq!(
             row(&after, "cms-admin").redirect_uris,

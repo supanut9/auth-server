@@ -32,7 +32,6 @@ base64 = "0.23.1"
 rand = "0.10.4"
 hex = "0.4.3"
 rsa = "0.10.0"
-jsonwebtoken = { version = "12.0.0", features = ["rust_crypto"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "form"] }
 lettre = { version = "0.11.24", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls", "aws-lc-rs", "webpki-roots"] }
 wiremock = "0.6.5"
@@ -63,9 +62,7 @@ auth-adapters.workspace = true
 auth-core.workspace = true
 auth-http.workspace = true
 axum.workspace = true
-base64.workspace = true
 dotenvy = "0.15.7"
-sha2.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
 tower.workspace = true

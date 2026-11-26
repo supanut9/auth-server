@@ -13,6 +13,7 @@ type AuthorizationCode struct {
 	GrantedScopes           string
 	PKCECodeChallenge       string
 	PKCECodeChallengeMethod string
+	Nonce                   string
 	AuthTime                time.Time
 	ExpiresAt               time.Time
 	ConsumedAt              *time.Time

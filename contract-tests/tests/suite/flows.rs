@@ -80,9 +80,11 @@ async fn otp_pkce_lifecycle(api: &Api, client: &OAuthClient) {
             "email_verified",
             "name",
             "picture",
+            "nonce",
         ],
     );
     assert_eq!(id["sub"], sub);
+    assert_eq!(id["nonce"], flow.params["nonce"].as_str());
     assert_eq!(id["email"], email);
     assert_eq!(id["email_verified"], true);
     assert_eq!(id["name"], result["account"]["display_name"]);

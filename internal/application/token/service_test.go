@@ -448,3 +448,70 @@ func newTestSigner(t *testing.T) jwks.Manager {
 
 	return manager
 }
+
+// OIDC Core 3.1.3.6: a nonce sent on the authorization request must come back in
+// the ID token. Without one (no nonce on the code) the claim is omitted, not "".
+func TestIDTokenEchoesNonce(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now().UTC() // Verify checks exp against the real clock
+	signer := newTestSigner(t)
+	svc := NewService(
+		Config{
+			Issuer:                  "http://localhost:8050",
+			Audience:                "platform-api",
+			AccessTokenTTL:          10 * time.Minute,
+			IDTokenTTL:              10 * time.Minute,
+			RefreshTokenAbsoluteTTL: 30 * 24 * time.Hour,
+			RefreshTokenInactiveTTL: 7 * 24 * time.Hour,
+		},
+		fixedClock{now: now},
+		&sequentialIDs{},
+		signer,
+		&memoryAccessTokenRepo{},
+		&memorySSOSessionRepo{sessions: map[string]domain.SSOSession{}},
+		&memoryRefreshTokenChainRepo{},
+		&memoryRefreshTokenRepo{},
+	)
+
+	for _, tc := range []struct {
+		name  string
+		nonce string
+	}{
+		{name: "with nonce", nonce: "n-0S6_WzA2Mj"},
+		{name: "without nonce", nonce: ""},
+	} {
+		issued, err := svc.IssueUserTokens(context.Background(), UserTokenRequest{
+			AccountID:    "account-123",
+			ClientID:     "portfolio-manager-web",
+			Scope:        []string{"openid"},
+			SSOSessionID: "sso-123",
+			AuthTime:     now,
+			Nonce:        tc.nonce,
+		})
+		if err != nil {
+			t.Fatalf("%s: issue user tokens: %v", tc.name, err)
+		}
+		claims, err := signer.Verify(issued.IDToken)
+		if err != nil {
+			t.Fatalf("%s: verify id token: %v", tc.name, err)
+		}
+		got, present := claims["nonce"]
+		if tc.nonce == "" {
+			if present {
+				t.Fatalf("%s: expected no nonce claim, got %v", tc.name, got)
+			}
+			continue
+		}
+		if got != tc.nonce {
+			t.Fatalf("%s: expected nonce %q, got %v", tc.name, tc.nonce, got)
+		}
+		access, err := signer.Verify(issued.AccessToken)
+		if err != nil {
+			t.Fatalf("%s: verify access token: %v", tc.name, err)
+		}
+		if _, leaked := access["nonce"]; leaked {
+			t.Fatalf("%s: nonce must stay out of the access token", tc.name)
+		}
+	}
+}

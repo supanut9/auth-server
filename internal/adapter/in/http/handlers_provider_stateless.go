@@ -235,6 +235,7 @@ func (h Handler) redirectPostAuthenticationStateless(c *gin.Context, validated o
 			Scopes:                  validated.Scopes,
 			PKCECodeChallenge:       validated.Request.CodeChallenge,
 			PKCECodeChallengeMethod: validated.Request.CodeChallengeMethod,
+			Nonce:                   validated.Request.Nonce,
 			AuthTime:                session.AuthenticatedAt,
 		})
 		if err != nil {

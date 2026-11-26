@@ -48,6 +48,7 @@ type UserTokenRequest struct {
 	SSOSessionID    string
 	DeviceSessionID string
 	AuthTime        time.Time
+	Nonce           string
 	Email           string
 	EmailVerified   bool
 	Name            string
@@ -142,6 +143,10 @@ func (s Service) IssueUserTokens(ctx context.Context, req UserTokenRequest) (Iss
 		"email_verified": req.EmailVerified,
 		"name":           req.Name,
 		"picture":        req.Picture,
+	}
+	// OIDC Core 3.1.3.6: echo the authorization request's nonce; omit the claim when none was sent.
+	if req.Nonce != "" {
+		idClaims["nonce"] = req.Nonce
 	}
 
 	idToken, err := s.signer.Sign(idClaims)

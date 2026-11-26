@@ -335,6 +335,7 @@ func (h Handler) handleAuthorizationCodeToken(c *gin.Context, clientID string, c
 		SSOSessionID:    derefString(authorizationCode.SSOSessionID),
 		DeviceSessionID: authorizationCode.ID,
 		AuthTime:        authorizationCode.AuthTime,
+		Nonce:           authorizationCode.Nonce,
 		Email:           account.PrimaryVerifiedEmail,
 		EmailVerified:   true,
 		Name:            account.DisplayName,

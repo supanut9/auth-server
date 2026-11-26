@@ -108,6 +108,7 @@ func (h Handler) verifyOTPStateless(c *gin.Context) {
 			Scopes:                  validated.Scopes,
 			PKCECodeChallenge:       validated.Request.CodeChallenge,
 			PKCECodeChallengeMethod: validated.Request.CodeChallengeMethod,
+			Nonce:                   validated.Request.Nonce,
 			AuthTime:                session.AuthenticatedAt,
 		})
 		if issueErr != nil {
@@ -203,6 +204,7 @@ func (h Handler) acceptConsentStateless(c *gin.Context) {
 		Scopes:                  validated.Scopes,
 		PKCECodeChallenge:       validated.Request.CodeChallenge,
 		PKCECodeChallengeMethod: validated.Request.CodeChallengeMethod,
+		Nonce:                   validated.Request.Nonce,
 		AuthTime:                session.AuthenticatedAt,
 	})
 	if err != nil {

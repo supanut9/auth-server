@@ -44,6 +44,7 @@ type IssueDirectCodeRequest struct {
 	Scopes                  []string
 	PKCECodeChallenge       string
 	PKCECodeChallengeMethod string
+	Nonce                   string
 	AuthTime                time.Time
 }
 
@@ -101,6 +102,7 @@ func (s Service) IssueDirectCode(ctx context.Context, req IssueDirectCodeRequest
 		GrantedScopes:           strings.Join(scopes, " "),
 		PKCECodeChallenge:       req.PKCECodeChallenge,
 		PKCECodeChallengeMethod: req.PKCECodeChallengeMethod,
+		Nonce:                   req.Nonce,
 		AuthTime:                req.AuthTime.UTC(),
 		ExpiresAt:               now.Add(s.authorizationCodeTTL),
 		CreatedAt:               now,

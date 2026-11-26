@@ -233,3 +233,41 @@ func TestLogoutGlobalRevokesSessionAndChains(t *testing.T) {
 func ptr[T any](v T) *T {
 	return &v
 }
+
+func TestIssueDirectCodeKeepsNonceForTheTokenExchange(t *testing.T) {
+	t.Parallel()
+
+	codes := &memoryAuthorizationCodeRepo{}
+	svc := NewService(
+		Config{AuthorizationCodeTTL: 5 * time.Minute, SSOSessionTTL: 24 * time.Hour},
+		fixedClock{now: time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)},
+		&sequentialIDs{},
+		codes,
+		&memoryConsentGrantRepo{},
+		&memorySSOSessionRepo{},
+		&memoryRefreshChainRepo{},
+		&memoryRefreshTokenRepo{},
+	)
+
+	value, _, err := svc.IssueDirectCode(context.Background(), IssueDirectCodeRequest{
+		AccountID:   "account-1",
+		ClientID:    "portfolio-manager-web",
+		RedirectURI: "https://folio.example/callback",
+		Scopes:      []string{"openid"},
+		Nonce:       "n-0S6_WzA2Mj",
+	})
+	if err != nil {
+		t.Fatalf("issue code: %v", err)
+	}
+	consumed, err := svc.ConsumeAuthorizationCode(context.Background(), ConsumeAuthorizationCodeRequest{
+		Code:        value,
+		ClientID:    "portfolio-manager-web",
+		RedirectURI: "https://folio.example/callback",
+	})
+	if err != nil {
+		t.Fatalf("consume code: %v", err)
+	}
+	if consumed.Nonce != "n-0S6_WzA2Mj" {
+		t.Fatalf("expected the code to carry the nonce, got %q", consumed.Nonce)
+	}
+}

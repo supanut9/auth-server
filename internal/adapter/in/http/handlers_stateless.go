@@ -77,6 +77,7 @@ func (h Handler) authorizeStateless(c *gin.Context) {
 				Scopes:                  validated.Scopes,
 				PKCECodeChallenge:       validated.Request.CodeChallenge,
 				PKCECodeChallengeMethod: validated.Request.CodeChallengeMethod,
+				Nonce:                   validated.Request.Nonce,
 				AuthTime:                authTime,
 			})
 			if err != nil {

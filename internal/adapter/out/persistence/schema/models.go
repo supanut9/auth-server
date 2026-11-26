@@ -79,6 +79,7 @@ type AuthorizationCodeModel struct {
 	GrantedScopes           string           `gorm:"type:text;not null"`
 	PKCECodeChallenge       string           `gorm:"size:255;not null;default:''"`
 	PKCECodeChallengeMethod string           `gorm:"size:32;not null;default:''"`
+	Nonce                   string           `gorm:"type:text;not null;default:''"`
 	AuthTime                time.Time        `gorm:"not null"`
 	ExpiresAt               time.Time        `gorm:"not null;index"`
 	ConsumedAt              *time.Time

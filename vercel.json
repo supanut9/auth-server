@@ -1,9 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/api/index?__vercel_path=/$1"
-    }
-  ]
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/auth" }]
 }

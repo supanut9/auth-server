@@ -1,0 +1,5 @@
+# Builds use the committed .sqlx offline query data, so no database is
+# needed at compile time (Vercel). Regenerate after changing a query:
+#   SQLX_OFFLINE=false SQLX_OFFLINE_DIR=$PWD/.sqlx cargo check --workspace --all-targets
+[env]
+SQLX_OFFLINE = "true"

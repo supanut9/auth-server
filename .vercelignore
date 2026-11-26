@@ -1,2 +1,13 @@
-contract-tests/
+# Build artifacts and test-only trees
 target/
+contract-tests/
+testdata/
+docs/
+# Go implementation: kept in the repo until cutover (AUTH-039) but never
+# deployed from this branch, so only the Rust function (api/auth.rs) ships.
+api/index.go
+cmd/
+internal/
+httpserver/
+go.mod
+go.sum

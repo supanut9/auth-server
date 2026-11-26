@@ -11,7 +11,7 @@ base64.workspace = true
 jsonwebtoken.workspace = true
 lettre.workspace = true
 reqwest.workspace = true
-rsa.workspace = true
+rsa = { workspace = true, features = ["pkcs1v15"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

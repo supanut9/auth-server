@@ -1,0 +1,300 @@
+{
+  "client_credentials_tokens": {
+    "cases": [
+      {
+        "name": "client_credentials_scoped",
+        "config": {
+          "issuer": "https://auth.example.com",
+          "audience": "platform-api",
+          "access_token_ttl_seconds": 600,
+          "id_token_ttl_seconds": 600,
+          "refresh_token_absolute_ttl_seconds": 2592000,
+          "refresh_token_inactive_ttl_seconds": 604800,
+          "refresh_reuse_grace_seconds": 60,
+          "private_key_file": "keys/test-only-rsa-2048-private-pkcs1.pem",
+          "now_unix": 1775044800,
+          "now_rfc3339": "2026-04-01T12:00:00Z",
+          "generated_ids_in_order": [
+            "access-jti-client_credentials_scoped"
+          ],
+          "random_source_note": "refresh token bytes come from crypto/rand (seeded in the Go test); they do not affect any JWT"
+        },
+        "request": {
+          "client_id": "support-console",
+          "scope": [
+            "trading.write",
+            "trading.read",
+            "trading.read"
+          ]
+        },
+        "access_token": {
+          "header_json": "{\"alg\":\"RS256\",\"kid\":\"oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8\",\"typ\":\"JWT\"}",
+          "claims_json": "{\"aud\":\"platform-api\",\"client_id\":\"support-console\",\"exp\":1775045400,\"iat\":1775044800,\"iss\":\"https://auth.example.com\",\"jti\":\"access-jti-client_credentials_scoped\",\"scope\":\"trading.read trading.write\",\"sub\":\"support-console\"}",
+          "signing_input": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJzdXBwb3J0LWNvbnNvbGUiLCJleHAiOjE3NzUwNDU0MDAsImlhdCI6MTc3NTA0NDgwMCwiaXNzIjoiaHR0cHM6Ly9hdXRoLmV4YW1wbGUuY29tIiwianRpIjoiYWNjZXNzLWp0aS1jbGllbnRfY3JlZGVudGlhbHNfc2NvcGVkIiwic2NvcGUiOiJ0cmFkaW5nLnJlYWQgdHJhZGluZy53cml0ZSIsInN1YiI6InN1cHBvcnQtY29uc29sZSJ9",
+          "signature_b64url": "OzPzLuTqtJycYrY3heA4HhhYesUCeIBl3b7LOzHac6M2XElWnyWcaqnALU6bvPmxSyePcKhP2BJarDWBHDDTv93ay-VJBboDyOD36t9qfZh9DHOMoq7h7tfTue5rS7xcKYlLJS_GNal4dMA3_u0GOtBWhw5QVd7CIex-p873HyiAv8B0jKRPJ3qnMHLCv-UsWbJXZ_4JozJznAqrtimARDeR4c-byUXr7A6hDwfUueXvzOYOisq0WgcRiNoeLHFIrWh3Y4Mp1XXAr5JaHPcJ-5Xp1n8p7RODZL7gFw6ShV0WCpAxPF31jo7ZUFgYuoS_mOnb5QBbGOJf5xbJMMoFXA",
+          "compact": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJzdXBwb3J0LWNvbnNvbGUiLCJleHAiOjE3NzUwNDU0MDAsImlhdCI6MTc3NTA0NDgwMCwiaXNzIjoiaHR0cHM6Ly9hdXRoLmV4YW1wbGUuY29tIiwianRpIjoiYWNjZXNzLWp0aS1jbGllbnRfY3JlZGVudGlhbHNfc2NvcGVkIiwic2NvcGUiOiJ0cmFkaW5nLnJlYWQgdHJhZGluZy53cml0ZSIsInN1YiI6InN1cHBvcnQtY29uc29sZSJ9.OzPzLuTqtJycYrY3heA4HhhYesUCeIBl3b7LOzHac6M2XElWnyWcaqnALU6bvPmxSyePcKhP2BJarDWBHDDTv93ay-VJBboDyOD36t9qfZh9DHOMoq7h7tfTue5rS7xcKYlLJS_GNal4dMA3_u0GOtBWhw5QVd7CIex-p873HyiAv8B0jKRPJ3qnMHLCv-UsWbJXZ_4JozJznAqrtimARDeR4c-byUXr7A6hDwfUueXvzOYOisq0WgcRiNoeLHFIrWh3Y4Mp1XXAr5JaHPcJ-5Xp1n8p7RODZL7gFw6ShV0WCpAxPF31jo7ZUFgYuoS_mOnb5QBbGOJf5xbJMMoFXA"
+        },
+        "token_fields": {
+          "expires_in": 600,
+          "scope": "trading.read trading.write",
+          "token_type": "Bearer"
+        }
+      },
+      {
+        "name": "client_credentials_no_scope",
+        "config": {
+          "issuer": "https://auth.example.com",
+          "audience": "platform-api",
+          "access_token_ttl_seconds": 600,
+          "id_token_ttl_seconds": 600,
+          "refresh_token_absolute_ttl_seconds": 2592000,
+          "refresh_token_inactive_ttl_seconds": 604800,
+          "refresh_reuse_grace_seconds": 60,
+          "private_key_file": "keys/test-only-rsa-2048-private-pkcs1.pem",
+          "now_unix": 1775044800,
+          "now_rfc3339": "2026-04-01T12:00:00Z",
+          "generated_ids_in_order": [
+            "access-jti-client_credentials_no_scope"
+          ],
+          "random_source_note": "refresh token bytes come from crypto/rand (seeded in the Go test); they do not affect any JWT"
+        },
+        "request": {
+          "client_id": "batch-worker",
+          "scope": null
+        },
+        "access_token": {
+          "header_json": "{\"alg\":\"RS256\",\"kid\":\"oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8\",\"typ\":\"JWT\"}",
+          "claims_json": "{\"aud\":\"platform-api\",\"client_id\":\"batch-worker\",\"exp\":1775045400,\"iat\":1775044800,\"iss\":\"https://auth.example.com\",\"jti\":\"access-jti-client_credentials_no_scope\",\"scope\":\"\",\"sub\":\"batch-worker\"}",
+          "signing_input": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJiYXRjaC13b3JrZXIiLCJleHAiOjE3NzUwNDU0MDAsImlhdCI6MTc3NTA0NDgwMCwiaXNzIjoiaHR0cHM6Ly9hdXRoLmV4YW1wbGUuY29tIiwianRpIjoiYWNjZXNzLWp0aS1jbGllbnRfY3JlZGVudGlhbHNfbm9fc2NvcGUiLCJzY29wZSI6IiIsInN1YiI6ImJhdGNoLXdvcmtlciJ9",
+          "signature_b64url": "Qkh9rHytxiOka-LYkIm_DxjtC69ogf6nowu_hSJH_jF5veS9b8dOgtx9Fx2SEOBaleheXOSZb3tByMy2oRaySkpguocXp_VildOyTfYzQsJ_ZBeLY6U5u0lWTg0s03L6rHt0PkHnKCaVZq2_WLU-J-hjy2N_BPBplVF1u22eOYCGiKoBVar0ORD-G8iTiJ5RAu_9CzAKD3qTlbc4prUutioKemQchiVdwDPF1V8Crc2f6V6Yv6HKvl-7H19X31r542AeSUrhjYV-ZlFDgq8LzBcjggMwMbbhDoIhbfRMSpxMnHCM05VXVjC7tcIWAWFf1E4XFzXmJS82dK7Ts3oqVA",
+          "compact": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJiYXRjaC13b3JrZXIiLCJleHAiOjE3NzUwNDU0MDAsImlhdCI6MTc3NTA0NDgwMCwiaXNzIjoiaHR0cHM6Ly9hdXRoLmV4YW1wbGUuY29tIiwianRpIjoiYWNjZXNzLWp0aS1jbGllbnRfY3JlZGVudGlhbHNfbm9fc2NvcGUiLCJzY29wZSI6IiIsInN1YiI6ImJhdGNoLXdvcmtlciJ9.Qkh9rHytxiOka-LYkIm_DxjtC69ogf6nowu_hSJH_jF5veS9b8dOgtx9Fx2SEOBaleheXOSZb3tByMy2oRaySkpguocXp_VildOyTfYzQsJ_ZBeLY6U5u0lWTg0s03L6rHt0PkHnKCaVZq2_WLU-J-hjy2N_BPBplVF1u22eOYCGiKoBVar0ORD-G8iTiJ5RAu_9CzAKD3qTlbc4prUutioKemQchiVdwDPF1V8Crc2f6V6Yv6HKvl-7H19X31r542AeSUrhjYV-ZlFDgq8LzBcjggMwMbbhDoIhbfRMSpxMnHCM05VXVjC7tcIWAWFf1E4XFzXmJS82dK7Ts3oqVA"
+        },
+        "token_fields": {
+          "expires_in": 600,
+          "scope": "",
+          "token_type": "Bearer"
+        }
+      }
+    ],
+    "description": "token.Service.IssueClientCredentialsToken: sub = client_id, no sid claim, no id/refresh token."
+  },
+  "refresh_token_grant": {
+    "config": {
+      "issuer": "https://auth.example.com",
+      "audience": "platform-api",
+      "access_token_ttl_seconds": 600,
+      "id_token_ttl_seconds": 600,
+      "refresh_token_absolute_ttl_seconds": 2592000,
+      "refresh_token_inactive_ttl_seconds": 604800,
+      "refresh_reuse_grace_seconds": 60,
+      "private_key_file": "keys/test-only-rsa-2048-private-pkcs1.pem",
+      "now_unix": 1775044800,
+      "now_rfc3339": "2026-04-01T12:00:00Z",
+      "generated_ids_in_order": [
+        "access-jti-initial",
+        "chain-refresh",
+        "access-jti-refreshed"
+      ],
+      "random_source_note": "refresh token bytes come from crypto/rand (seeded in the Go test); they do not affect any JWT"
+    },
+    "description": "token.Service.RefreshUserTokens access token. Inputs: the chain created by IssueUserTokens below; rotation happens at refresh_now_unix. The refreshed access token has no id_token sibling.",
+    "initial": {
+      "access_token": {
+        "header_json": "{\"alg\":\"RS256\",\"kid\":\"oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8\",\"typ\":\"JWT\"}",
+        "claims_json": "{\"aud\":\"platform-api\",\"client_id\":\"trading-web\",\"exp\":1775045400,\"iat\":1775044800,\"iss\":\"https://auth.example.com\",\"jti\":\"access-jti-initial\",\"scope\":\"offline_access openid trading.read\",\"sid\":\"0195f0a2-0000-7000-8000-000000000003\",\"sub\":\"0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d91\"}",
+        "signing_input": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJ0cmFkaW5nLXdlYiIsImV4cCI6MTc3NTA0NTQwMCwiaWF0IjoxNzc1MDQ0ODAwLCJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJqdGkiOiJhY2Nlc3MtanRpLWluaXRpYWwiLCJzY29wZSI6Im9mZmxpbmVfYWNjZXNzIG9wZW5pZCB0cmFkaW5nLnJlYWQiLCJzaWQiOiIwMTk1ZjBhMi0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDMiLCJzdWIiOiIwMTk1ZjBhMi03YzRlLTdiMmEtOWQxZS0zZjRhNWI2YzdkOTEifQ",
+        "signature_b64url": "fNRBpQKcUbrQsEK5pls3gY37axNK31NfS5Uo-ODaHeU6_An5RCGj0xUGkqKK_X_KqK9yXewe76iwRLHs04RYSAvKbVVtofY4MDPrsqUsgh9uOMJgTYbFh49SZ-U6yZ0lZVZJwkxjKEYqUV7K3HUu7z7rUcT4G4fb3MsbU2XkuSZD1Ix-yEQ80CqC30yjXgQuLnxtIcvSKTBYr1YQ-lxavvjPANweUT0-DZ8DRaUR7lcXlVRbrFrfbiifxJn3NU0s3XEym_AorxWDSiQW4pKeQ03nk9Jm9SJOE-Ys2eKCBEH1CR9LDQtv2dlQuNO9vCcBVM43CIfbtqytmTTZ-4LYNg",
+        "compact": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJ0cmFkaW5nLXdlYiIsImV4cCI6MTc3NTA0NTQwMCwiaWF0IjoxNzc1MDQ0ODAwLCJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJqdGkiOiJhY2Nlc3MtanRpLWluaXRpYWwiLCJzY29wZSI6Im9mZmxpbmVfYWNjZXNzIG9wZW5pZCB0cmFkaW5nLnJlYWQiLCJzaWQiOiIwMTk1ZjBhMi0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDMiLCJzdWIiOiIwMTk1ZjBhMi03YzRlLTdiMmEtOWQxZS0zZjRhNWI2YzdkOTEifQ.fNRBpQKcUbrQsEK5pls3gY37axNK31NfS5Uo-ODaHeU6_An5RCGj0xUGkqKK_X_KqK9yXewe76iwRLHs04RYSAvKbVVtofY4MDPrsqUsgh9uOMJgTYbFh49SZ-U6yZ0lZVZJwkxjKEYqUV7K3HUu7z7rUcT4G4fb3MsbU2XkuSZD1Ix-yEQ80CqC30yjXgQuLnxtIcvSKTBYr1YQ-lxavvjPANweUT0-DZ8DRaUR7lcXlVRbrFrfbiifxJn3NU0s3XEym_AorxWDSiQW4pKeQ03nk9Jm9SJOE-Ys2eKCBEH1CR9LDQtv2dlQuNO9vCcBVM43CIfbtqytmTTZ-4LYNg"
+      },
+      "account_id": "0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d91",
+      "client_id": "trading-web",
+      "scope": [
+        "openid",
+        "offline_access",
+        "trading.read"
+      ],
+      "sso_session_id": "0195f0a2-0000-7000-8000-000000000003"
+    },
+    "refresh_now_unix": 1775045100,
+    "refreshed": {
+      "access_token": {
+        "header_json": "{\"alg\":\"RS256\",\"kid\":\"oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8\",\"typ\":\"JWT\"}",
+        "claims_json": "{\"aud\":\"platform-api\",\"client_id\":\"trading-web\",\"exp\":1775045700,\"iat\":1775045100,\"iss\":\"https://auth.example.com\",\"jti\":\"access-jti-refreshed\",\"scope\":\"offline_access openid trading.read\",\"sid\":\"0195f0a2-0000-7000-8000-000000000003\",\"sub\":\"0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d91\"}",
+        "signing_input": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJ0cmFkaW5nLXdlYiIsImV4cCI6MTc3NTA0NTcwMCwiaWF0IjoxNzc1MDQ1MTAwLCJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJqdGkiOiJhY2Nlc3MtanRpLXJlZnJlc2hlZCIsInNjb3BlIjoib2ZmbGluZV9hY2Nlc3Mgb3BlbmlkIHRyYWRpbmcucmVhZCIsInNpZCI6IjAxOTVmMGEyLTAwMDAtNzAwMC04MDAwLTAwMDAwMDAwMDAwMyIsInN1YiI6IjAxOTVmMGEyLTdjNGUtN2IyYS05ZDFlLTNmNGE1YjZjN2Q5MSJ9",
+        "signature_b64url": "dX1ioA9ozL_lW4D5LuNrx_j342howW8ZqVnCW8p47rdA6JOg-s_8pRg3o3zVkePM70e35bh9McaimPHXoFeZHtcpdGc9dlOCGaa37Z7Zp-V7MBPrHRpXT5Rp9tCSmc063bJczzujvVgfb-GWaidDaEypX_Nq7TEa4q3-J7eSnd5gOEyGyTriqDnIu0AaujYNi-yyWWfdWY0Axo5UJmdk2tY3MFqy8ZWJw9wSj2Nan-nNfIjUE5h-fzWQF9b2EJ3i4ScGaxTaNXWdVz4hOrK1JlJDp-pxBZnJcT0TanJJJdqp3wD8ZCaWicDNZV6ptUyZjGlGNTpIPZ5_sI2wu3g2Vg",
+        "compact": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJ0cmFkaW5nLXdlYiIsImV4cCI6MTc3NTA0NTcwMCwiaWF0IjoxNzc1MDQ1MTAwLCJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJqdGkiOiJhY2Nlc3MtanRpLXJlZnJlc2hlZCIsInNjb3BlIjoib2ZmbGluZV9hY2Nlc3Mgb3BlbmlkIHRyYWRpbmcucmVhZCIsInNpZCI6IjAxOTVmMGEyLTAwMDAtNzAwMC04MDAwLTAwMDAwMDAwMDAwMyIsInN1YiI6IjAxOTVmMGEyLTdjNGUtN2IyYS05ZDFlLTNmNGE1YjZjN2Q5MSJ9.dX1ioA9ozL_lW4D5LuNrx_j342howW8ZqVnCW8p47rdA6JOg-s_8pRg3o3zVkePM70e35bh9McaimPHXoFeZHtcpdGc9dlOCGaa37Z7Zp-V7MBPrHRpXT5Rp9tCSmc063bJczzujvVgfb-GWaidDaEypX_Nq7TEa4q3-J7eSnd5gOEyGyTriqDnIu0AaujYNi-yyWWfdWY0Axo5UJmdk2tY3MFqy8ZWJw9wSj2Nan-nNfIjUE5h-fzWQF9b2EJ3i4ScGaxTaNXWdVz4hOrK1JlJDp-pxBZnJcT0TanJJJdqp3wD8ZCaWicDNZV6ptUyZjGlGNTpIPZ5_sI2wu3g2Vg"
+      },
+      "token_fields": {
+        "expires_in": 600,
+        "scope": "offline_access openid trading.read",
+        "token_type": "Bearer"
+      }
+    }
+  },
+  "user_tokens": {
+    "cases": [
+      {
+        "name": "user_basic",
+        "config": {
+          "issuer": "https://auth.example.com",
+          "audience": "platform-api",
+          "access_token_ttl_seconds": 600,
+          "id_token_ttl_seconds": 600,
+          "refresh_token_absolute_ttl_seconds": 2592000,
+          "refresh_token_inactive_ttl_seconds": 604800,
+          "refresh_reuse_grace_seconds": 60,
+          "private_key_file": "keys/test-only-rsa-2048-private-pkcs1.pem",
+          "now_unix": 1775044800,
+          "now_rfc3339": "2026-04-01T12:00:00Z",
+          "generated_ids_in_order": [
+            "access-jti-user_basic",
+            "chain-user_basic"
+          ],
+          "random_source_note": "refresh token bytes come from crypto/rand (seeded in the Go test); they do not affect any JWT"
+        },
+        "request": {
+          "account_id": "0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d8e",
+          "auth_time_rfc3339": "2026-04-01T11:55:00Z",
+          "client_id": "trading-web",
+          "device_session_id": "0195f0a2-0000-7000-8000-0000000000c0",
+          "email": "user@example.com",
+          "email_verified": true,
+          "name": "Trader",
+          "picture": "https://example.com/avatar.png",
+          "scope": [
+            "profile",
+            "openid",
+            "trading.read",
+            "email",
+            "openid"
+          ],
+          "sso_session_id": "0195f0a2-0000-7000-8000-000000000001"
+        },
+        "access_token": {
+          "header_json": "{\"alg\":\"RS256\",\"kid\":\"oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8\",\"typ\":\"JWT\"}",
+          "claims_json": "{\"aud\":\"platform-api\",\"client_id\":\"trading-web\",\"exp\":1775045400,\"iat\":1775044800,\"iss\":\"https://auth.example.com\",\"jti\":\"access-jti-user_basic\",\"scope\":\"email openid profile trading.read\",\"sid\":\"0195f0a2-0000-7000-8000-000000000001\",\"sub\":\"0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d8e\"}",
+          "signing_input": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJ0cmFkaW5nLXdlYiIsImV4cCI6MTc3NTA0NTQwMCwiaWF0IjoxNzc1MDQ0ODAwLCJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJqdGkiOiJhY2Nlc3MtanRpLXVzZXJfYmFzaWMiLCJzY29wZSI6ImVtYWlsIG9wZW5pZCBwcm9maWxlIHRyYWRpbmcucmVhZCIsInNpZCI6IjAxOTVmMGEyLTAwMDAtNzAwMC04MDAwLTAwMDAwMDAwMDAwMSIsInN1YiI6IjAxOTVmMGEyLTdjNGUtN2IyYS05ZDFlLTNmNGE1YjZjN2Q4ZSJ9",
+          "signature_b64url": "K9zKWt1wiTeFfdvcJSSqQqtFtTa3nJFpcoIoPIQvXHE-HAoqFgx1PugrnLqPTbTya5830FSfiRxWdb1q4HY8XWlPpDpm5_6J3J5CGAdqXXU9H3TYk45rQ-Dcl2_nu0kHm2zepxxfDqMPsVc4jgiAan_53LmIBz9pJAWw_QHnsdr6gEVRgoi2b9ANMZe1Y9tIEzEQzdJrP3ju_xF9OlzbBtji_6R6y0eeHJawqakYU183nA9H4uiuiiC5MGSlj9ch3e-iry_UHfww77RzLDd0Zrq1FipS5UYYUOBAhxct--_pQ_nTZCbaFPWj81XZmGm6YI1OkQmnm0THC1WArqrozw",
+          "compact": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJ0cmFkaW5nLXdlYiIsImV4cCI6MTc3NTA0NTQwMCwiaWF0IjoxNzc1MDQ0ODAwLCJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJqdGkiOiJhY2Nlc3MtanRpLXVzZXJfYmFzaWMiLCJzY29wZSI6ImVtYWlsIG9wZW5pZCBwcm9maWxlIHRyYWRpbmcucmVhZCIsInNpZCI6IjAxOTVmMGEyLTAwMDAtNzAwMC04MDAwLTAwMDAwMDAwMDAwMSIsInN1YiI6IjAxOTVmMGEyLTdjNGUtN2IyYS05ZDFlLTNmNGE1YjZjN2Q4ZSJ9.K9zKWt1wiTeFfdvcJSSqQqtFtTa3nJFpcoIoPIQvXHE-HAoqFgx1PugrnLqPTbTya5830FSfiRxWdb1q4HY8XWlPpDpm5_6J3J5CGAdqXXU9H3TYk45rQ-Dcl2_nu0kHm2zepxxfDqMPsVc4jgiAan_53LmIBz9pJAWw_QHnsdr6gEVRgoi2b9ANMZe1Y9tIEzEQzdJrP3ju_xF9OlzbBtji_6R6y0eeHJawqakYU183nA9H4uiuiiC5MGSlj9ch3e-iry_UHfww77RzLDd0Zrq1FipS5UYYUOBAhxct--_pQ_nTZCbaFPWj81XZmGm6YI1OkQmnm0THC1WArqrozw"
+        },
+        "id_token": {
+          "header_json": "{\"alg\":\"RS256\",\"kid\":\"oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8\",\"typ\":\"JWT\"}",
+          "claims_json": "{\"aud\":\"trading-web\",\"auth_time\":1775044500,\"email\":\"user@example.com\",\"email_verified\":true,\"exp\":1775045400,\"iat\":1775044800,\"iss\":\"https://auth.example.com\",\"name\":\"Trader\",\"picture\":\"https://example.com/avatar.png\",\"sub\":\"0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d8e\"}",
+          "signing_input": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJ0cmFkaW5nLXdlYiIsImF1dGhfdGltZSI6MTc3NTA0NDUwMCwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc3NTA0NTQwMCwiaWF0IjoxNzc1MDQ0ODAwLCJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJuYW1lIjoiVHJhZGVyIiwicGljdHVyZSI6Imh0dHBzOi8vZXhhbXBsZS5jb20vYXZhdGFyLnBuZyIsInN1YiI6IjAxOTVmMGEyLTdjNGUtN2IyYS05ZDFlLTNmNGE1YjZjN2Q4ZSJ9",
+          "signature_b64url": "jN62Dxn2yltEaGFuO4d0AxlS9qYor66C082fK8FrY1Cu5_64yKTjMzewEabKKex973fS8K_AjrQTGkXLOS-shp0OjlfRMnN1E2KKZ9w5nWlzyl3LSyW2ToCGEGNDQOwm3fUmzgp2akx59Q2p9mbBj8UvaLLSJ2q_DvpbNhn9EDIGJQy0gOS9IHZqXZSb9F4zM0GyxD1-qv2OVyk9mbNVphPf__DkyRsd5tjArbP7q6uCZf8k3q2d3SuJomLNMs1F8W7IT3ZhmBrpFeAsnpgXbzZ6bx-cyT7LJgBg7TUiyCFpvvfIhBtVDi3kVa_HAQ9A0lh15awWULk5GBsbn6mnIw",
+          "compact": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJ0cmFkaW5nLXdlYiIsImF1dGhfdGltZSI6MTc3NTA0NDUwMCwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc3NTA0NTQwMCwiaWF0IjoxNzc1MDQ0ODAwLCJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20iLCJuYW1lIjoiVHJhZGVyIiwicGljdHVyZSI6Imh0dHBzOi8vZXhhbXBsZS5jb20vYXZhdGFyLnBuZyIsInN1YiI6IjAxOTVmMGEyLTdjNGUtN2IyYS05ZDFlLTNmNGE1YjZjN2Q4ZSJ9.jN62Dxn2yltEaGFuO4d0AxlS9qYor66C082fK8FrY1Cu5_64yKTjMzewEabKKex973fS8K_AjrQTGkXLOS-shp0OjlfRMnN1E2KKZ9w5nWlzyl3LSyW2ToCGEGNDQOwm3fUmzgp2akx59Q2p9mbBj8UvaLLSJ2q_DvpbNhn9EDIGJQy0gOS9IHZqXZSb9F4zM0GyxD1-qv2OVyk9mbNVphPf__DkyRsd5tjArbP7q6uCZf8k3q2d3SuJomLNMs1F8W7IT3ZhmBrpFeAsnpgXbzZ6bx-cyT7LJgBg7TUiyCFpvvfIhBtVDi3kVa_HAQ9A0lh15awWULk5GBsbn6mnIw"
+        },
+        "token_fields": {
+          "expires_in": 600,
+          "scope": "email openid profile trading.read",
+          "token_type": "Bearer"
+        }
+      },
+      {
+        "name": "user_untrimmed_issuer_and_html_escaping",
+        "config": {
+          "issuer": "https://auth.example.com/",
+          "audience": "platform-api",
+          "access_token_ttl_seconds": 600,
+          "id_token_ttl_seconds": 600,
+          "refresh_token_absolute_ttl_seconds": 2592000,
+          "refresh_token_inactive_ttl_seconds": 604800,
+          "refresh_reuse_grace_seconds": 60,
+          "private_key_file": "keys/test-only-rsa-2048-private-pkcs1.pem",
+          "now_unix": 1775044800,
+          "now_rfc3339": "2026-04-01T12:00:00Z",
+          "generated_ids_in_order": [
+            "access-jti-user_untrimmed_issuer_and_html_escaping",
+            "chain-user_untrimmed_issuer_and_html_escaping"
+          ],
+          "random_source_note": "refresh token bytes come from crypto/rand (seeded in the Go test); they do not affect any JWT"
+        },
+        "request": {
+          "account_id": "0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d8f",
+          "auth_time_rfc3339": "2026-04-01T04:00:00+07:00",
+          "client_id": "language-web",
+          "device_session_id": "0195f0a2-0000-7000-8000-0000000000c1",
+          "email": "o'neil+tag@example.co.th",
+          "email_verified": true,
+          "name": "สมชาย <Admin> & \"Co\"",
+          "picture": "https://cdn.example.com/a.png?w=64&h=64",
+          "scope": [
+            "openid"
+          ],
+          "sso_session_id": "0195f0a2-0000-7000-8000-000000000002"
+        },
+        "access_token": {
+          "header_json": "{\"alg\":\"RS256\",\"kid\":\"oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8\",\"typ\":\"JWT\"}",
+          "claims_json": "{\"aud\":\"platform-api\",\"client_id\":\"language-web\",\"exp\":1775045400,\"iat\":1775044800,\"iss\":\"https://auth.example.com/\",\"jti\":\"access-jti-user_untrimmed_issuer_and_html_escaping\",\"scope\":\"openid\",\"sid\":\"0195f0a2-0000-7000-8000-000000000002\",\"sub\":\"0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d8f\"}",
+          "signing_input": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJsYW5ndWFnZS13ZWIiLCJleHAiOjE3NzUwNDU0MDAsImlhdCI6MTc3NTA0NDgwMCwiaXNzIjoiaHR0cHM6Ly9hdXRoLmV4YW1wbGUuY29tLyIsImp0aSI6ImFjY2Vzcy1qdGktdXNlcl91bnRyaW1tZWRfaXNzdWVyX2FuZF9odG1sX2VzY2FwaW5nIiwic2NvcGUiOiJvcGVuaWQiLCJzaWQiOiIwMTk1ZjBhMi0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDIiLCJzdWIiOiIwMTk1ZjBhMi03YzRlLTdiMmEtOWQxZS0zZjRhNWI2YzdkOGYifQ",
+          "signature_b64url": "NEO0Z7E5Vue-cGIUWKU3j4hlxylnTMICyTEKq6Pd-8i4NAWgBeXV_WeEo2F6Sz7arZ07kgCjgbFmdH4NGRGbqcBu8-CmLVhiECYL4DGtsL2eJf17WdiIw8I5Jau7KUHIr35kFaUv_t9KKM_HZ2PL4kXoiT1Y_2X4P2OHm1tXMl77KdnVwrrCqc8hdu04rPdPnGD2dFSXss0xFUXv4naNxayzUjrp0tx0vEcxPdZT5LwDp2Sryw8F_oy5Me1s-bSxK9l0kJ6lfPTzh95CPZuFeIDvEbFqy8sEmTDJRENlHA_iqHi0cgkhmfqY_IyG2il70gNq-gG_itoJ8b5AFMrsSw",
+          "compact": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJsYW5ndWFnZS13ZWIiLCJleHAiOjE3NzUwNDU0MDAsImlhdCI6MTc3NTA0NDgwMCwiaXNzIjoiaHR0cHM6Ly9hdXRoLmV4YW1wbGUuY29tLyIsImp0aSI6ImFjY2Vzcy1qdGktdXNlcl91bnRyaW1tZWRfaXNzdWVyX2FuZF9odG1sX2VzY2FwaW5nIiwic2NvcGUiOiJvcGVuaWQiLCJzaWQiOiIwMTk1ZjBhMi0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDIiLCJzdWIiOiIwMTk1ZjBhMi03YzRlLTdiMmEtOWQxZS0zZjRhNWI2YzdkOGYifQ.NEO0Z7E5Vue-cGIUWKU3j4hlxylnTMICyTEKq6Pd-8i4NAWgBeXV_WeEo2F6Sz7arZ07kgCjgbFmdH4NGRGbqcBu8-CmLVhiECYL4DGtsL2eJf17WdiIw8I5Jau7KUHIr35kFaUv_t9KKM_HZ2PL4kXoiT1Y_2X4P2OHm1tXMl77KdnVwrrCqc8hdu04rPdPnGD2dFSXss0xFUXv4naNxayzUjrp0tx0vEcxPdZT5LwDp2Sryw8F_oy5Me1s-bSxK9l0kJ6lfPTzh95CPZuFeIDvEbFqy8sEmTDJRENlHA_iqHi0cgkhmfqY_IyG2il70gNq-gG_itoJ8b5AFMrsSw"
+        },
+        "id_token": {
+          "header_json": "{\"alg\":\"RS256\",\"kid\":\"oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8\",\"typ\":\"JWT\"}",
+          "claims_json": "{\"aud\":\"language-web\",\"auth_time\":1774990800,\"email\":\"o'neil+tag@example.co.th\",\"email_verified\":true,\"exp\":1775045400,\"iat\":1775044800,\"iss\":\"https://auth.example.com/\",\"name\":\"สมชาย \\u003cAdmin\\u003e \\u0026 \\\"Co\\\"\",\"picture\":\"https://cdn.example.com/a.png?w=64\\u0026h=64\",\"sub\":\"0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d8f\"}",
+          "signing_input": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJsYW5ndWFnZS13ZWIiLCJhdXRoX3RpbWUiOjE3NzQ5OTA4MDAsImVtYWlsIjoibyduZWlsK3RhZ0BleGFtcGxlLmNvLnRoIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc3NTA0NTQwMCwiaWF0IjoxNzc1MDQ0ODAwLCJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20vIiwibmFtZSI6IuC4quC4oeC4iuC4suC4oiBcdTAwM2NBZG1pblx1MDAzZSBcdTAwMjYgXCJDb1wiIiwicGljdHVyZSI6Imh0dHBzOi8vY2RuLmV4YW1wbGUuY29tL2EucG5nP3c9NjRcdTAwMjZoPTY0Iiwic3ViIjoiMDE5NWYwYTItN2M0ZS03YjJhLTlkMWUtM2Y0YTViNmM3ZDhmIn0",
+          "signature_b64url": "r1FYp42iA_2RR1vRiD0QDfXr304jgzxgdldgp-w8yl0rAtr5XG64LreihxDTqlotsF3_FHSCyk_fFcZHZCMfI9ChLo9Vy4Q4z8ajmrdJyhTUqhT4VXGwqRx7jprvfCoIpCPB1e2Zx3ARuziFZYGsNmgAEeJtMoHUdzy09VsPzuBdQ-zrYpmqIM1pPUbZYXsPoCWCz4LKxr9BigFpXTsRpJcOJHSGjH0yeCZVPaHENH0zzOWumdWIHNhlGj0Fg7TJ3btcRHUWZmIb8uH10g6CbhKQO_eSsMx0XmRnIiB58tPaSN_VTnwfOGi-MQYycNaZetdkr0s8Ss5ozLL6aZrRZw",
+          "compact": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJsYW5ndWFnZS13ZWIiLCJhdXRoX3RpbWUiOjE3NzQ5OTA4MDAsImVtYWlsIjoibyduZWlsK3RhZ0BleGFtcGxlLmNvLnRoIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc3NTA0NTQwMCwiaWF0IjoxNzc1MDQ0ODAwLCJpc3MiOiJodHRwczovL2F1dGguZXhhbXBsZS5jb20vIiwibmFtZSI6IuC4quC4oeC4iuC4suC4oiBcdTAwM2NBZG1pblx1MDAzZSBcdTAwMjYgXCJDb1wiIiwicGljdHVyZSI6Imh0dHBzOi8vY2RuLmV4YW1wbGUuY29tL2EucG5nP3c9NjRcdTAwMjZoPTY0Iiwic3ViIjoiMDE5NWYwYTItN2M0ZS03YjJhLTlkMWUtM2Y0YTViNmM3ZDhmIn0.r1FYp42iA_2RR1vRiD0QDfXr304jgzxgdldgp-w8yl0rAtr5XG64LreihxDTqlotsF3_FHSCyk_fFcZHZCMfI9ChLo9Vy4Q4z8ajmrdJyhTUqhT4VXGwqRx7jprvfCoIpCPB1e2Zx3ARuziFZYGsNmgAEeJtMoHUdzy09VsPzuBdQ-zrYpmqIM1pPUbZYXsPoCWCz4LKxr9BigFpXTsRpJcOJHSGjH0yeCZVPaHENH0zzOWumdWIHNhlGj0Fg7TJ3btcRHUWZmIb8uH10g6CbhKQO_eSsMx0XmRnIiB58tPaSN_VTnwfOGi-MQYycNaZetdkr0s8Ss5ozLL6aZrRZw"
+        },
+        "token_fields": {
+          "expires_in": 600,
+          "scope": "openid",
+          "token_type": "Bearer"
+        }
+      },
+      {
+        "name": "user_empty_profile_fields",
+        "config": {
+          "issuer": "http://localhost:8050",
+          "audience": "platform-api",
+          "access_token_ttl_seconds": 600,
+          "id_token_ttl_seconds": 600,
+          "refresh_token_absolute_ttl_seconds": 2592000,
+          "refresh_token_inactive_ttl_seconds": 604800,
+          "refresh_reuse_grace_seconds": 60,
+          "private_key_file": "keys/test-only-rsa-2048-private-pkcs1.pem",
+          "now_unix": 1775044800,
+          "now_rfc3339": "2026-04-01T12:00:00Z",
+          "generated_ids_in_order": [
+            "access-jti-user_empty_profile_fields",
+            "chain-user_empty_profile_fields"
+          ],
+          "random_source_note": "refresh token bytes come from crypto/rand (seeded in the Go test); they do not affect any JWT"
+        },
+        "request": {
+          "account_id": "0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d90",
+          "auth_time_rfc3339": "2026-04-01T12:00:00Z",
+          "client_id": "knowledge-web",
+          "device_session_id": "",
+          "email": "",
+          "email_verified": false,
+          "name": "",
+          "picture": "",
+          "scope": null,
+          "sso_session_id": ""
+        },
+        "access_token": {
+          "header_json": "{\"alg\":\"RS256\",\"kid\":\"oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8\",\"typ\":\"JWT\"}",
+          "claims_json": "{\"aud\":\"platform-api\",\"client_id\":\"knowledge-web\",\"exp\":1775045400,\"iat\":1775044800,\"iss\":\"http://localhost:8050\",\"jti\":\"access-jti-user_empty_profile_fields\",\"scope\":\"\",\"sid\":\"\",\"sub\":\"0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d90\"}",
+          "signing_input": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJrbm93bGVkZ2Utd2ViIiwiZXhwIjoxNzc1MDQ1NDAwLCJpYXQiOjE3NzUwNDQ4MDAsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MCIsImp0aSI6ImFjY2Vzcy1qdGktdXNlcl9lbXB0eV9wcm9maWxlX2ZpZWxkcyIsInNjb3BlIjoiIiwic2lkIjoiIiwic3ViIjoiMDE5NWYwYTItN2M0ZS03YjJhLTlkMWUtM2Y0YTViNmM3ZDkwIn0",
+          "signature_b64url": "F3RTvkjq96v3PyoA2ED2MjHhQugXWKkFrGJEbyF83IBIApZIoCsdTUdPguT4dj8uqv8rHo8t9hnjhq7alSA-ODhOys2k_2NvqRuOB-fHBqLoWtoPuzww530xiB7so0_yS1af55De-qMOS_fXfb_MjbHgaYHC2LEU018hN0pJwl1kJbioWOUZZWeU2HUix1BUsARQmrmPwRDaVenWH6Ag03iBOozYfX2f6SqrdFtofcuctKmwVhhZWoHLEyEzLmwn-lDcSoTT_Lx6x5Mf-p38oab21Ravf4E7VB2M4xfAHcyotDH4waRfp-erpowlZmi_KpDUoNSwrKYZXKkcBj-CYw",
+          "compact": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJwbGF0Zm9ybS1hcGkiLCJjbGllbnRfaWQiOiJrbm93bGVkZ2Utd2ViIiwiZXhwIjoxNzc1MDQ1NDAwLCJpYXQiOjE3NzUwNDQ4MDAsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MCIsImp0aSI6ImFjY2Vzcy1qdGktdXNlcl9lbXB0eV9wcm9maWxlX2ZpZWxkcyIsInNjb3BlIjoiIiwic2lkIjoiIiwic3ViIjoiMDE5NWYwYTItN2M0ZS03YjJhLTlkMWUtM2Y0YTViNmM3ZDkwIn0.F3RTvkjq96v3PyoA2ED2MjHhQugXWKkFrGJEbyF83IBIApZIoCsdTUdPguT4dj8uqv8rHo8t9hnjhq7alSA-ODhOys2k_2NvqRuOB-fHBqLoWtoPuzww530xiB7so0_yS1af55De-qMOS_fXfb_MjbHgaYHC2LEU018hN0pJwl1kJbioWOUZZWeU2HUix1BUsARQmrmPwRDaVenWH6Ag03iBOozYfX2f6SqrdFtofcuctKmwVhhZWoHLEyEzLmwn-lDcSoTT_Lx6x5Mf-p38oab21Ravf4E7VB2M4xfAHcyotDH4waRfp-erpowlZmi_KpDUoNSwrKYZXKkcBj-CYw"
+        },
+        "id_token": {
+          "header_json": "{\"alg\":\"RS256\",\"kid\":\"oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8\",\"typ\":\"JWT\"}",
+          "claims_json": "{\"aud\":\"knowledge-web\",\"auth_time\":1775044800,\"email\":\"\",\"email_verified\":false,\"exp\":1775045400,\"iat\":1775044800,\"iss\":\"http://localhost:8050\",\"name\":\"\",\"picture\":\"\",\"sub\":\"0195f0a2-7c4e-7b2a-9d1e-3f4a5b6c7d90\"}",
+          "signing_input": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJrbm93bGVkZ2Utd2ViIiwiYXV0aF90aW1lIjoxNzc1MDQ0ODAwLCJlbWFpbCI6IiIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiZXhwIjoxNzc1MDQ1NDAwLCJpYXQiOjE3NzUwNDQ4MDAsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MCIsIm5hbWUiOiIiLCJwaWN0dXJlIjoiIiwic3ViIjoiMDE5NWYwYTItN2M0ZS03YjJhLTlkMWUtM2Y0YTViNmM3ZDkwIn0",
+          "signature_b64url": "kv0OAeuLT1cZ4olQOPLjMKZ5-VdxH0ICCIc0Q-TxyABJyoPJ89jZXS_-jcrKsNe8jxrtLUtfrGU4514MXl2XqoG0f8AWZs0mwtL9AYhEIph4Foumvs1KJ37n85a3KXWiVhgcXeYcuQAUH-IrgcIpL8J9Hj6q_bmn-cEvmHjP-5A6yZoIQGAscltxf2hdlheBs5xYiCsDscEP9p_KxmSMviSFQaf7jHZ_k54h1mhEYkrrgQIMYbePDAYnIN7a5M_-3_edH5WxAJwqo6_C0kWqN2o4GxENvGTvr56q0a0cNsKcKuPTDRR3_YejPXM0B7FkDPh2P9_XT-ok1H9p3iBUmQ",
+          "compact": "eyJhbGciOiJSUzI1NiIsImtpZCI6Im9vZmlsR1hsWnVfTy1nY2hsMzJmc0c5UldYd2ptX1NHN2VXVjFZZkZaQjgiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJrbm93bGVkZ2Utd2ViIiwiYXV0aF90aW1lIjoxNzc1MDQ0ODAwLCJlbWFpbCI6IiIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiZXhwIjoxNzc1MDQ1NDAwLCJpYXQiOjE3NzUwNDQ4MDAsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MCIsIm5hbWUiOiIiLCJwaWN0dXJlIjoiIiwic3ViIjoiMDE5NWYwYTItN2M0ZS03YjJhLTlkMWUtM2Y0YTViNmM3ZDkwIn0.kv0OAeuLT1cZ4olQOPLjMKZ5-VdxH0ICCIc0Q-TxyABJyoPJ89jZXS_-jcrKsNe8jxrtLUtfrGU4514MXl2XqoG0f8AWZs0mwtL9AYhEIph4Foumvs1KJ37n85a3KXWiVhgcXeYcuQAUH-IrgcIpL8J9Hj6q_bmn-cEvmHjP-5A6yZoIQGAscltxf2hdlheBs5xYiCsDscEP9p_KxmSMviSFQaf7jHZ_k54h1mhEYkrrgQIMYbePDAYnIN7a5M_-3_edH5WxAJwqo6_C0kWqN2o4GxENvGTvr56q0a0cNsKcKuPTDRR3_YejPXM0B7FkDPh2P9_XT-ok1H9p3iBUmQ"
+        },
+        "token_fields": {
+          "expires_in": 600,
+          "scope": "",
+          "token_type": "Bearer"
+        }
+      }
+    ],
+    "description": "token.Service.IssueUserTokens (authorization_code grant). Generated IDs are consumed in order: access jti, then refresh chain id. Header = {alg,kid,typ} and claims are Go maps, so keys are sorted and encoding/json HTML-escapes &, <, > as \\u0026 etc. iss is cfg.Issuer verbatim (NOT trimmed); id_token aud = client_id; auth_time is AuthTime in unix seconds; scope is trimmed/deduped/byte-sorted and space-joined. In production the HTTP handler always passes email_verified=true."
+  }
+}

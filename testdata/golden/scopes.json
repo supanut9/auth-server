@@ -1,0 +1,593 @@
+{
+  "client_credentials_scope_rules": {
+    "cases": [
+      {
+        "name": "subset_ok",
+        "request_scope": "trading.write trading.read",
+        "client_allowed_scopes": "trading.read,trading.write",
+        "split": [
+          "trading.write",
+          "trading.read"
+        ],
+        "outcome": "issue"
+      },
+      {
+        "name": "empty_scope_ok",
+        "request_scope": "",
+        "client_allowed_scopes": "trading.read",
+        "split": [],
+        "outcome": "issue"
+      },
+      {
+        "name": "duplicate_and_comma",
+        "request_scope": "trading.read,trading.read",
+        "client_allowed_scopes": "trading.read",
+        "split": [
+          "trading.read"
+        ],
+        "outcome": "issue"
+      },
+      {
+        "name": "not_allowed",
+        "request_scope": "trading.admin",
+        "client_allowed_scopes": "trading.read",
+        "split": [
+          "trading.admin"
+        ],
+        "outcome": "invalid_scope"
+      },
+      {
+        "name": "openid_rejected_even_if_allowed",
+        "request_scope": "openid",
+        "client_allowed_scopes": "openid trading.read",
+        "split": [
+          "openid"
+        ],
+        "outcome": "invalid_scope"
+      },
+      {
+        "name": "email_rejected",
+        "request_scope": "trading.read email",
+        "client_allowed_scopes": "email trading.read",
+        "split": [
+          "trading.read",
+          "email"
+        ],
+        "outcome": "invalid_scope"
+      },
+      {
+        "name": "profile_rejected",
+        "request_scope": "profile",
+        "client_allowed_scopes": "profile",
+        "split": [
+          "profile"
+        ],
+        "outcome": "invalid_scope"
+      },
+      {
+        "name": "offline_access_allowed_if_listed",
+        "request_scope": "offline_access",
+        "client_allowed_scopes": "offline_access",
+        "split": [
+          "offline_access"
+        ],
+        "outcome": "issue"
+      }
+    ],
+    "description": "client_credentials grant scope handling in router.go handleClientCredentials (after client auth): split = splitProtocolList(form scope); any of openid/email/profile => 400 invalid_scope; not a subset of splitProtocolList(client.allowed_scopes) => 400 invalid_scope; else the token service normalizes (see token_normalize_scopes) so the response/claim scope is sorted and space-joined. The outcome column mirrors the handler's branch order exactly."
+  },
+  "flow_scope_subset": {
+    "cases": [
+      {
+        "requested": null,
+        "granted": null,
+        "subset": true
+      },
+      {
+        "requested": null,
+        "granted": [
+          "openid"
+        ],
+        "subset": true
+      },
+      {
+        "requested": [
+          "openid"
+        ],
+        "granted": null,
+        "subset": false
+      },
+      {
+        "requested": [
+          "openid",
+          "email"
+        ],
+        "granted": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "subset": true
+      },
+      {
+        "requested": [
+          "openid",
+          "trading.write"
+        ],
+        "granted": [
+          "openid",
+          "trading.read"
+        ],
+        "subset": false
+      },
+      {
+        "requested": [
+          "OpenID"
+        ],
+        "granted": [
+          "openid"
+        ],
+        "subset": false
+      }
+    ],
+    "description": "flow/service.go scopeSubset (HasConsentForScopes): every requested scope must be in granted; exact, case-sensitive; empty requested -> true."
+  },
+  "flow_split_scopes": {
+    "cases": [
+      {
+        "input": "",
+        "output": null,
+        "joined": ""
+      },
+      {
+        "input": "openid profile email",
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "input": "email openid email profile",
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "input": "openid,profile email",
+        "output": [
+          "email",
+          "openid,profile"
+        ],
+        "joined": "email openid,profile"
+      },
+      {
+        "input": "openid\temail\nprofile",
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "input": "  openid   email  ",
+        "output": [
+          "email",
+          "openid"
+        ],
+        "joined": "email openid"
+      },
+      {
+        "input": "openid\remail",
+        "output": [
+          "email",
+          "openid"
+        ],
+        "joined": "email openid"
+      },
+      {
+        "input": "openid email",
+        "output": [
+          "email",
+          "openid"
+        ],
+        "joined": "email openid"
+      },
+      {
+        "input": "trading.write Trading.read trading.read",
+        "output": [
+          "Trading.read",
+          "trading.read",
+          "trading.write"
+        ],
+        "joined": "Trading.read trading.read trading.write"
+      },
+      {
+        "input": "a,,b , c",
+        "output": [
+          ",",
+          "a,,b",
+          "c"
+        ],
+        "joined": ", a,,b c"
+      }
+    ],
+    "description": "flow/service.go splitScopes (stored consent_grants.scope -> list): \"\" -> null; strings.Fields (any Unicode whitespace, NOT commas), then normalizeScopes (trim, drop empty, dedupe, byte-wise sort). Same behavior as token_split_scopes."
+  },
+  "flow_union_scopes": {
+    "cases": [
+      {
+        "base": null,
+        "extra": null,
+        "output": [],
+        "joined": ""
+      },
+      {
+        "base": [
+          "openid",
+          "profile"
+        ],
+        "extra": [
+          "email",
+          "openid"
+        ],
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "base": [
+          "trading.read"
+        ],
+        "extra": [
+          " trading.write ",
+          ""
+        ],
+        "output": [
+          "trading.read",
+          "trading.write"
+        ],
+        "joined": "trading.read trading.write"
+      },
+      {
+        "base": [
+          "b",
+          "a"
+        ],
+        "extra": null,
+        "output": [
+          "a",
+          "b"
+        ],
+        "joined": "a b"
+      }
+    ],
+    "description": "flow/service.go unionScopes (consent accept merges the existing grant with the newly approved scopes): normalizeScopes(base ++ extra). Empty -> [] and joined \"\"."
+  },
+  "http_split_protocol_list": {
+    "cases": [
+      {
+        "input": "",
+        "output": []
+      },
+      {
+        "input": "openid profile email",
+        "output": [
+          "openid",
+          "profile",
+          "email"
+        ]
+      },
+      {
+        "input": "email openid email profile",
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ]
+      },
+      {
+        "input": "openid,profile email",
+        "output": [
+          "openid",
+          "profile",
+          "email"
+        ]
+      },
+      {
+        "input": "openid\temail\nprofile",
+        "output": [
+          "openid",
+          "email",
+          "profile"
+        ]
+      },
+      {
+        "input": "  openid   email  ",
+        "output": [
+          "openid",
+          "email"
+        ]
+      },
+      {
+        "input": "openid\remail",
+        "output": [
+          "openid\remail"
+        ]
+      },
+      {
+        "input": "openid email",
+        "output": [
+          "openid email"
+        ]
+      },
+      {
+        "input": "trading.write Trading.read trading.read",
+        "output": [
+          "trading.write",
+          "Trading.read",
+          "trading.read"
+        ]
+      },
+      {
+        "input": "a,,b , c",
+        "output": [
+          "a",
+          "b",
+          "c"
+        ]
+      }
+    ],
+    "description": "router.go splitProtocolList (client_credentials scope, code granted_scopes, access-token scope claim in userinfo, client.allowed_scopes for public-info): split on ' ', ',', '\\n', '\\t', trim, drop empty, dedupe keeping FIRST occurrence order — NOT sorted. Always a non-null list."
+  },
+  "oauth_split_scopes": {
+    "cases": [
+      {
+        "input": "",
+        "output": null,
+        "joined": ""
+      },
+      {
+        "input": "openid profile email",
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "input": "email openid email profile",
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "input": "openid,profile email",
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "input": "openid\temail\nprofile",
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "input": "  openid   email  ",
+        "output": [
+          "email",
+          "openid"
+        ],
+        "joined": "email openid"
+      },
+      {
+        "input": "openid\remail",
+        "output": [
+          "openid\remail"
+        ],
+        "joined": "openid\remail"
+      },
+      {
+        "input": "openid email",
+        "output": [
+          "openid email"
+        ],
+        "joined": "openid email"
+      },
+      {
+        "input": "trading.write Trading.read trading.read",
+        "output": [
+          "Trading.read",
+          "trading.read",
+          "trading.write"
+        ],
+        "joined": "Trading.read trading.read trading.write"
+      },
+      {
+        "input": "a,,b , c",
+        "output": [
+          "a",
+          "b",
+          "c"
+        ],
+        "joined": "a b c"
+      }
+    ],
+    "description": "oauth/validate.go splitScopes, used by Validate for the request scope and client.AllowedScopes: \"\" -> null; split on ' ', ',', '\\n', '\\t' only (NOT \\r or U+00A0), trim each field (TrimSpace strips \\r, U+00A0, ...), drop empty, dedupe, byte-wise sort. Validated.Request.Scope is the space-joined result (canonical scope echoed to auth-ui /consent)."
+  },
+  "token_normalize_scopes": {
+    "cases": [
+      {
+        "input": null,
+        "output": [],
+        "joined": ""
+      },
+      {
+        "input": [
+          "openid",
+          "profile",
+          "email"
+        ],
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "input": [
+          " openid ",
+          "openid",
+          "",
+          "  "
+        ],
+        "output": [
+          "openid"
+        ],
+        "joined": "openid"
+      },
+      {
+        "input": [
+          "trading.write",
+          "Trading.read",
+          "trading.read",
+          "a,b"
+        ],
+        "output": [
+          "Trading.read",
+          "a,b",
+          "trading.read",
+          "trading.write"
+        ],
+        "joined": "Trading.read a,b trading.read trading.write"
+      },
+      {
+        "input": [
+          "z",
+          "Z",
+          "é",
+          "e",
+          "_",
+          "1"
+        ],
+        "output": [
+          "1",
+          "Z",
+          "_",
+          "e",
+          "z",
+          "é"
+        ],
+        "joined": "1 Z _ e z é"
+      }
+    ],
+    "description": "token/service.go normalizeScopes: applied to every requested scope list before signing (user + client_credentials). Trim each, drop empty, dedupe, sort.Strings (byte-wise). Empty input -> [] and joined \"\"."
+  },
+  "token_split_scopes": {
+    "cases": [
+      {
+        "input": "",
+        "output": null,
+        "joined": ""
+      },
+      {
+        "input": "openid profile email",
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "input": "email openid email profile",
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "input": "openid,profile email",
+        "output": [
+          "email",
+          "openid,profile"
+        ],
+        "joined": "email openid,profile"
+      },
+      {
+        "input": "openid\temail\nprofile",
+        "output": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "joined": "email openid profile"
+      },
+      {
+        "input": "  openid   email  ",
+        "output": [
+          "email",
+          "openid"
+        ],
+        "joined": "email openid"
+      },
+      {
+        "input": "openid\remail",
+        "output": [
+          "email",
+          "openid"
+        ],
+        "joined": "email openid"
+      },
+      {
+        "input": "openid email",
+        "output": [
+          "email",
+          "openid"
+        ],
+        "joined": "email openid"
+      },
+      {
+        "input": "trading.write Trading.read trading.read",
+        "output": [
+          "Trading.read",
+          "trading.read",
+          "trading.write"
+        ],
+        "joined": "Trading.read trading.read trading.write"
+      },
+      {
+        "input": "a,,b , c",
+        "output": [
+          ",",
+          "a,,b",
+          "c"
+        ],
+        "joined": ", a,,b c"
+      }
+    ],
+    "description": "token/service.go splitScopes (used on refresh: chain.Scope -> new access token scope): \"\" -> null; otherwise strings.Fields (splits on any Unicode whitespace incl. \\r and U+00A0, NOT on commas), then normalizeScopes (trim, drop empty, dedupe, byte-wise sort)."
+  }
+}

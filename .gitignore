@@ -11,3 +11,4 @@ secrets/
 contract-tests/target/
 contract-tests/.keys/
 /target/
+testdata/golden/*.json.lock

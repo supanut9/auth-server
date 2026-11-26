@@ -1,0 +1,111 @@
+{
+  "mask_email": {
+    "cases": [
+      {
+        "input": "alice@example.com",
+        "input_hex": "616c696365406578616d706c652e636f6d",
+        "output": "a***e@example.com",
+        "output_hex": "612a2a2a65406578616d706c652e636f6d",
+        "output_valid_utf8": true,
+        "json_rendered": "\"a***e@example.com\""
+      },
+      {
+        "input": "bob@example.com",
+        "input_hex": "626f62406578616d706c652e636f6d",
+        "output": "b*b@example.com",
+        "output_hex": "622a62406578616d706c652e636f6d",
+        "output_valid_utf8": true,
+        "json_rendered": "\"b*b@example.com\""
+      },
+      {
+        "input": "ab@example.com",
+        "input_hex": "6162406578616d706c652e636f6d",
+        "output": "a*@example.com",
+        "output_hex": "612a406578616d706c652e636f6d",
+        "output_valid_utf8": true,
+        "json_rendered": "\"a*@example.com\""
+      },
+      {
+        "input": "a@example.com",
+        "input_hex": "61406578616d706c652e636f6d",
+        "output": "a*@example.com",
+        "output_hex": "612a406578616d706c652e636f6d",
+        "output_valid_utf8": true,
+        "json_rendered": "\"a*@example.com\""
+      },
+      {
+        "input": "@example.com",
+        "input_hex": "406578616d706c652e636f6d",
+        "output": "@example.com",
+        "output_hex": "406578616d706c652e636f6d",
+        "output_valid_utf8": true,
+        "json_rendered": "\"@example.com\""
+      },
+      {
+        "input": "",
+        "input_hex": "",
+        "output": "",
+        "output_hex": "",
+        "output_valid_utf8": true,
+        "json_rendered": "\"\""
+      },
+      {
+        "input": "no-at-sign",
+        "input_hex": "6e6f2d61742d7369676e",
+        "output": "no-at-sign",
+        "output_hex": "6e6f2d61742d7369676e",
+        "output_valid_utf8": true,
+        "json_rendered": "\"no-at-sign\""
+      },
+      {
+        "input": "a@b@example.com",
+        "input_hex": "614062406578616d706c652e636f6d",
+        "output": "a@b@example.com",
+        "output_hex": "614062406578616d706c652e636f6d",
+        "output_valid_utf8": true,
+        "json_rendered": "\"a@b@example.com\""
+      },
+      {
+        "input": "alice@",
+        "input_hex": "616c69636540",
+        "output": "a***e@",
+        "output_hex": "612a2a2a6540",
+        "output_valid_utf8": true,
+        "json_rendered": "\"a***e@\""
+      },
+      {
+        "input": "Al.Ice+tag@Example.COM",
+        "input_hex": "416c2e4963652b746167404578616d706c652e434f4d",
+        "output": "A********g@Example.COM",
+        "output_hex": "412a2a2a2a2a2a2a2a67404578616d706c652e434f4d",
+        "output_valid_utf8": true,
+        "json_rendered": "\"A********g@Example.COM\""
+      },
+      {
+        "input": "éa@example.com",
+        "input_hex": "c3a961406578616d706c652e636f6d",
+        "output": "\ufffd*a@example.com",
+        "output_hex": "c32a61406578616d706c652e636f6d",
+        "output_valid_utf8": false,
+        "json_rendered": "\"\\ufffd*a@example.com\""
+      },
+      {
+        "input": "ผู้ใช้@example.com",
+        "input_hex": "e0b89ce0b8b9e0b989e0b983e0b88ae0b989406578616d706c652e636f6d",
+        "output": "\ufffd****************\ufffd@example.com",
+        "output_hex": "e02a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a89406578616d706c652e636f6d",
+        "output_valid_utf8": false,
+        "json_rendered": "\"\\ufffd****************\\ufffd@example.com\""
+      },
+      {
+        "input": "é@example.com",
+        "input_hex": "c3a9406578616d706c652e636f6d",
+        "output": "\ufffd*@example.com",
+        "output_hex": "c32a406578616d706c652e636f6d",
+        "output_valid_utf8": false,
+        "json_rendered": "\"\\ufffd*@example.com\""
+      }
+    ],
+    "description": "router.go maskEmail (OTP start/resend response \"email\"). BYTE-based: split on every '@'; if not exactly 2 parts or the local part is empty => unchanged; local <= 2 bytes => local[0] + \"*\" + \"@\" + domain; else local[0] + \"*\" x (len-2) + local[len-1] + \"@\" + domain. Multi-byte local parts are cut mid-rune, producing invalid UTF-8 (see output_hex); gin's c.JSON then renders each invalid byte as \\ufffd (json_rendered is the exact JSON string token on the wire). output is lossy for invalid UTF-8 — use output_hex."
+  }
+}

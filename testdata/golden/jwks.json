@@ -1,0 +1,128 @@
+{
+  "encode_int": {
+    "cases": [
+      {
+        "input": 65537,
+        "output": "AQAB"
+      },
+      {
+        "input": 3,
+        "output": "Aw"
+      },
+      {
+        "input": 1,
+        "output": "AQ"
+      },
+      {
+        "input": 255,
+        "output": "_w"
+      },
+      {
+        "input": 256,
+        "output": "AQA"
+      },
+      {
+        "input": 0,
+        "output": ""
+      }
+    ],
+    "description": "JWK exponent encoding: minimal big-endian bytes, base64url_nopad; 0 encodes to the empty string. Source: manager.go encodeInt."
+  },
+  "jwks_document": {
+    "alg": "RS256",
+    "description": "Exact bytes of GET /.well-known/jwks.json (Manager.PublicJWKS, served with c.Data so Content-Type is exactly \"application/json\"). Field order kty,use,alg,kid,n,e; n = base64url_nopad(big-endian modulus, no leading zero); e via encodeInt.",
+    "document": "{\"keys\":[{\"kty\":\"RSA\",\"use\":\"sig\",\"alg\":\"RS256\",\"kid\":\"oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8\",\"n\":\"sEqWh_qHI8IMBoB-3-2yHzz2JDpGcaMFT0qOhkCBHpUxvHpAGw1DSicVARTriEeMD8DaFN9W816xh697bNkZXqSKt_pv04819dkygAatIsBgIC1eyW1idjuP49haWbkCP0n0uTQsC4ZjpvDrOZfFbzeHydgSxyvkSjkc_Vpym90kg6mOy3wwOpPs7_0cFTTzfGdNnv6D1PZB5f0WSlHg4VjU9OKI-5OFfiLv_QfT_waIZcmAIG3bHSAytzeY4U4s-qAprk34qC8XHpJHBD1oyxsl4fDPvqRd5Kz_r32i729KGRNNKouw279byjWYfzcdfDFcMyl6VGmTzrpcO6VE3w\",\"e\":\"AQAB\"}]}",
+    "e": "AQAB",
+    "n": "sEqWh_qHI8IMBoB-3-2yHzz2JDpGcaMFT0qOhkCBHpUxvHpAGw1DSicVARTriEeMD8DaFN9W816xh697bNkZXqSKt_pv04819dkygAatIsBgIC1eyW1idjuP49haWbkCP0n0uTQsC4ZjpvDrOZfFbzeHydgSxyvkSjkc_Vpym90kg6mOy3wwOpPs7_0cFTTzfGdNnv6D1PZB5f0WSlHg4VjU9OKI-5OFfiLv_QfT_waIZcmAIG3bHSAytzeY4U4s-qAprk34qC8XHpJHBD1oyxsl4fDPvqRd5Kz_r32i729KGRNNKouw279byjWYfzcdfDFcMyl6VGmTzrpcO6VE3w"
+  },
+  "kid": {
+    "description": "kid = base64url_nopad(SHA-256(SPKI/PKIX DER of the RSA public key)). Source: internal/adapter/out/jwks/manager.go computeKeyID.",
+    "kid": "oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8",
+    "public_key_file": "keys/test-only-rsa-2048-public-pkix.pem",
+    "sha256_hex": "a287e29465e566efcefa0721977d9fb06f51597c239bf486ede595d587c5641f",
+    "spki_der_hex": "30820122300d06092a864886f70d01010105000382010f003082010a0282010100b04a9687fa8723c20c06807edfedb21f3cf6243a4671a3054f4a8e8640811e9531bc7a401b0d434a27150114eb88478c0fc0da14df56f35eb187af7b6cd9195ea48ab7fa6fd38f35f5d9328006ad22c060202d5ec96d62763b8fe3d85a59b9023f49f4b9342c0b8663a6f0eb3997c56f3787c9d812c72be44a391cfd5a729bdd2483a98ecb7c303a93eceffd1c1534f37c674d9efe83d4f641e5fd164a51e0e158d4f4e288fb93857e22effd07d3ff068865c980206ddb1d2032b73798e14e2cfaa029ae4df8a82f171e9247043d68cb1b25e1f0cfbea45de4acffaf7da2ef6f4a19134d2a8bb0dbbf5bca35987f371d7c315c33297a546993ceba5c3ba544df0203010001"
+  },
+  "pem_variants": {
+    "cases": [
+      {
+        "name": "pkcs1_private+pkix_public",
+        "private_source": "keys/test-only-rsa-2048-private-pkcs1.pem",
+        "public_source": "keys/test-only-rsa-2048-public-pkix.pem",
+        "accepted": true,
+        "kid": "oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8"
+      },
+      {
+        "name": "pkcs8_private+pkix_public",
+        "private_source": "keys/test-only-rsa-2048-private-pkcs8.pem",
+        "public_source": "keys/test-only-rsa-2048-public-pkix.pem",
+        "accepted": true,
+        "kid": "oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8"
+      },
+      {
+        "name": "pkcs1_private+x509_certificate_public",
+        "private_source": "keys/test-only-rsa-2048-private-pkcs1.pem",
+        "public_source": "keys/test-only-rsa-2048-cert.pem",
+        "accepted": true,
+        "kid": "oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8"
+      },
+      {
+        "name": "leading_text_before_pem_is_skipped",
+        "private_source": "keys/test-only-rsa-2048-private-pkcs1.pem",
+        "public_source": "keys/test-only-rsa-2048-public-pkix.pem",
+        "private_transform": "prepend_text_line",
+        "accepted": true,
+        "kid": "oofilGXlZu_O-gchl32fsG9RWXwjm_SG7eWV1YfFZB8"
+      },
+      {
+        "name": "private_not_pem",
+        "private_source": "inline",
+        "public_source": "keys/test-only-rsa-2048-public-pkix.pem",
+        "private_pem": "not a pem",
+        "accepted": false,
+        "error": "decode private key PEM: no PEM block found"
+      },
+      {
+        "name": "private_escaped_newlines",
+        "private_source": "keys/test-only-rsa-2048-private-pkcs1.pem",
+        "public_source": "keys/test-only-rsa-2048-public-pkix.pem",
+        "private_transform": "escape_newlines",
+        "accepted": false,
+        "error": "decode private key PEM: no PEM block found"
+      },
+      {
+        "name": "public_not_pem",
+        "private_source": "keys/test-only-rsa-2048-private-pkcs1.pem",
+        "public_source": "inline",
+        "public_pem": "not a pem",
+        "accepted": false,
+        "error": "decode public key PEM: no PEM block found"
+      },
+      {
+        "name": "private_is_public_key",
+        "private_source": "keys/test-only-rsa-2048-public-pkix.pem",
+        "public_source": "keys/test-only-rsa-2048-public-pkix.pem",
+        "accepted": false,
+        "error": "parse private key: asn1: structure error: tags don't match (2 vs {class:0 tag:16 length:13 isCompound:true}) {optional:false explicit:false application:false private:false defaultValue:<nil> tag:<nil> stringType:0 timeType:0 set:false omitEmpty:false} int @2",
+        "error_note": "Go x509 error text; informational (boot-time config error)"
+      },
+      {
+        "name": "public_is_private_key",
+        "private_source": "keys/test-only-rsa-2048-private-pkcs1.pem",
+        "public_source": "keys/test-only-rsa-2048-private-pkcs1.pem",
+        "accepted": false,
+        "error": "parse public key: asn1: structure error: tags don't match (16 vs {class:0 tag:2 length:1 isCompound:false}) {optional:false explicit:false application:false private:false defaultValue:<nil> tag:<nil> stringType:0 timeType:0 set:false omitEmpty:false} AlgorithmIdentifier @2",
+        "error_note": "Go x509 error text; informational (boot-time config error)"
+      }
+    ],
+    "description": "PEM sources accepted by NewManagerWithSources (JWT_PRIVATE_KEY_PEM / JWT_PUBLIC_KEY_PEM). Private: PKCS#1 then PKCS#8 (RSA only). Public: PKIX then X.509 certificate. Text before the first PEM block is ignored by pem.Decode. Go never checks that the private and public keys match. *_source names a file under testdata/golden or \"inline\" (then *_pem holds the value). private_transform: prepend_text_line = \"comment line before the block\\n\" + file; escape_newlines = TrimSpace(file) with every newline replaced by the two characters backslash-n (a common env-var mistake; Go rejects it)."
+  },
+  "sign_errors": {
+    "cases": [
+      {
+        "alg": "ES256",
+        "error": "unsupported signing alg: ES256"
+      }
+    ],
+    "description": "Manager.Sign only supports RS256 (JWT_SIGNING_ALG)."
+  }
+}

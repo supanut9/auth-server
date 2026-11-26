@@ -1,0 +1,305 @@
+{
+  "constructor": {
+    "description": "NewEnvelopeSigner: secret must be >= 32 bytes; ttl <= 0 defaults to 10m.",
+    "short_secret_error": "envelope signer: secret must be at least 32 bytes, got 9",
+    "zero_ttl_defaults_to_seconds": 600
+  },
+  "sign": {
+    "cases": [
+      {
+        "name": "required_fields_only",
+        "envelope": {
+          "provider": "google",
+          "client_id": "trading-web",
+          "redirect_uri": "https://trading.example.com/callback",
+          "scope": "openid email profile",
+          "state": "st-123"
+        },
+        "jti": "gTrraUfS5G2e6S7oxw_tFg",
+        "payload_json": "{\"provider\":\"google\",\"client_id\":\"trading-web\",\"redirect_uri\":\"https://trading.example.com/callback\",\"scope\":\"openid email profile\",\"state\":\"st-123\",\"iat\":1775044800,\"exp\":1775045400,\"jti\":\"gTrraUfS5G2e6S7oxw_tFg\"}",
+        "payload_b64url": "eyJwcm92aWRlciI6Imdvb2dsZSIsImNsaWVudF9pZCI6InRyYWRpbmctd2ViIiwicmVkaXJlY3RfdXJpIjoiaHR0cHM6Ly90cmFkaW5nLmV4YW1wbGUuY29tL2NhbGxiYWNrIiwic2NvcGUiOiJvcGVuaWQgZW1haWwgcHJvZmlsZSIsInN0YXRlIjoic3QtMTIzIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6ImdUcnJhVWZTNUcyZTZTN294d190RmcifQ",
+        "signature_b64url": "3xu1GLZuBkjGIZWT6-IaXJh8GIsFlCYgCffGMQuqU9M",
+        "token": "eyJwcm92aWRlciI6Imdvb2dsZSIsImNsaWVudF9pZCI6InRyYWRpbmctd2ViIiwicmVkaXJlY3RfdXJpIjoiaHR0cHM6Ly90cmFkaW5nLmV4YW1wbGUuY29tL2NhbGxiYWNrIiwic2NvcGUiOiJvcGVuaWQgZW1haWwgcHJvZmlsZSIsInN0YXRlIjoic3QtMTIzIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6ImdUcnJhVWZTNUcyZTZTN294d190RmcifQ.3xu1GLZuBkjGIZWT6-IaXJh8GIsFlCYgCffGMQuqU9M"
+      },
+      {
+        "name": "all_fields",
+        "envelope": {
+          "provider": "github",
+          "client_id": "language-web",
+          "redirect_uri": "https://language.example.com/auth/callback",
+          "scope": "email openid profile",
+          "state": "s",
+          "nonce": "n-456",
+          "code_challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+          "code_challenge_method": "S256",
+          "prompt": "login"
+        },
+        "jti": "mAWPgdn2S03r3f5c0EVWsA",
+        "payload_json": "{\"provider\":\"github\",\"client_id\":\"language-web\",\"redirect_uri\":\"https://language.example.com/auth/callback\",\"scope\":\"email openid profile\",\"state\":\"s\",\"nonce\":\"n-456\",\"code_challenge\":\"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM\",\"code_challenge_method\":\"S256\",\"prompt\":\"login\",\"iat\":1775044800,\"exp\":1775045400,\"jti\":\"mAWPgdn2S03r3f5c0EVWsA\"}",
+        "payload_b64url": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ",
+        "signature_b64url": "LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-I",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ.LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-I"
+      },
+      {
+        "name": "html_escapable_chars",
+        "envelope": {
+          "provider": "google",
+          "client_id": "c&<>",
+          "redirect_uri": "https://app.example.com/cb?a=1&b=<2>",
+          "scope": "openid",
+          "state": "x&y<z>'\"",
+          "nonce": "a>b"
+        },
+        "jti": "1ZaylWtJZdQVN4KyEnA0dw",
+        "payload_json": "{\"provider\":\"google\",\"client_id\":\"c\\u0026\\u003c\\u003e\",\"redirect_uri\":\"https://app.example.com/cb?a=1\\u0026b=\\u003c2\\u003e\",\"scope\":\"openid\",\"state\":\"x\\u0026y\\u003cz\\u003e'\\\"\",\"nonce\":\"a\\u003eb\",\"iat\":1775044800,\"exp\":1775045400,\"jti\":\"1ZaylWtJZdQVN4KyEnA0dw\"}",
+        "payload_b64url": "eyJwcm92aWRlciI6Imdvb2dsZSIsImNsaWVudF9pZCI6ImNcdTAwMjZcdTAwM2NcdTAwM2UiLCJyZWRpcmVjdF91cmkiOiJodHRwczovL2FwcC5leGFtcGxlLmNvbS9jYj9hPTFcdTAwMjZiPVx1MDAzYzJcdTAwM2UiLCJzY29wZSI6Im9wZW5pZCIsInN0YXRlIjoieFx1MDAyNnlcdTAwM2N6XHUwMDNlJ1wiIiwibm9uY2UiOiJhXHUwMDNlYiIsImlhdCI6MTc3NTA0NDgwMCwiZXhwIjoxNzc1MDQ1NDAwLCJqdGkiOiIxWmF5bFd0SlpkUVZONEt5RW5BMGR3In0",
+        "signature_b64url": "XpyIn-DqJlhndN2iGWxsrSqP-WPD4wdALvCVqnyhcyw",
+        "token": "eyJwcm92aWRlciI6Imdvb2dsZSIsImNsaWVudF9pZCI6ImNcdTAwMjZcdTAwM2NcdTAwM2UiLCJyZWRpcmVjdF91cmkiOiJodHRwczovL2FwcC5leGFtcGxlLmNvbS9jYj9hPTFcdTAwMjZiPVx1MDAzYzJcdTAwM2UiLCJzY29wZSI6Im9wZW5pZCIsInN0YXRlIjoieFx1MDAyNnlcdTAwM2N6XHUwMDNlJ1wiIiwibm9uY2UiOiJhXHUwMDNlYiIsImlhdCI6MTc3NTA0NDgwMCwiZXhwIjoxNzc1MDQ1NDAwLCJqdGkiOiIxWmF5bFd0SlpkUVZONEt5RW5BMGR3In0.XpyIn-DqJlhndN2iGWxsrSqP-WPD4wdALvCVqnyhcyw"
+      },
+      {
+        "name": "unicode_and_line_separators",
+        "envelope": {
+          "provider": "google",
+          "client_id": "trading-web",
+          "redirect_uri": "https://trading.example.com/callback",
+          "scope": "openid",
+          "state": "สวัสดี\u2028\u2029\t/\\",
+          "code_challenge_method": "plain"
+        },
+        "jti": "w5bExC-QXq6eqp_JXstoFw",
+        "payload_json": "{\"provider\":\"google\",\"client_id\":\"trading-web\",\"redirect_uri\":\"https://trading.example.com/callback\",\"scope\":\"openid\",\"state\":\"สวัสดี\\u2028\\u2029\\t/\\\\\",\"code_challenge_method\":\"plain\",\"iat\":1775044800,\"exp\":1775045400,\"jti\":\"w5bExC-QXq6eqp_JXstoFw\"}",
+        "payload_b64url": "eyJwcm92aWRlciI6Imdvb2dsZSIsImNsaWVudF9pZCI6InRyYWRpbmctd2ViIiwicmVkaXJlY3RfdXJpIjoiaHR0cHM6Ly90cmFkaW5nLmV4YW1wbGUuY29tL2NhbGxiYWNrIiwic2NvcGUiOiJvcGVuaWQiLCJzdGF0ZSI6IuC4quC4p-C4seC4quC4lOC4tVx1MjAyOFx1MjAyOVx0L1xcIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoicGxhaW4iLCJpYXQiOjE3NzUwNDQ4MDAsImV4cCI6MTc3NTA0NTQwMCwianRpIjoidzViRXhDLVFYcTZlcXBfSlhzdG9GdyJ9",
+        "signature_b64url": "_jnBQOGmoEcQZOFSNX3nBNEskXYX6we-bux94ZKYxXQ",
+        "token": "eyJwcm92aWRlciI6Imdvb2dsZSIsImNsaWVudF9pZCI6InRyYWRpbmctd2ViIiwicmVkaXJlY3RfdXJpIjoiaHR0cHM6Ly90cmFkaW5nLmV4YW1wbGUuY29tL2NhbGxiYWNrIiwic2NvcGUiOiJvcGVuaWQiLCJzdGF0ZSI6IuC4quC4p-C4seC4quC4lOC4tVx1MjAyOFx1MjAyOVx0L1xcIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoicGxhaW4iLCJpYXQiOjE3NzUwNDQ4MDAsImV4cCI6MTc3NTA0NTQwMCwianRpIjoidzViRXhDLVFYcTZlcXBfSlhzdG9GdyJ9._jnBQOGmoEcQZOFSNX3nBNEskXYX6we-bux94ZKYxXQ"
+      },
+      {
+        "name": "empty_required_fields",
+        "envelope": {
+          "provider": "",
+          "client_id": "",
+          "redirect_uri": "",
+          "scope": "",
+          "state": ""
+        },
+        "jti": "b76pwEPrkJkxY8olGqFJgw",
+        "payload_json": "{\"provider\":\"\",\"client_id\":\"\",\"redirect_uri\":\"\",\"scope\":\"\",\"state\":\"\",\"iat\":1775044800,\"exp\":1775045400,\"jti\":\"b76pwEPrkJkxY8olGqFJgw\"}",
+        "payload_b64url": "eyJwcm92aWRlciI6IiIsImNsaWVudF9pZCI6IiIsInJlZGlyZWN0X3VyaSI6IiIsInNjb3BlIjoiIiwic3RhdGUiOiIiLCJpYXQiOjE3NzUwNDQ4MDAsImV4cCI6MTc3NTA0NTQwMCwianRpIjoiYjc2cHdFUHJrSmt4WThvbEdxRkpndyJ9",
+        "signature_b64url": "A8ULqfqXNmoepWcmcR9oxv7sx4P8cBMzpSd98QVRy7k",
+        "token": "eyJwcm92aWRlciI6IiIsImNsaWVudF9pZCI6IiIsInJlZGlyZWN0X3VyaSI6IiIsInNjb3BlIjoiIiwic3RhdGUiOiIiLCJpYXQiOjE3NzUwNDQ4MDAsImV4cCI6MTc3NTA0NTQwMCwianRpIjoiYjc2cHdFUHJrSmt4WThvbEdxRkpndyJ9.A8ULqfqXNmoepWcmcR9oxv7sx4P8cBMzpSd98QVRy7k"
+      }
+    ],
+    "description": "EnvelopeSigner.Sign (internal/application/oauth/envelope.go). token = b64url_nopad(payload) + \".\" + b64url_nopad(HMAC-SHA256(secret, b64url_nopad(payload))) — the MAC covers the base64 text, not the raw JSON. payload = encoding/json of {provider,client_id,redirect_uri,scope,state,nonce?,code_challenge?,code_challenge_method?,prompt?,iat,exp,jti} in exactly that order; optional fields are omitted when empty; encoding/json escapes & < > as \\u0026 \\u003c \\u003e and U+2028/U+2029 as \\u2028/\\u2029. jti = b64url_nopad(16 random bytes) (22 chars; Go draws it from crypto/rand, recorded here as an input). iat = now (unix s), exp = now + ttl.",
+    "now_unix": 1775044800,
+    "secret": "golden-envelope-secret-TEST-ONLY-0123456789abcdef",
+    "ttl_seconds": 600
+  },
+  "verify": {
+    "cases": [
+      {
+        "name": "valid_at_iat",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ.LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-I",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": true,
+        "envelope": {
+          "provider": "github",
+          "client_id": "language-web",
+          "redirect_uri": "https://language.example.com/auth/callback",
+          "scope": "email openid profile",
+          "state": "s",
+          "nonce": "n-456",
+          "code_challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+          "code_challenge_method": "S256",
+          "prompt": "login"
+        }
+      },
+      {
+        "name": "valid_at_exactly_exp",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ.LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-I",
+        "now_unix": 1775045400,
+        "attempt": 1,
+        "ok": true,
+        "envelope": {
+          "provider": "github",
+          "client_id": "language-web",
+          "redirect_uri": "https://language.example.com/auth/callback",
+          "scope": "email openid profile",
+          "state": "s",
+          "nonce": "n-456",
+          "code_challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+          "code_challenge_method": "S256",
+          "prompt": "login"
+        },
+        "note": "expiry check is now > exp"
+      },
+      {
+        "name": "expired_at_exp_plus_1",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ.LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-I",
+        "now_unix": 1775045401,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: expired"
+      },
+      {
+        "name": "valid_before_iat",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ.LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-I",
+        "now_unix": 1775041200,
+        "attempt": 1,
+        "ok": true,
+        "envelope": {
+          "provider": "github",
+          "client_id": "language-web",
+          "redirect_uri": "https://language.example.com/auth/callback",
+          "scope": "email openid profile",
+          "state": "s",
+          "nonce": "n-456",
+          "code_challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+          "code_challenge_method": "S256",
+          "prompt": "login"
+        },
+        "note": "iat is never checked"
+      },
+      {
+        "name": "tampered_signature",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ.LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-A",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: signature mismatch"
+      },
+      {
+        "name": "tampered_payload",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifA.LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-I",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: signature mismatch"
+      },
+      {
+        "name": "signature_with_padding",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ.LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-I=",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: signature mismatch"
+      },
+      {
+        "name": "extra_dot_segment",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ.LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-I.x",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: signature mismatch",
+        "note": "SplitN(token, \".\", 2): everything after the first dot is the signature"
+      },
+      {
+        "name": "malformed_no_dot",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: malformed token"
+      },
+      {
+        "name": "malformed_empty",
+        "token": "",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: malformed token"
+      },
+      {
+        "name": "wrong_secret",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ.WXz7sNGNQ0i46IkDV2zT6-RU8IbJBTQIrG55OtA2UiI",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: signature mismatch"
+      },
+      {
+        "name": "missing_jti",
+        "token": "eyJwcm92aWRlciI6Imdvb2dsZSIsImNsaWVudF9pZCI6InRyYWRpbmctd2ViIiwicmVkaXJlY3RfdXJpIjoiaHR0cHM6Ly90cmFkaW5nLmV4YW1wbGUuY29tL2NhbGxiYWNrIiwic2NvcGUiOiJvcGVuaWQiLCJzdGF0ZSI6InMiLCJpYXQiOjE3NzUwNDQ4MDAsImV4cCI6MTc3NTA0NTQwMH0.Qt8BWW3EvnopXq_pKUmOza-7mz1k5Ty2JE_PI6VDMRI",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: missing jti"
+      },
+      {
+        "name": "empty_jti",
+        "token": "eyJwcm92aWRlciI6Imdvb2dsZSIsImNsaWVudF9pZCI6InRyYWRpbmctd2ViIiwicmVkaXJlY3RfdXJpIjoiaHR0cHM6Ly90cmFkaW5nLmV4YW1wbGUuY29tL2NhbGxiYWNrIiwic2NvcGUiOiJvcGVuaWQiLCJzdGF0ZSI6InMiLCJpYXQiOjE3NzUwNDQ4MDAsImV4cCI6MTc3NTA0NTQwMCwianRpIjoiIn0.4kJPSTOQCHT5lS7WqKIY3csqYPfP3kcPk6hacF3mna8",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: missing jti"
+      },
+      {
+        "name": "expired_checked_before_jti",
+        "token": "eyJwcm92aWRlciI6Imdvb2dsZSIsImV4cCI6MTc3NTA0NTQwMH0.M69WwbCXbsuZ6teUWLwuqT1XZ6blxweq1sZgH8F8AOs",
+        "now_unix": 1775045401,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: expired"
+      },
+      {
+        "name": "payload_not_base64",
+        "token": "@@@.AAhKHOXL_vaf9S2FKvHv2XZO1i89m0a97vhoHunLokQ",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: decode payload: illegal base64 data at input byte 0",
+        "note": "error text wraps Go's base64 error (returned to the client as error_description)"
+      },
+      {
+        "name": "payload_not_json",
+        "token": "bm90IGpzb24.NA-4h5OXUrRujTNji5G_t-iwls1pt92bWONtwulbR2o",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": false,
+        "error": "envelope: parse claims: invalid character 'o' in literal null (expecting 'u')",
+        "note": "error text wraps Go's encoding/json error (returned to the client as error_description)"
+      },
+      {
+        "name": "unknown_fields_ignored",
+        "token": "eyJwcm92aWRlciI6Imdvb2dsZSIsImNsaWVudF9pZCI6ImMiLCJyZWRpcmVjdF91cmkiOiJodHRwczovL2EuZXhhbXBsZS9jYiIsInNjb3BlIjoib3BlbmlkIiwic3RhdGUiOiJzIiwiZXh0cmEiOnRydWUsImlhdCI6MSwiZXhwIjoxNzc1MDQ1NDAwLCJqdGkiOiJqdGktdW5rbm93bi1maWVsZHMifQ.ROONs4Yut7WYKQOVYBMVBmg020K0jqXYsgD2vDzknrA",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": true,
+        "envelope": {
+          "provider": "google",
+          "client_id": "c",
+          "redirect_uri": "https://a.example/cb",
+          "scope": "openid",
+          "state": "s"
+        }
+      },
+      {
+        "name": "replay",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ.LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-I",
+        "now_unix": 1775044800,
+        "attempt": 1,
+        "ok": true,
+        "envelope": {
+          "provider": "github",
+          "client_id": "language-web",
+          "redirect_uri": "https://language.example.com/auth/callback",
+          "scope": "email openid profile",
+          "state": "s",
+          "nonce": "n-456",
+          "code_challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+          "code_challenge_method": "S256",
+          "prompt": "login"
+        }
+      },
+      {
+        "name": "replay",
+        "token": "eyJwcm92aWRlciI6ImdpdGh1YiIsImNsaWVudF9pZCI6Imxhbmd1YWdlLXdlYiIsInJlZGlyZWN0X3VyaSI6Imh0dHBzOi8vbGFuZ3VhZ2UuZXhhbXBsZS5jb20vYXV0aC9jYWxsYmFjayIsInNjb3BlIjoiZW1haWwgb3BlbmlkIHByb2ZpbGUiLCJzdGF0ZSI6InMiLCJub25jZSI6Im4tNDU2IiwiY29kZV9jaGFsbGVuZ2UiOiJFOU1lbGhvYTJPd3ZGckVNVEpndUNIYW9lSzF0OFVSV2J1R0pTc3R3LWNNIiwiY29kZV9jaGFsbGVuZ2VfbWV0aG9kIjoiUzI1NiIsInByb21wdCI6ImxvZ2luIiwiaWF0IjoxNzc1MDQ0ODAwLCJleHAiOjE3NzUwNDU0MDAsImp0aSI6Im1BV1BnZG4yUzAzcjNmNWMwRVZXc0EifQ.LUWo9UQO0eZdU_IzXT3CjcymHtzHMZZl4QOGydUO0-I",
+        "now_unix": 1775044800,
+        "attempt": 2,
+        "ok": false,
+        "error": "oauth: jti replay"
+      }
+    ],
+    "description": "EnvelopeSigner.Verify with the sign section's secret. Order: split on first \".\" -> HMAC compare (constant time, over the base64 text) -> base64 decode -> JSON decode -> now > exp -> jti != \"\" -> JTI store insert (replay => \"oauth: jti replay\"). The callback handler returns error as {\"error\":\"invalid_state\",\"error_description\":<error>}. attempt counts verifications of the same token against one JTI store.",
+    "secret": "golden-envelope-secret-TEST-ONLY-0123456789abcdef"
+  }
+}

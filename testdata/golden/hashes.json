@@ -1,0 +1,344 @@
+{
+  "authorization_code_hash": {
+    "cases": [
+      {
+        "input": "",
+        "error": "authorization code expired"
+      },
+      {
+        "input": "abc",
+        "hash": "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
+      },
+      {
+        "input": "authorization-code-value",
+        "hash": "3rWl377avOaa6U-rtqZ5Zg_iYl1yTZvdmw2LfANG-PI"
+      },
+      {
+        "input": "Zm9vYmFyYmF6cXV4cXV1eGNvcmdlZ3JhdWx0Z2FycGx5d2FsZG8",
+        "hash": "ZgIjaQnEZn3FB5XHxgBuV1yCfvln12yhw4OaHLnncH4"
+      }
+    ],
+    "description": "authorization_codes.code_hash = base64url_nopad(SHA-256(code)), unsalted. An empty code fails with ErrAuthorizationCodeExpired (the token endpoint maps every consume failure to invalid_grant). Source: internal/application/flow/service.go hashSecret."
+  },
+  "authorization_code_random": {
+    "cases": [
+      {
+        "raw_hex": "f936a301f8f4de4cfcf33d34da25e15540dff0e6e4360f81ed5d88222da567f7",
+        "value": "-TajAfj03kz88z002iXhVUDf8ObkNg-B7V2IIi2lZ_c",
+        "hash": "upgrTzulqDrpyuDivnmjupAb985379mTMaAB4Pq8JFo"
+      },
+      {
+        "raw_hex": "85774a93f97e1c35da36a5dd473b462a787a411bd8f74f97a5c65864f7b5b757",
+        "value": "hXdKk_l-HDXaNqXdRztGKnh6QRvY90-XpcZYZPe1t1c",
+        "hash": "mpOPVXNy-Oe9UJR91FsMfnfzUiCjFgAuK4EOPhXY_hs"
+      },
+      {
+        "raw_hex": "8ecb9ea9020bbbfd015ad0e212b0fb1e8f21764f3966402ed0212abb7adaf1bc",
+        "value": "jsueqQILu_0BWtDiErD7Ho8hdk85ZkAu0CEqu3ra8bw",
+        "hash": "x4GFznpTsO2lvvnoipcQzRk6NEb1vkSSjmJwqwCsjmk"
+      }
+    ],
+    "description": "Authorization code = base64url_nopad(32 random bytes) -> 43 chars. Source: flow/service.go newOpaqueSecret."
+  },
+  "client_secret_match": {
+    "cases": [
+      {
+        "name": "hashed_match",
+        "stored": "sha256:HsHCa1DV08WNlYMYGvgHZlX-AHVr9yhZQLo2cPmfy6A",
+        "provided": "s3cret",
+        "match": true
+      },
+      {
+        "name": "hashed_mismatch",
+        "stored": "sha256:HsHCa1DV08WNlYMYGvgHZlX-AHVr9yhZQLo2cPmfy6A",
+        "provided": "S3cret",
+        "match": false
+      },
+      {
+        "name": "hashed_provided_is_the_hash",
+        "stored": "sha256:HsHCa1DV08WNlYMYGvgHZlX-AHVr9yhZQLo2cPmfy6A",
+        "provided": "sha256:HsHCa1DV08WNlYMYGvgHZlX-AHVr9yhZQLo2cPmfy6A",
+        "match": false
+      },
+      {
+        "name": "hashed_prefix_case_sensitive",
+        "stored": "SHA256:HsHCa1DV08WNlYMYGvgHZlX-AHVr9yhZQLo2cPmfy6A",
+        "provided": "s3cret",
+        "match": false
+      },
+      {
+        "name": "plaintext_match",
+        "stored": "plain-secret",
+        "provided": "plain-secret",
+        "match": true
+      },
+      {
+        "name": "plaintext_mismatch",
+        "stored": "plain-secret",
+        "provided": "plain-secret ",
+        "match": false
+      },
+      {
+        "name": "empty_stored",
+        "stored": "",
+        "provided": "anything",
+        "match": false
+      },
+      {
+        "name": "empty_provided",
+        "stored": "plain-secret",
+        "provided": "",
+        "match": false
+      },
+      {
+        "name": "hashed_empty_digest",
+        "stored": "sha256:",
+        "provided": "x",
+        "match": false
+      }
+    ],
+    "description": "Confidential-client secret check (router.go matchSecret). Empty stored or provided => false. Stored \"sha256:<b64url_nopad(SHA-256(secret))>\" (case-sensitive prefix) => constant-time compare of the digest text; otherwise constant-time plaintext compare."
+  },
+  "client_secret_storage": {
+    "cases": [
+      {
+        "secret": "s3cret",
+        "stored": "sha256:HsHCa1DV08WNlYMYGvgHZlX-AHVr9yhZQLo2cPmfy6A"
+      },
+      {
+        "secret": "",
+        "stored": "sha256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU"
+      },
+      {
+        "secret": "dev-trading-api-secret",
+        "stored": "sha256:pxNP7ePdKV9gzg0t5DkDj4lZew1WVaWgao3nzOp-O-w"
+      },
+      {
+        "secret": "รหัสลับ",
+        "stored": "sha256:pyBkfNedlH96Uol3avRYK47A0N0fZJdo94ha2_nevHs"
+      }
+    ],
+    "description": "oauth_clients.client_secret_hash as written by cmd/devseed hashSecret: \"sha256:\" + base64url_nopad(SHA-256(secret)). Verified by client_secret_match."
+  },
+  "envelope_jti_random": {
+    "cases": [
+      {
+        "raw_hex": "7989c155f15ebdb57e2363c0d55e6d0b",
+        "value": "eYnBVfFevbV-I2PA1V5tCw"
+      },
+      {
+        "raw_hex": "d35a15422672a0a46a4117b68437941e",
+        "value": "01oVQiZyoKRqQRe2hDeUHg"
+      },
+      {
+        "raw_hex": "5f0e19485c04d7251fe7a249a63f8106",
+        "value": "Xw4ZSFwE1yUf56JJpj-BBg"
+      }
+    ],
+    "description": "Envelope jti = base64url_nopad(16 random bytes) -> 22 chars. Source: oauth/envelope.go randomJTI."
+  },
+  "http_opaque_token_hash": {
+    "cases": [
+      {
+        "input": "",
+        "error": "empty token"
+      },
+      {
+        "input": "abc",
+        "hash": "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
+      },
+      {
+        "input": "refresh-token-value",
+        "hash": "5lAJ9uCun8IErctzogj2PFgreDm95_6DbaNqPfaueoU"
+      }
+    ],
+    "description": "router.go hashOpaqueToken (revoke + refresh introspection lookups): same digest as refresh_token_hash; empty token short-circuits (revoke => 200, introspect => {\"active\":false})."
+  },
+  "otp_code_hash": {
+    "cases": [
+      {
+        "input": "",
+        "error": "empty otp code"
+      },
+      {
+        "input": "AbCd-_12",
+        "hash": "fTIJ8sr0ALxCL6MwjTrxS26zsh4c0Vz53SNaAyNPjUo"
+      },
+      {
+        "input": "12345678",
+        "hash": "73l8gRjwLftklgfdXT-MdiMEjJwGPVMsyVxe16iYpk8"
+      },
+      {
+        "input": "abc",
+        "hash": "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
+      },
+      {
+        "input": " AbCd-_12",
+        "hash": "DlUf8K7fVHVW1lwraro5k7O8XCakOnxPkJCD0jsbdqE"
+      }
+    ],
+    "description": "otp_challenges.code_hash = base64url_nopad(SHA-256(code)), unsalted, no trimming or case folding of the submitted code. Source: internal/application/identity/service.go hashOTPCode."
+  },
+  "otp_code_random": {
+    "cases": [
+      {
+        "raw_hex": "08290403be1e",
+        "code": "CCkEA74e",
+        "hash": "LIIEBK436dAeHS9mWd8boGFC2L9AIaK8_eCedn8qqew"
+      },
+      {
+        "raw_hex": "dbf5ed8b15ae",
+        "code": "2_XtixWu",
+        "hash": "CpKs5oQ383SDlh1KaeQeQYXf0k1Ljuh6StHrf51Y1Kc"
+      },
+      {
+        "raw_hex": "c7fc5440b20a",
+        "code": "x_xUQLIK",
+        "hash": "nneWRUu8pS5fUu0rAAWwumlcjvcyC81wD0dxr4BHE2w"
+      },
+      {
+        "raw_hex": "caf32006c776",
+        "code": "yvMgBsd2",
+        "hash": "Kn1VltOdlFXRh6zLZ9nN3NzUqXnCQAJdMvQ1MTIOLbM"
+      }
+    ],
+    "description": "OTP code = base64url_nopad(6 random bytes) -> 8 chars from [A-Za-z0-9_-] (not digits). Source: identity/service.go randomOTPCodeGenerator."
+  },
+  "pkce_verify": {
+    "cases": [
+      {
+        "name": "s256_rfc7636_appendix_b",
+        "method": "S256",
+        "challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        "verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+        "valid": true
+      },
+      {
+        "name": "s256_wrong_verifier",
+        "method": "S256",
+        "challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        "verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXkx",
+        "valid": false
+      },
+      {
+        "name": "s256_padded_challenge",
+        "method": "S256",
+        "challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM=",
+        "verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+        "valid": false
+      },
+      {
+        "name": "s256_lowercase_method_rejected",
+        "method": "s256",
+        "challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        "verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+        "valid": false
+      },
+      {
+        "name": "plain_match",
+        "method": "plain",
+        "challenge": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+        "verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+        "valid": true
+      },
+      {
+        "name": "plain_mismatch",
+        "method": "plain",
+        "challenge": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+        "verifier": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        "valid": false
+      },
+      {
+        "name": "empty_method_is_plain",
+        "method": "",
+        "challenge": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+        "verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+        "valid": true
+      },
+      {
+        "name": "empty_method_does_not_hash",
+        "method": "",
+        "challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        "verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+        "valid": false
+      },
+      {
+        "name": "unknown_method",
+        "method": "S512",
+        "challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        "verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+        "valid": false
+      },
+      {
+        "name": "no_challenge_no_verifier",
+        "method": "",
+        "challenge": "",
+        "verifier": "",
+        "valid": true
+      },
+      {
+        "name": "no_challenge_with_method_no_verifier",
+        "method": "S256",
+        "challenge": "",
+        "verifier": "",
+        "valid": true
+      },
+      {
+        "name": "no_challenge_but_verifier_sent",
+        "method": "",
+        "challenge": "",
+        "verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+        "valid": false
+      },
+      {
+        "name": "challenge_but_no_verifier",
+        "method": "S256",
+        "challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        "verifier": "",
+        "valid": false
+      }
+    ],
+    "description": "Token-endpoint PKCE check (internal/adapter/in/http/router.go validatePKCE) on the stored code_challenge(_method). Empty challenge => valid iff verifier is empty. Method \"\" or \"plain\" => constant-time equality; \"S256\" => challenge == base64url_nopad(SHA-256(verifier)); any other method (case-sensitive) => invalid. Failure => 400 {\"error\":\"invalid_grant\",\"error_description\":\"pkce validation failed\"}."
+  },
+  "refresh_token_hash": {
+    "cases": [
+      {
+        "input": "",
+        "error": "hash opaque token: empty token"
+      },
+      {
+        "input": "abc",
+        "hash": "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
+      },
+      {
+        "input": "refresh-token-value",
+        "hash": "5lAJ9uCun8IErctzogj2PFgreDm95_6DbaNqPfaueoU"
+      },
+      {
+        "input": "dGhpcyBpcyBub3QgYSByZWFsIHRva2VuLCBqdXN0IHRlc3Q",
+        "hash": "L36CzE6qrzUJAmKHRybapMv-I2Fa9GiP58YxU1SK0vc"
+      }
+    ],
+    "description": "Refresh token_hash = base64url_nopad(SHA-256(token)), unsalted. Source: internal/application/token/service.go hashOpaqueToken."
+  },
+  "refresh_token_random": {
+    "cases": [
+      {
+        "raw_hex": "c6c150a912520b1c7c69c20d48c464e39aad038be1ff2905636365f4b3b0947a",
+        "value": "xsFQqRJSCxx8acINSMRk45qtA4vh_ykFY2Nl9LOwlHo",
+        "hash": "rnHzJ2vjtTJyDdGafvQuBQAdEEdaZgsW7oGkHwnm3Po"
+      },
+      {
+        "raw_hex": "e54022f9b96e0442092c1646ef3782dbfbe92efe1be0cb2ce864d29d6d644145",
+        "value": "5UAi-bluBEIJLBZG7zeC2_vpLv4b4Mss6GTSnW1kQUU",
+        "hash": "IaSkQ3PQJ1MCpeQzALMNogpshDR1O2LSb1Ebf2GAD5Q"
+      },
+      {
+        "raw_hex": "94de4d4874caa31bf420832dcf47eb5e8fa2d3ab733785fbba0770caf222c22c",
+        "value": "lN5NSHTKoxv0IIMtz0frXo-i06tzN4X7ugdwyvIiwiw",
+        "hash": "qgKB952AT6jI5yfbO9tl1eorr_RDvxFb4HjHUipdQFw"
+      }
+    ],
+    "description": "Refresh token value = base64url_nopad(32 random bytes) -> 43 chars; hash as refresh_token_hash. raw_hex is the random input. Source: token/service.go newOpaqueToken."
+  }
+}

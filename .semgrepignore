@@ -1,0 +1,24 @@
+# A custom .semgrepignore replaces Semgrep's built-in defaults, so they are
+# restated verbatim here to keep the scanned set unchanged.
+node_modules/
+build/
+dist/
+vendor/
+.env/
+.venv/
+.tox/
+*.min.js
+.npm/
+.yarn/
+test/
+tests/
+*_test.go
+.semgrep
+.semgrep_logs/
+
+# AUTH-027 golden vectors only: the TEST-ONLY RSA key (never a production key,
+# see testdata/golden/keys/README.md) and the JWTs / envelope state tokens
+# signed with it, which trip the private-key and JWT secret detectors.
+testdata/golden/keys/
+testdata/golden/jwt.json
+testdata/golden/envelope.json

@@ -1,0 +1,568 @@
+{
+  "auth_ui_from_raw_query": {
+    "auth_ui_base_url": "https://auth-ui.example.com/",
+    "cases": [
+      {
+        "name": "full_params",
+        "raw_query": "response_type=code&client_id=trading-web&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&scope=openid%20email%20profile&state=abc&nonce=n1&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&prompt=login",
+        "path": "/login",
+        "url": "https://auth-ui.example.com/login?client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n1&prompt=login&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=openid+email+profile&state=abc"
+      },
+      {
+        "name": "extra_params_dropped_and_empty_omitted",
+        "raw_query": "client_id=trading-web&utm_source=x&nonce=&scope=openid&state=s&redirect_uri=https://a.example/cb",
+        "path": "/login",
+        "url": "https://auth-ui.example.com/login?client_id=trading-web&redirect_uri=https%3A%2F%2Fa.example%2Fcb&scope=openid&state=s"
+      },
+      {
+        "name": "repeated_param_first_wins",
+        "raw_query": "client_id=a&client_id=b&state=1&state=2",
+        "path": "/consent",
+        "url": "https://auth-ui.example.com/consent?client_id=a&state=1"
+      },
+      {
+        "name": "plus_and_percent_decoding",
+        "raw_query": "scope=openid+email%2Cprofile&state=a%2Bb+c%26d&redirect_uri=https%3A%2F%2Fa.example%2Fcb%3Fx%3D1%26y%3D2",
+        "path": "/login",
+        "url": "https://auth-ui.example.com/login?redirect_uri=https%3A%2F%2Fa.example%2Fcb%3Fx%3D1%26y%3D2&scope=openid+email%2Cprofile&state=a%2Bb+c%26d"
+      },
+      {
+        "name": "unicode_state",
+        "raw_query": "state=%E0%B8%AA%E0%B8%A7%E0%B8%B1%E0%B8%AA%E0%B8%94%E0%B8%B5&client_id=c",
+        "path": "/login",
+        "url": "https://auth-ui.example.com/login?client_id=c&state=%E0%B8%AA%E0%B8%A7%E0%B8%B1%E0%B8%AA%E0%B8%94%E0%B8%B5"
+      },
+      {
+        "name": "no_params_no_question_mark",
+        "raw_query": "",
+        "path": "/login",
+        "url": "https://auth-ui.example.com/login"
+      },
+      {
+        "name": "only_unknown_params",
+        "raw_query": "foo=bar",
+        "path": "/login",
+        "url": "https://auth-ui.example.com/login"
+      }
+    ],
+    "description": "handlers_stateless.go preservedAuthorizeQuery + authUIRoute (authorize => auth-ui /login or /consent). Only response_type, client_id, redirect_uri, scope, state, nonce, code_challenge, code_challenge_method, prompt are copied, each via c.Query (first value, decoded; '+' => space) and only if non-empty; re-encoded with url.Values.Encode (sorted). URL = TrimRight(AUTH_UI_BASE_URL, \"/\") + path, plus \"?\" + query only when at least one param survives."
+  },
+  "auth_ui_from_request": {
+    "auth_ui_base_url": "https://auth-ui.example.com/",
+    "cases": [
+      {
+        "name": "canonical_s256",
+        "request": {
+          "ResponseType": "code",
+          "ClientID": "trading-web",
+          "RedirectURI": "https://trading.example.com/callback",
+          "Scope": "email openid profile",
+          "State": "abc",
+          "Nonce": "n1",
+          "CodeChallenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+          "CodeChallengeMethod": "S256",
+          "Prompt": ""
+        },
+        "consent_url": "https://auth-ui.example.com/consent?client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n1&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=email+openid+profile&state=abc",
+        "error_code": "provider_email_unverified",
+        "error_description": "provider did not return a verified email; try email OTP",
+        "error_response": {
+          "status": 302,
+          "location": "https://auth-ui.example.com/error?client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&error=provider_email_unverified&error_description=provider+did+not+return+a+verified+email%3B+try+email+OTP&nonce=n1&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=email+openid+profile&state=abc"
+        }
+      },
+      {
+        "name": "minimal_with_specials",
+        "request": {
+          "ResponseType": "",
+          "ClientID": "c&d",
+          "RedirectURI": "https://a.example/cb?x=1&y=2",
+          "Scope": "openid",
+          "State": "a b+c",
+          "Nonce": "",
+          "CodeChallenge": "",
+          "CodeChallengeMethod": "",
+          "Prompt": "login"
+        },
+        "consent_url": "https://auth-ui.example.com/consent?client_id=c%26d&prompt=login&redirect_uri=https%3A%2F%2Fa.example%2Fcb%3Fx%3D1%26y%3D2&scope=openid&state=a+b%2Bc",
+        "error_code": "access_denied",
+        "error_description": "",
+        "error_response": {
+          "status": 302,
+          "location": "https://auth-ui.example.com/error?client_id=c%26d&error=access_denied&prompt=login&redirect_uri=https%3A%2F%2Fa.example%2Fcb%3Fx%3D1%26y%3D2&scope=openid&state=a+b%2Bc"
+        }
+      }
+    ],
+    "description": "consent_url: oauthValuesFromRequest(validated.Request) => auth-ui /consent (after provider callback / OTP verify without consent); the request is the CANONICAL one from oauth.Validate (scope sorted+space-joined, code_challenge_method defaulted). error_response: redirectAuthUIError => 302 to auth-ui /error with the same params plus error and error_description (if non-empty). All via url.Values.Encode (sorted keys)."
+  },
+  "authorization_success": {
+    "cases": [
+      {
+        "name": "plain",
+        "redirect_uri": "https://app.example.com/callback",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "xyz",
+        "ok": true,
+        "url": "https://app.example.com/callback?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=xyz",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/callback?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=xyz"
+        }
+      },
+      {
+        "name": "no_state",
+        "redirect_uri": "https://app.example.com/callback",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "",
+        "ok": true,
+        "url": "https://app.example.com/callback?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/callback?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij"
+        }
+      },
+      {
+        "name": "existing_query_merged_and_sorted",
+        "redirect_uri": "https://app.example.com/cb?z=1&a=2&a=3",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "s",
+        "ok": true,
+        "url": "https://app.example.com/cb?a=2&a=3&code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=s&z=1",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/cb?a=2&a=3&code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=s&z=1"
+        }
+      },
+      {
+        "name": "existing_code_and_state_replaced",
+        "redirect_uri": "https://app.example.com/cb?code=old&state=old&keep=1",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "new",
+        "ok": true,
+        "url": "https://app.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&keep=1&state=new",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&keep=1&state=new"
+        }
+      },
+      {
+        "name": "existing_state_kept_when_state_empty",
+        "redirect_uri": "https://app.example.com/cb?state=old",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "",
+        "ok": true,
+        "url": "https://app.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=old",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=old"
+        }
+      },
+      {
+        "name": "fragment_kept",
+        "redirect_uri": "https://app.example.com/cb#frag",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "s",
+        "ok": true,
+        "url": "https://app.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=s#frag",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=s#frag"
+        }
+      },
+      {
+        "name": "state_needs_escaping",
+        "redirect_uri": "https://app.example.com/cb",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "a b&c=d/é+%",
+        "ok": true,
+        "url": "https://app.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=a+b%26c%3Dd%2F%C3%A9%2B%25",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=a+b%26c%3Dd%2F%C3%A9%2B%25"
+        }
+      },
+      {
+        "name": "raw_query_reencoded",
+        "redirect_uri": "https://app.example.com/cb?q=a+b&r=%20x&empty=&flag",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "s",
+        "ok": true,
+        "url": "https://app.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&empty=&flag=&q=a+b&r=+x&state=s",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&empty=&flag=&q=a+b&r=+x&state=s"
+        }
+      },
+      {
+        "name": "non_ascii_path_and_fragment",
+        "redirect_uri": "https://app.example.com/é/cb#ü",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "s",
+        "ok": true,
+        "url": "https://app.example.com/%C3%A9/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=s#%C3%BC",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/%C3%A9/cb?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=s#%C3%BC"
+        }
+      },
+      {
+        "name": "custom_scheme",
+        "redirect_uri": "com.example.app:/oauth2redirect",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "s",
+        "ok": true,
+        "url": "com.example.app:/oauth2redirect?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=s",
+        "response": {
+          "status": 302,
+          "location": "com.example.app:/oauth2redirect?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=s"
+        }
+      },
+      {
+        "name": "loopback_port",
+        "redirect_uri": "http://127.0.0.1:53682/callback",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "s",
+        "ok": true,
+        "url": "http://127.0.0.1:53682/callback?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=s",
+        "response": {
+          "status": 302,
+          "location": "http://127.0.0.1:53682/callback?code=SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij&state=s"
+        }
+      },
+      {
+        "name": "empty_redirect_uri",
+        "redirect_uri": "",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "s",
+        "ok": false,
+        "response": {
+          "status": 400,
+          "content_type": "application/json; charset=utf-8",
+          "body": "{\"error\":\"invalid_request\"}"
+        }
+      },
+      {
+        "name": "unparseable_redirect_uri",
+        "redirect_uri": "http://[::1",
+        "code": "SplxlOBeZQQYbYS6WxSbIA-0123456789abcdefghij",
+        "state": "s",
+        "ok": false,
+        "response": {
+          "status": 400,
+          "content_type": "application/json; charset=utf-8",
+          "body": "{\"error\":\"invalid_request\"}"
+        }
+      }
+    ],
+    "description": "router.go authorizationSuccessURL / redirectAuthorizationSuccess. url.Parse(redirect_uri); query = existing query parsed (url.ParseQuery semantics), Set(code), Set(state) only if non-empty, then url.Values.Encode (keys byte-sorted, values in original order, QueryEscape: space => '+'); fragment preserved; RawQuery replaced. Parse failure or empty redirect_uri => 400 {\"error\":\"invalid_request\"}. Response is 302 with Location; the HTML body of http.Redirect is an accepted deviation and omitted."
+  },
+  "authorize_without_session": {
+    "auth_ui_base_url": "https://auth-ui.example.com/",
+    "cases": [
+      {
+        "name": "no_session_to_login",
+        "raw_query": "client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=profile+openid+email&state=st+1",
+        "response": {
+          "status": 302,
+          "location": "https://auth-ui.example.com/login?client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=profile+openid+email&state=st+1"
+        }
+      },
+      {
+        "name": "no_session_extra_param_dropped",
+        "raw_query": "client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=profile+openid+email&state=st+1&utm=x",
+        "response": {
+          "status": 302,
+          "location": "https://auth-ui.example.com/login?client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=profile+openid+email&state=st+1"
+        }
+      },
+      {
+        "name": "prompt_none_login_required",
+        "raw_query": "client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n&prompt=none&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=profile+openid+email&state=st+1",
+        "response": {
+          "status": 302,
+          "location": "https://trading.example.com/callback?error=login_required&error_description=no+active+SSO+session&state=st+1"
+        }
+      },
+      {
+        "name": "registered_uri_with_query",
+        "raw_query": "client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n&prompt=none&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcb%3Ftenant%3Da&response_type=code&scope=profile+openid+email&state=st+1",
+        "response": {
+          "status": 302,
+          "location": "https://trading.example.com/cb?error=login_required&error_description=no+active+SSO+session&state=st+1&tenant=a"
+        }
+      },
+      {
+        "name": "recoverable_missing_state",
+        "raw_query": "client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=profile+openid+email",
+        "response": {
+          "status": 302,
+          "location": "https://trading.example.com/callback?error=invalid_request&error_description=state+is+required"
+        }
+      },
+      {
+        "name": "recoverable_scope_not_allowed",
+        "raw_query": "client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=openid+trading.write&state=st+1",
+        "response": {
+          "status": 302,
+          "location": "https://trading.example.com/callback?error=invalid_scope&error_description=requested+scopes+are+not+allowed+for+this+client&state=st+1"
+        }
+      },
+      {
+        "name": "recoverable_plain_pkce_public",
+        "raw_query": "client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=plain&nonce=n&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=profile+openid+email&state=st+1",
+        "response": {
+          "status": 302,
+          "location": "https://trading.example.com/callback?error=invalid_request&error_description=public+clients+must+use+S256+for+code_challenge_method&state=st+1"
+        }
+      },
+      {
+        "name": "fatal_unknown_client",
+        "raw_query": "client_id=nope&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n&redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback&response_type=code&scope=profile+openid+email&state=st+1",
+        "response": {
+          "status": 400,
+          "content_type": "application/json; charset=utf-8",
+          "body": "{\"error\":\"invalid_client\",\"error_description\":\"client_id is unknown\"}"
+        }
+      },
+      {
+        "name": "fatal_unregistered_redirect",
+        "raw_query": "client_id=trading-web&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&nonce=n&redirect_uri=https%3A%2F%2Fevil.example.com%2Fcb&response_type=code&scope=profile+openid+email&state=st+1",
+        "response": {
+          "status": 400,
+          "content_type": "application/json; charset=utf-8",
+          "body": "{\"error\":\"invalid_request\",\"error_description\":\"redirect_uri does not match a registered URI\"}"
+        }
+      }
+    ],
+    "clients": {
+      "trading-web": {
+        "ID": "",
+        "ClientID": "trading-web",
+        "ClientType": "public",
+        "ClientSecretHash": "",
+        "DisplayName": "",
+        "LogoURI": "",
+        "RedirectURIs": [
+          "https://trading.example.com/callback",
+          "https://trading.example.com/cb?tenant=a"
+        ],
+        "AllowedScopes": "openid email profile offline_access trading.read",
+        "Status": "active",
+        "CreatedAt": "0001-01-01T00:00:00Z",
+        "UpdatedAt": "0001-01-01T00:00:00Z"
+      }
+    },
+    "description": "GET /v1/oauth2/authorize with no SSO cookie (handlers_stateless.go authorizeStateless). Client registry: see clients. Fatal validation errors => 400 JSON; recoverable => 302 to redirect_uri with error params; prompt=none => login_required; otherwise 302 to auth-ui /login with the preserved query."
+  },
+  "oauth_error": {
+    "cases": [
+      {
+        "name": "login_required",
+        "redirect_uri": "https://app.example.com/callback",
+        "state": "xyz",
+        "error": "login_required",
+        "error_description": "no active SSO session",
+        "ok": true,
+        "url": "https://app.example.com/callback?error=login_required&error_description=no+active+SSO+session&state=xyz",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/callback?error=login_required&error_description=no+active+SSO+session&state=xyz"
+        }
+      },
+      {
+        "name": "no_description_no_state",
+        "redirect_uri": "https://app.example.com/callback",
+        "state": "",
+        "error": "access_denied",
+        "error_description": "",
+        "ok": true,
+        "url": "https://app.example.com/callback?error=access_denied",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/callback?error=access_denied"
+        }
+      },
+      {
+        "name": "merged_query_and_fragment",
+        "redirect_uri": "https://app.example.com/cb?error=old&b=2#f",
+        "state": "s t",
+        "error": "invalid_scope",
+        "error_description": "requested scopes are not allowed for this client",
+        "ok": true,
+        "url": "https://app.example.com/cb?b=2&error=invalid_scope&error_description=requested+scopes+are+not+allowed+for+this+client&state=s+t#f",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/cb?b=2&error=invalid_scope&error_description=requested+scopes+are+not+allowed+for+this+client&state=s+t#f"
+        }
+      },
+      {
+        "name": "unicode_description",
+        "redirect_uri": "https://app.example.com/cb",
+        "state": "s",
+        "error": "invalid_request",
+        "error_description": "code_challenge length must be 43–128 characters",
+        "ok": true,
+        "url": "https://app.example.com/cb?error=invalid_request&error_description=code_challenge+length+must+be+43%E2%80%93128+characters&state=s",
+        "response": {
+          "status": 302,
+          "location": "https://app.example.com/cb?error=invalid_request&error_description=code_challenge+length+must+be+43%E2%80%93128+characters&state=s"
+        }
+      },
+      {
+        "name": "empty_redirect_uri_renders_json",
+        "redirect_uri": "",
+        "state": "s",
+        "error": "invalid_request",
+        "error_description": "state is required",
+        "ok": false,
+        "response": {
+          "status": 400,
+          "content_type": "application/json; charset=utf-8",
+          "body": "{\"error\":\"invalid_request\",\"error_description\":\"state is required\"}"
+        }
+      }
+    ],
+    "description": "router.go oauthErrorURL / redirectOAuthError: like authorization_success but sets error, error_description (only if non-empty) and state (only if non-empty). Unusable redirect_uri => 400 JSON {\"error\",\"error_description\"} (both keys always present)."
+  },
+  "otp_start_response": {
+    "auth_ui_base_url": "https://auth-ui.example.com/",
+    "cases": [
+      {
+        "name": "trimmed_email_and_canonical_params",
+        "request_body": "{\"client_id\":\"trading-web\",\"redirect_uri\":\"https://trading.example.com/callback\",\"scope\":\"profile openid\",\"state\":\"a b&c\",\"nonce\":\"n\",\"code_challenge\":\"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM\",\"code_challenge_method\":\"S256\",\"email\":\"  Alice.Smith@Example.com \"}",
+        "response": {
+          "status": 200,
+          "content_type": "application/json; charset=utf-8",
+          "body": "{\"email\":\"A*********h@Example.com\",\"expires_at\":\"2026-04-01T12:10:00Z\",\"otp_challenge_id\":\"0195f0a2-0000-7000-8000-0000000000aa\",\"redirect_to\":\"https://auth-ui.example.com/otp?client_id=trading-web\\u0026code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM\\u0026code_challenge_method=S256\\u0026email=Alice.Smith%40Example.com\\u0026nonce=n\\u0026otp_challenge_id=0195f0a2-0000-7000-8000-0000000000aa\\u0026redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback\\u0026scope=profile+openid\\u0026state=a+b%26c\"}"
+        }
+      },
+      {
+        "name": "response_type_and_prompt_echoed",
+        "request_body": "{\"response_type\":\"code\",\"client_id\":\"trading-web\",\"redirect_uri\":\"https://trading.example.com/callback\",\"scope\":\"openid\",\"state\":\"s\",\"nonce\":\"n\",\"code_challenge\":\"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM\",\"code_challenge_method\":\"S256\",\"prompt\":\"login\",\"email\":\"ab@example.com\"}",
+        "response": {
+          "status": 200,
+          "content_type": "application/json; charset=utf-8",
+          "body": "{\"email\":\"a*@example.com\",\"expires_at\":\"2026-04-01T12:10:00Z\",\"otp_challenge_id\":\"0195f0a2-0000-7000-8000-0000000000aa\",\"redirect_to\":\"https://auth-ui.example.com/otp?client_id=trading-web\\u0026code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM\\u0026code_challenge_method=S256\\u0026email=ab%40example.com\\u0026nonce=n\\u0026otp_challenge_id=0195f0a2-0000-7000-8000-0000000000aa\\u0026prompt=login\\u0026redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback\\u0026response_type=code\\u0026scope=openid\\u0026state=s\"}"
+        }
+      },
+      {
+        "name": "non_ascii_local_part",
+        "request_body": "{\"client_id\":\"trading-web\",\"redirect_uri\":\"https://trading.example.com/callback\",\"scope\":\"openid\",\"state\":\"s\",\"nonce\":\"n\",\"code_challenge\":\"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM\",\"code_challenge_method\":\"S256\",\"email\":\"éa@example.com\"}",
+        "response": {
+          "status": 200,
+          "content_type": "application/json; charset=utf-8",
+          "body": "{\"email\":\"\\ufffd*a@example.com\",\"expires_at\":\"2026-04-01T12:10:00Z\",\"otp_challenge_id\":\"0195f0a2-0000-7000-8000-0000000000aa\",\"redirect_to\":\"https://auth-ui.example.com/otp?client_id=trading-web\\u0026code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM\\u0026code_challenge_method=S256\\u0026email=%C3%A9a%40example.com\\u0026nonce=n\\u0026otp_challenge_id=0195f0a2-0000-7000-8000-0000000000aa\\u0026redirect_uri=https%3A%2F%2Ftrading.example.com%2Fcallback\\u0026scope=openid\\u0026state=s\"}"
+        }
+      },
+      {
+        "name": "public_client_plain_pkce_rejected",
+        "request_body": "{\"client_id\":\"trading-web\",\"redirect_uri\":\"https://trading.example.com/callback\",\"scope\":\"openid\",\"state\":\"s\",\"nonce\":\"n\",\"code_challenge\":\"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM\",\"email\":\"a@example.com\"}",
+        "response": {
+          "status": 400,
+          "content_type": "application/json; charset=utf-8",
+          "body": "{\"error\":\"invalid_request\",\"error_description\":\"public clients must use S256 for code_challenge_method\"}"
+        }
+      }
+    ],
+    "clients": {
+      "trading-web": {
+        "ID": "",
+        "ClientID": "trading-web",
+        "ClientType": "public",
+        "ClientSecretHash": "",
+        "DisplayName": "",
+        "LogoURI": "",
+        "RedirectURIs": [
+          "https://trading.example.com/callback"
+        ],
+        "AllowedScopes": "openid email profile",
+        "Status": "active",
+        "CreatedAt": "0001-01-01T00:00:00Z",
+        "UpdatedAt": "0001-01-01T00:00:00Z"
+      }
+    },
+    "description": "POST /v1/auth/otp/start (handlers_otp_consent_stateless.go startOTPStateless) with a fixed clock (now_unix), OTP_CHALLENGE_TTL=10m and challenge id. redirect_to = auth-ui /otp + body params as sent (response_type is NOT defaulted in the query even though validation defaults it) + otp_challenge_id + email=TrimSpace(body.email), url.Values.Encode (sorted). email = maskEmail(TrimSpace(body.email)) (see masking.json). expires_at = RFC3339 UTC.",
+    "now_unix": 1775044800,
+    "otp_challenge_id": "0195f0a2-0000-7000-8000-0000000000aa"
+  },
+  "post_logout": {
+    "auth_ui_base_url": "https://auth-ui.example.com/",
+    "cases": [
+      {
+        "post_logout_redirect_uri": "",
+        "location": "https://auth-ui.example.com/logout"
+      },
+      {
+        "post_logout_redirect_uri": "https://auth-ui.example.com/signed-out?x=1",
+        "location": "https://auth-ui.example.com/signed-out?x=1"
+      },
+      {
+        "post_logout_redirect_uri": "HTTPS://AUTH-UI.EXAMPLE.COM/x",
+        "location": "HTTPS://AUTH-UI.EXAMPLE.COM/x"
+      },
+      {
+        "post_logout_redirect_uri": "https://trading.example.com/after-logout",
+        "location": "https://trading.example.com/after-logout"
+      },
+      {
+        "post_logout_redirect_uri": "https://language.example.com/anything",
+        "location": "https://language.example.com/anything"
+      },
+      {
+        "post_logout_redirect_uri": "https://trading.example.com:443/x",
+        "location": "https://auth-ui.example.com/logout"
+      },
+      {
+        "post_logout_redirect_uri": "http://trading.example.com/x",
+        "location": "https://auth-ui.example.com/logout"
+      },
+      {
+        "post_logout_redirect_uri": "https://evil.example.com/",
+        "location": "https://auth-ui.example.com/logout"
+      },
+      {
+        "post_logout_redirect_uri": "//trading.example.com/x",
+        "location": "https://auth-ui.example.com/logout"
+      },
+      {
+        "post_logout_redirect_uri": "/relative",
+        "location": "https://auth-ui.example.com/logout"
+      },
+      {
+        "post_logout_redirect_uri": "https://trading.example.com.evil.example/x",
+        "location": "https://auth-ui.example.com/logout"
+      }
+    ],
+    "description": "router.go postLogoutRedirect (GET /v1/auth/logout and /logout/global => 302). Default = TrimRight(AUTH_UI_BASE_URL, \"/\") + \"/logout\". A candidate is returned verbatim when its scheme and host (host includes any explicit port) case-insensitively equal those of AUTH_UI_BASE_URL or any POST_LOGOUT_REDIRECT_ALLOWLIST entry (paths ignored); relative or scheme-less URLs fall back to the default.",
+    "post_logout_redirect_allowlist": [
+      "https://trading.example.com",
+      "https://language.example.com/some/path"
+    ]
+  },
+  "provider_authorization_url": {
+    "cases": [
+      {
+        "provider": "google",
+        "state": "eyJwcm92aWRlciI6Imdvb2dsZSJ9.c2lnbmF0dXJl",
+        "url": "https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&client_id=google-client-id.apps.googleusercontent.com&prompt=select_account&redirect_uri=https%3A%2F%2Fauth.example.com%2Fv1%2Fauth%2Flogin%2Fcallback%2Fgoogle&response_type=code&scope=openid+email+profile&state=eyJwcm92aWRlciI6Imdvb2dsZSJ9.c2lnbmF0dXJl"
+      },
+      {
+        "provider": "github",
+        "state": "eyJwcm92aWRlciI6Imdvb2dsZSJ9.c2lnbmF0dXJl",
+        "url": "https://github.com/login/oauth/authorize?client_id=Iv1.githubclientid&prompt=select_account&redirect_uri=https%3A%2F%2Fauth.example.com%2Fv1%2Fauth%2Flogin%2Fcallback%2Fgithub&response_type=code&scope=read%3Auser+user%3Aemail&state=eyJwcm92aWRlciI6Imdvb2dsZSJ9.c2lnbmF0dXJl"
+      },
+      {
+        "provider": "unknown",
+        "state": "eyJwcm92aWRlciI6Imdvb2dsZSJ9.c2lnbmF0dXJl",
+        "url": ""
+      }
+    ],
+    "config": {
+      "github_client_id": "Iv1.githubclientid",
+      "github_redirect_url": "https://auth.example.com/v1/auth/login/callback/github",
+      "google_client_id": "google-client-id.apps.googleusercontent.com",
+      "google_redirect_url": "https://auth.example.com/v1/auth/login/callback/google"
+    },
+    "description": "handlers_provider_stateless.go providerAuthorizationURLWithState (POST /v1/auth/login/{google,github} => {\"authorization_url\"}). Params set: client_id, redirect_uri, response_type=code, state=<envelope>, prompt=select_account, scope (google: \"openid email profile\" + access_type=offline; github: \"read:user user:email\"); url.Values.Encode (sorted). Unknown provider => \"\"."
+  }
+}

@@ -1,0 +1,232 @@
+{
+  "csrf_cookie": {
+    "cases": [
+      {
+        "name": "lax",
+        "config": {
+          "sso_cookie_secure": false,
+          "sso_cookie_same_site": "lax",
+          "sso_cookie_domain": ""
+        },
+        "random_raw_hex": "ecfda42815931ea8699f6356b9c16c6ed075c57f32774e664b08b72828690515",
+        "token": "7P2kKBWTHqhpn2NWucFsbtB1xX8yd05mSwi3KChpBRU",
+        "response": {
+          "status": 200,
+          "content_type": "application/json; charset=utf-8",
+          "set_cookie": [
+            "auth_csrf=7P2kKBWTHqhpn2NWucFsbtB1xX8yd05mSwi3KChpBRU; Path=/; Max-Age=1800; SameSite=Lax"
+          ],
+          "body": "{\"csrf_token\":\"7P2kKBWTHqhpn2NWucFsbtB1xX8yd05mSwi3KChpBRU\",\"expires_in\":1800}"
+        }
+      },
+      {
+        "name": "strict_secure",
+        "config": {
+          "sso_cookie_secure": true,
+          "sso_cookie_same_site": "strict",
+          "sso_cookie_domain": "auth.example.com"
+        },
+        "random_raw_hex": "342445d632ad6f7ea1d03757de1e5ce03fbf95dc8d01062fefe71e354014e3be",
+        "token": "NCRF1jKtb36h0DdX3h5c4D-_ldyNAQYv7-ceNUAU474",
+        "response": {
+          "status": 200,
+          "content_type": "application/json; charset=utf-8",
+          "set_cookie": [
+            "auth_csrf=NCRF1jKtb36h0DdX3h5c4D-_ldyNAQYv7-ceNUAU474; Path=/; Domain=auth.example.com; Max-Age=1800; Secure; SameSite=Strict"
+          ],
+          "body": "{\"csrf_token\":\"NCRF1jKtb36h0DdX3h5c4D-_ldyNAQYv7-ceNUAU474\",\"expires_in\":1800}"
+        }
+      },
+      {
+        "name": "none_secure",
+        "config": {
+          "sso_cookie_secure": true,
+          "sso_cookie_same_site": "none",
+          "sso_cookie_domain": ".example.com"
+        },
+        "random_raw_hex": "2f55a8a5b5fb31b899db4ff7cb8d648f57041747c11fa2a1b173e198acf14531",
+        "token": "L1WopbX7MbiZ20_3y41kj1cEF0fBH6KhsXPhmKzxRTE",
+        "response": {
+          "status": 200,
+          "content_type": "application/json; charset=utf-8",
+          "set_cookie": [
+            "auth_csrf=L1WopbX7MbiZ20_3y41kj1cEF0fBH6KhsXPhmKzxRTE; Path=/; Domain=example.com; Max-Age=1800; Secure; SameSite=None"
+          ],
+          "body": "{\"csrf_token\":\"L1WopbX7MbiZ20_3y41kj1cEF0fBH6KhsXPhmKzxRTE\",\"expires_in\":1800}"
+        }
+      }
+    ],
+    "description": "GET /v1/auth/csrf (helpers.go csrfToken): token = base64url_nopad(32 random bytes); cookie auth_csrf, Max-Age=1800, Path=/, NOT HttpOnly, Secure/SameSite/Domain from the SSO_COOKIE_* config; body {\"csrf_token\",\"expires_in\":1800} (sorted keys)."
+  },
+  "sso_cookie": {
+    "cases": [
+      {
+        "name": "default_lax_insecure_no_domain",
+        "config": {
+          "sso_cookie_secure": false,
+          "sso_cookie_same_site": "lax",
+          "sso_cookie_domain": ""
+        },
+        "action": "set",
+        "value": "0195f0a2-0000-7000-8000-000000000001",
+        "max_age": 2592000,
+        "set_cookie": [
+          "auth_sso_session=0195f0a2-0000-7000-8000-000000000001; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax"
+        ]
+      },
+      {
+        "name": "secure_strict_domain",
+        "config": {
+          "sso_cookie_secure": true,
+          "sso_cookie_same_site": "strict",
+          "sso_cookie_domain": "auth.example.com"
+        },
+        "action": "set",
+        "value": "0195f0a2-0000-7000-8000-000000000001",
+        "max_age": 86400,
+        "set_cookie": [
+          "auth_sso_session=0195f0a2-0000-7000-8000-000000000001; Path=/; Domain=auth.example.com; Max-Age=86400; HttpOnly; Secure; SameSite=Strict"
+        ]
+      },
+      {
+        "name": "secure_none_leading_dot_domain",
+        "config": {
+          "sso_cookie_secure": true,
+          "sso_cookie_same_site": "none",
+          "sso_cookie_domain": ".example.com"
+        },
+        "action": "set",
+        "value": "0195f0a2-0000-7000-8000-000000000001",
+        "max_age": 3600,
+        "set_cookie": [
+          "auth_sso_session=0195f0a2-0000-7000-8000-000000000001; Path=/; Domain=example.com; Max-Age=3600; HttpOnly; Secure; SameSite=None"
+        ]
+      },
+      {
+        "name": "empty_same_site_is_lax",
+        "config": {
+          "sso_cookie_secure": false,
+          "sso_cookie_same_site": "",
+          "sso_cookie_domain": ""
+        },
+        "action": "set",
+        "value": "0195f0a2-0000-7000-8000-000000000001",
+        "max_age": 60,
+        "set_cookie": [
+          "auth_sso_session=0195f0a2-0000-7000-8000-000000000001; Path=/; Max-Age=60; HttpOnly; SameSite=Lax"
+        ]
+      },
+      {
+        "name": "unknown_same_site_is_lax",
+        "config": {
+          "sso_cookie_secure": false,
+          "sso_cookie_same_site": "bogus",
+          "sso_cookie_domain": ""
+        },
+        "action": "set",
+        "value": "0195f0a2-0000-7000-8000-000000000001",
+        "max_age": 60,
+        "set_cookie": [
+          "auth_sso_session=0195f0a2-0000-7000-8000-000000000001; Path=/; Max-Age=60; HttpOnly; SameSite=Lax"
+        ]
+      },
+      {
+        "name": "ip_domain",
+        "config": {
+          "sso_cookie_secure": false,
+          "sso_cookie_same_site": "lax",
+          "sso_cookie_domain": "127.0.0.1"
+        },
+        "action": "set",
+        "value": "0195f0a2-0000-7000-8000-000000000001",
+        "max_age": 60,
+        "set_cookie": [
+          "auth_sso_session=0195f0a2-0000-7000-8000-000000000001; Path=/; Domain=127.0.0.1; Max-Age=60; HttpOnly; SameSite=Lax"
+        ]
+      },
+      {
+        "name": "localhost_domain",
+        "config": {
+          "sso_cookie_secure": false,
+          "sso_cookie_same_site": "lax",
+          "sso_cookie_domain": "localhost"
+        },
+        "action": "set",
+        "value": "0195f0a2-0000-7000-8000-000000000001",
+        "max_age": 60,
+        "set_cookie": [
+          "auth_sso_session=0195f0a2-0000-7000-8000-000000000001; Path=/; Domain=localhost; Max-Age=60; HttpOnly; SameSite=Lax"
+        ]
+      },
+      {
+        "name": "invalid_domain_dropped",
+        "config": {
+          "sso_cookie_secure": false,
+          "sso_cookie_same_site": "lax",
+          "sso_cookie_domain": "bad domain"
+        },
+        "action": "set",
+        "value": "0195f0a2-0000-7000-8000-000000000001",
+        "max_age": 60,
+        "set_cookie": [
+          "auth_sso_session=0195f0a2-0000-7000-8000-000000000001; Path=/; Max-Age=60; HttpOnly; SameSite=Lax"
+        ]
+      },
+      {
+        "name": "value_needs_query_escape",
+        "config": {
+          "sso_cookie_secure": false,
+          "sso_cookie_same_site": "lax",
+          "sso_cookie_domain": ""
+        },
+        "action": "set",
+        "value": "a b+c/d=e;f,g\"h\\i~j*k@ü",
+        "max_age": 60,
+        "set_cookie": [
+          "auth_sso_session=a+b%2Bc%2Fd%3De%3Bf%2Cg%22h%5Ci~j%2Ak%40%C3%BC; Path=/; Max-Age=60; HttpOnly; SameSite=Lax"
+        ]
+      },
+      {
+        "name": "expired_session_max_age_0",
+        "config": {
+          "sso_cookie_secure": true,
+          "sso_cookie_same_site": "lax",
+          "sso_cookie_domain": "auth.example.com"
+        },
+        "action": "set",
+        "value": "0195f0a2-0000-7000-8000-000000000001",
+        "max_age": 0,
+        "set_cookie": [
+          "auth_sso_session=0195f0a2-0000-7000-8000-000000000001; Path=/; Domain=auth.example.com; HttpOnly; Secure; SameSite=Lax"
+        ]
+      },
+      {
+        "name": "clear_insecure",
+        "config": {
+          "sso_cookie_secure": false,
+          "sso_cookie_same_site": "lax",
+          "sso_cookie_domain": ""
+        },
+        "action": "clear",
+        "max_age": -1,
+        "set_cookie": [
+          "auth_sso_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"
+        ]
+      },
+      {
+        "name": "clear_secure_none_domain",
+        "config": {
+          "sso_cookie_secure": true,
+          "sso_cookie_same_site": "none",
+          "sso_cookie_domain": ".example.com"
+        },
+        "action": "clear",
+        "max_age": -1,
+        "set_cookie": [
+          "auth_sso_session=; Path=/; Domain=example.com; Max-Age=0; HttpOnly; Secure; SameSite=None"
+        ]
+      }
+    ],
+    "description": "auth_sso_session cookie (router.go setSSOCookie / clearSSOCookie via gin c.SetCookie -> net/http Cookie.String). value is url.QueryEscape'd (space -> '+'). set: Max-Age = int(time.Until(session.ExpiresAt).Seconds()) truncated, clamped to >= 0; Max-Age 0 omits the attribute entirely (session cookie!). clear: MaxAge -1 renders \"Max-Age=0\". Path=/, HttpOnly. Domain: leading '.' stripped; invalid domains are silently dropped (Go logs). SameSite from SSO_COOKIE_SAME_SITE: strict/none, anything else => Lax. No Expires attribute is ever sent. Attribute order: Name=Value; Path; Domain; Max-Age; HttpOnly; Secure; SameSite."
+  }
+}

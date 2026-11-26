@@ -10,3 +10,6 @@ pub use otp_template::{
     render_otp_email_with_remaining,
 };
 pub use smtp::{SmtpSender, SmtpSenderConfig};
+
+mod otp_mailer;
+pub use otp_mailer::TemplateOtpMailer;

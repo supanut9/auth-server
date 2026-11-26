@@ -27,3 +27,6 @@ pub use system::{Clock, IdGenerator, OtpCodeGenerator, RandomSource};
 
 #[cfg(test)]
 mod tests;
+
+mod otp_mailer;
+pub use otp_mailer::OtpMailer;

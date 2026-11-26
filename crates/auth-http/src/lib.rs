@@ -6,6 +6,7 @@
 
 pub mod cookies;
 pub mod go_url;
+pub mod handlers;
 pub mod json;
 pub mod middleware;
 pub mod post_logout;

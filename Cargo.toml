@@ -9,6 +9,12 @@ edition = "2024"
 [workspace.dependencies]
 auth-http = { path = "crates/auth-http" }
 
+async-trait = "0.1.92"
+secrecy = "0.10.3"
+thiserror = "2.0.21"
+time = { version = "0.3.55", features = ["macros"] }
+url = "2.5.9"
+
 axum = "0.8.9"
 tower = "0.5.3"
 tokio = { version = "1.54.1", features = ["full"] }

@@ -75,3 +75,15 @@ rs-core-deps:
 	./scripts/check-core-deps.sh
 
 rs-check: rs-fmt rs-lint rs-test rs-deny rs-core-deps
+
+# AUTH-037 contract runs. Each needs Docker Compose Postgres, Atlas, Go, Cargo.
+.PHONY: contract-rust contract-diff contract-continuity
+
+contract-rust:
+	AUTH_IMPL=rust ./contract-tests/run-local.sh
+
+contract-diff:
+	./contract-tests/run-differential.sh
+
+contract-continuity:
+	./contract-tests/run-continuity.sh

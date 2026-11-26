@@ -51,6 +51,7 @@ Legend:
 | X.509 / ASN.1 key parse errors | the prefix (`parse private key:` / `parse public key:`) and the error kind match; the detail differs. Boot only. The certificate reader also validates less than Go |
 | JWT verifier errors | golang-jwt wording; JSON details from serde. Handlers discard the text (`invalid_token` / `active:false`) |
 | Provider JSON decode errors | serde text, except empty → `EOF` and truncated → `unexpected EOF`, as in Go. Can surface in a 502 `error_description` only when Google or GitHub return malformed JSON |
+| Provider transport errors (502 `provider_error`) | `error_description` carries the HTTP client's transport error text (Go `net/http` vs `reqwest`); status and `error` code match. Found by the differential run |
 | devseed fatal errors | no `log` timestamp prefix; an unreachable DB gives sqlx's pool-timeout text. A malformed `.env` may apply the lines before the error, where godotenv applies none |
 
 ## Runtime differences

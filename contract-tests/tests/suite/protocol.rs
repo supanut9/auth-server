@@ -157,13 +157,16 @@ fn der(tag: u8, body: &[u8]) -> Vec<u8> {
     encoded
 }
 
+/// (query updates, error, error_description)
+type FatalCase<'a> = (&'a [(&'a str, &'a str)], &'a str, &'a str);
+
 #[tokio::test]
 async fn authorize_fatal_errors() {
     let api = Api::new();
     let inactive = setting("CONTRACT_INACTIVE_CLIENT_ID", "knowledge-web");
     let malformed_client = setting("CONTRACT_MALFORMED_CLIENT_ID", "language-web");
     let malformed_uri = setting("CONTRACT_MALFORMED_REDIRECT_URI", "/contract-callback");
-    let cases: &[(&[(&str, &str)], &str, &str)] = &[
+    let cases: &[FatalCase] = &[
         (
             &[("client_id", ""), ("redirect_uri", "")],
             "invalid_request",

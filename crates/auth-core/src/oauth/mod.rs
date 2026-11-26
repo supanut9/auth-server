@@ -3,3 +3,6 @@
 mod error;
 
 pub use error::{EnvelopeError, OAuthErrorCode, ValidationError};
+
+pub mod envelope;
+pub mod pkce;

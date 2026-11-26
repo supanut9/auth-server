@@ -1,5 +1,6 @@
 //! Authorization domain, application services, and ports.
 
+pub mod crypto;
 pub mod domain;
 pub mod flow;
 pub mod identity;

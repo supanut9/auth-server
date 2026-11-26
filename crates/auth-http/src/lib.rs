@@ -4,6 +4,7 @@
 //! through [`apply_global_layers`], which reproduces gin's middleware order
 //! and routing quirks.
 
+pub mod bootstrap;
 pub mod cookies;
 pub mod go_url;
 pub mod handlers;

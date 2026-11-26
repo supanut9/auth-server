@@ -5,3 +5,4 @@ pub mod jwks;
 pub mod mail;
 pub mod persistence;
 pub mod provider;
+pub mod system;

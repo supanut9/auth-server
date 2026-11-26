@@ -13,8 +13,8 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use super::accounts::{now_utc, parse_uuid};
 use super::common::map_err;
+use super::common::{now_utc, parse_uuid};
 
 /// Postgres-backed [`OtpChallengeRepository`].
 #[derive(Clone)]

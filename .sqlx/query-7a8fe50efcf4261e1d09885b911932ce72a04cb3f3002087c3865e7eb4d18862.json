@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO signed_state_jtis (jti, expires_at, created_at)\n               VALUES ($1, $2, $3)\n               ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7a8fe50efcf4261e1d09885b911932ce72a04cb3f3002087c3865e7eb4d18862"
+}

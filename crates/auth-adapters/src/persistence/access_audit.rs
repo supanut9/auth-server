@@ -10,8 +10,8 @@ use auth_core::domain::{AccessTokenRecord, AccessTokenRecordId, AccessTokenStatu
 use auth_core::ports::{AccessTokenRepository, Clock, IdGenerator, RepoResult};
 use sqlx::PgPool;
 
-use super::chains::parse_uuid;
 use super::common::map_err;
+use super::common::parse_uuid;
 
 /// Postgres [`AccessTokenRepository`].
 #[derive(Clone)]

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE refresh_token_chains\n               SET status = $2, revoked_at = $3, updated_at = $3\n               WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f752caab08146d1ed0384f6c1d56a9f276570f9bdaf2ccba612c1200842751a8"
+}

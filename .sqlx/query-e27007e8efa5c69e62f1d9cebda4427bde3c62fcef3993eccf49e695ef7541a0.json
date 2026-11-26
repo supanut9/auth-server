@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO refresh_token_chains (\n                   id, account_id, client_id, sso_session_id, scope, device_session_id,\n                   status, absolute_expires_at, inactive_expires_at, last_used_at,\n                   revoked_at, created_at, updated_at)\n               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Uuid",
+        "Text",
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e27007e8efa5c69e62f1d9cebda4427bde3c62fcef3993eccf49e695ef7541a0"
+}

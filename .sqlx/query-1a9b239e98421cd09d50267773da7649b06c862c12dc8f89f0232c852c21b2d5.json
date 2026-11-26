@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE sso_sessions SET status = $2, revoked_at = $3, updated_at = $3\n               WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1a9b239e98421cd09d50267773da7649b06c862c12dc8f89f0232c852c21b2d5"
+}

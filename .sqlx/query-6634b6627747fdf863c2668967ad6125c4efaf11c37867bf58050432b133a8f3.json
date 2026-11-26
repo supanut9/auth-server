@@ -1,0 +1,136 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, client_id, client_type, client_secret_hash, display_name, logo_uri,\n                      allowed_scopes, status, created_at, updated_at\n               FROM oauth_clients\n               WHERE client_id = $1\n               ORDER BY id\n               LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "oauth_clients",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "client_id",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "oauth_clients",
+            "name": "client_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "client_type",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "oauth_clients",
+            "name": "client_type"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "client_secret_hash",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "oauth_clients",
+            "name": "client_secret_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "display_name",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "oauth_clients",
+            "name": "display_name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "logo_uri",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "oauth_clients",
+            "name": "logo_uri"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "allowed_scopes",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oauth_clients",
+            "name": "allowed_scopes"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "status",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "oauth_clients",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "oauth_clients",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "oauth_clients",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6634b6627747fdf863c2668967ad6125c4efaf11c37867bf58050432b133a8f3"
+}

@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO consent_grants\n                    (id, account_id, client_id, granted_scopes, granted_at, last_used_at, revoked_at)\n                   VALUES ($1, $2, $3, $4, $5, $6, $7)\n                   ON CONFLICT (id) DO UPDATE SET\n                     account_id = EXCLUDED.account_id,\n                     client_id = EXCLUDED.client_id,\n                     granted_scopes = EXCLUDED.granted_scopes,\n                     granted_at = EXCLUDED.granted_at,\n                     last_used_at = EXCLUDED.last_used_at,\n                     revoked_at = EXCLUDED.revoked_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1f4fac749bdff9d4c22768206aa8ed0cda3e18d2a53834e21422e499363e654e"
+}

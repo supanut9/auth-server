@@ -7,9 +7,8 @@ use auth_core::domain::{AccountId, ClientId, ConsentGrant, ConsentGrantId, is_ze
 use auth_core::ports::{Clock, ConsentGrantRepository, IdGenerator, RepoError, RepoResult};
 use sqlx::PgPool;
 use time::UtcOffset;
-use uuid::Uuid;
 
-use super::common::map_err;
+use super::common::{map_err, parse_uuid};
 
 /// Postgres-backed [`ConsentGrantRepository`].
 pub struct PgConsentGrantRepository {
@@ -25,14 +24,6 @@ impl PgConsentGrantRepository {
     }
 }
 
-/// Parses an ID bound to a `uuid` column. GORM sent the raw string and
-/// Postgres rejected malformed values with an error that was not
-/// `ErrRecordNotFound`, so this is [`RepoError::Other`], never `NotFound`.
-fn uuid_param(value: &str) -> RepoResult<Uuid> {
-    Uuid::parse_str(value)
-        .map_err(|_| RepoError::other(format!("invalid input syntax for type uuid: \"{value}\"")))
-}
-
 impl PgConsentGrantRepository {
     /// GORM `Where("account_id = ? AND client_id = ?").First`. The table has
     /// no unique constraint on the pair; with duplicates the lowest `id` wins.
@@ -41,7 +32,7 @@ impl PgConsentGrantRepository {
         account_id: &AccountId,
         client_id: &ClientId,
     ) -> RepoResult<ConsentGrant> {
-        let account = uuid_param(account_id.as_str())?;
+        let account = parse_uuid(account_id.as_str())?;
         let row = sqlx::query!(
             r#"SELECT id, account_id, client_id, granted_scopes, granted_at, last_used_at, revoked_at
                FROM consent_grants
@@ -71,8 +62,8 @@ impl PgConsentGrantRepository {
     /// `ON CONFLICT (id) DO UPDATE` insert GORM `Save` falls back to when its
     /// `UPDATE` matched no row.
     async fn insert(&self, grant: &ConsentGrant, upsert: bool) -> RepoResult<()> {
-        let id = uuid_param(grant.id.as_str())?;
-        let account = uuid_param(grant.account_id.as_str())?;
+        let id = parse_uuid(grant.id.as_str())?;
+        let account = parse_uuid(grant.account_id.as_str())?;
         let result = if upsert {
             sqlx::query!(
                 r#"INSERT INTO consent_grants
@@ -163,8 +154,8 @@ impl ConsentGrantRepository for PgConsentGrantRepository {
         existing.last_used_at = now;
         existing.revoked_at = grant.revoked_at;
 
-        let id = uuid_param(existing.id.as_str())?;
-        let account = uuid_param(existing.account_id.as_str())?;
+        let id = parse_uuid(existing.id.as_str())?;
+        let account = parse_uuid(existing.account_id.as_str())?;
         let result = sqlx::query!(
             r#"UPDATE consent_grants SET
                  account_id = $2,
@@ -196,6 +187,7 @@ impl ConsentGrantRepository for PgConsentGrantRepository {
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
+    use uuid::Uuid;
 
     use time::OffsetDateTime;
     use time::macros::datetime;

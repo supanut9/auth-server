@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE sso_sessions\n               SET account_id = $2, status = $3, login_method = $4, authenticated_at = $5,\n                   last_seen_at = $6, expires_at = $7, revoked_at = $8, created_at = $9,\n                   updated_at = $10\n               WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8c70caee12c92457320df76f5ff1478069a43d221feebdef28280ef97cf99173"
+}

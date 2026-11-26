@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use time::UtcOffset;
 use uuid::Uuid;
 
-use super::common::map_err;
+use super::common::{map_err, parse_uuid};
 
 /// Postgres-backed [`AuthorizationCodeRepository`].
 pub struct PgAuthorizationCodeRepository {
@@ -27,16 +27,8 @@ impl PgAuthorizationCodeRepository {
     }
 }
 
-/// Parses an ID bound to a `uuid` column. GORM sent the raw string and
-/// Postgres rejected malformed values with an error that was not
-/// `ErrRecordNotFound`, so this is [`RepoError::Other`], never `NotFound`.
-fn uuid_param(value: &str) -> RepoResult<Uuid> {
-    Uuid::parse_str(value)
-        .map_err(|_| RepoError::other(format!("invalid input syntax for type uuid: \"{value}\"")))
-}
-
-fn optional_uuid_param(value: Option<&str>) -> RepoResult<Option<Uuid>> {
-    value.map(uuid_param).transpose()
+fn optional_parse_uuid(value: Option<&str>) -> RepoResult<Option<Uuid>> {
+    value.map(parse_uuid).transpose()
 }
 
 /// Bound column values for one `authorization_codes` row.
@@ -50,12 +42,12 @@ struct Params {
 impl Params {
     fn of(code: &AuthorizationCode) -> RepoResult<Self> {
         Ok(Self {
-            id: uuid_param(code.id.as_str())?,
-            authorization_request_id: optional_uuid_param(
+            id: parse_uuid(code.id.as_str())?,
+            authorization_request_id: optional_parse_uuid(
                 code.authorization_request_id.as_deref(),
             )?,
-            account_id: uuid_param(code.account_id.as_str())?,
-            sso_session_id: optional_uuid_param(
+            account_id: parse_uuid(code.account_id.as_str())?,
+            sso_session_id: optional_parse_uuid(
                 code.sso_session_id.as_ref().map(SessionId::as_str),
             )?,
         })

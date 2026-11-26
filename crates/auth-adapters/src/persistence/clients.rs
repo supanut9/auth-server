@@ -9,9 +9,8 @@ use auth_core::ports::{Clock, IdGenerator, OAuthClientRepository, RepoError, Rep
 use secrecy::{ExposeSecret, SecretString};
 use sqlx::PgPool;
 use time::UtcOffset;
-use uuid::Uuid;
 
-use super::common::map_err;
+use super::common::{map_err, parse_uuid};
 
 /// Postgres-backed [`OAuthClientRepository`].
 pub struct PgOAuthClientRepository {
@@ -25,14 +24,6 @@ impl PgOAuthClientRepository {
     pub fn new(pool: PgPool, clock: Arc<dyn Clock>, ids: Arc<dyn IdGenerator>) -> Self {
         Self { pool, clock, ids }
     }
-}
-
-/// Parses an ID bound to a `uuid` column. GORM sent the raw string and
-/// Postgres rejected malformed values with an error that was not
-/// `ErrRecordNotFound`, so this is [`RepoError::Other`], never `NotFound`.
-fn uuid_param(value: &str) -> RepoResult<Uuid> {
-    Uuid::parse_str(value)
-        .map_err(|_| RepoError::other(format!("invalid input syntax for type uuid: \"{value}\"")))
 }
 
 /// Go `buildRedirectURIModels`: drop empty and repeated URIs, keep first-seen
@@ -65,10 +56,10 @@ impl OAuthClientRepository for PgOAuthClientRepository {
         let redirect_uris = dedupe_redirect_uris(&client.redirect_uris);
         let redirect_ids: Vec<String> = redirect_uris.iter().map(|_| self.ids.new_id()).collect();
 
-        let id = uuid_param(client.id.as_str())?;
+        let id = parse_uuid(client.id.as_str())?;
         let redirect_ids = redirect_ids
             .iter()
-            .map(|value| uuid_param(value))
+            .map(|value| parse_uuid(value))
             .collect::<RepoResult<Vec<_>>>()?;
 
         let mut tx = self.pool.begin().await.map_err(map_err)?;
@@ -171,6 +162,7 @@ impl OAuthClientRepository for PgOAuthClientRepository {
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
+    use uuid::Uuid;
 
     use auth_core::domain::ZERO_TIME;
     use time::OffsetDateTime;

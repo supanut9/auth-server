@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE accounts\n               SET primary_verified_email = $2, display_name = $3, avatar_url = $4,\n                   status = $5, created_at = $6, updated_at = $7\n               WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ca4a5fe4f76a3438405e0f899e37b6ece2219799d6133c79969f2845c0714ea0"
+}

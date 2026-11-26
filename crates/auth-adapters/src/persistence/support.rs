@@ -16,8 +16,9 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use super::chains::{ChainRow, parse_uuid, parse_uuids};
+use super::chains::ChainRow;
 use super::common::map_err;
+use super::common::{parse_uuid, parse_uuids};
 
 struct AccountRow {
     id: Uuid,

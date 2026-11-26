@@ -13,8 +13,8 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use super::chains::parse_uuid;
 use super::common::map_err;
+use super::common::parse_uuid;
 
 struct TokenRow {
     id: Uuid,

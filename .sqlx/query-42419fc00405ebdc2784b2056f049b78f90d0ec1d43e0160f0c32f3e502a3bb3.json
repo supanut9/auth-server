@@ -1,0 +1,137 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, account_id, provider, provider_account_id, provider_email,\n                      provider_email_verified, profile_name, profile_avatar_url, created_at, updated_at\n               FROM account_providers\n               WHERE provider = $1 AND provider_account_id = $2\n               ORDER BY id LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "account_providers",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "account_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "account_providers",
+            "name": "account_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "provider",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "account_providers",
+            "name": "provider"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "provider_account_id",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "account_providers",
+            "name": "provider_account_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "provider_email",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "account_providers",
+            "name": "provider_email"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "provider_email_verified",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "account_providers",
+            "name": "provider_email_verified"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "profile_name",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "account_providers",
+            "name": "profile_name"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "profile_avatar_url",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "account_providers",
+            "name": "profile_avatar_url"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "account_providers",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "account_providers",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "42419fc00405ebdc2784b2056f049b78f90d0ec1d43e0160f0c32f3e502a3bb3"
+}

@@ -18,24 +18,7 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use super::common::map_err;
-
-/// Parses a domain ID string into a `uuid` bind value.
-///
-/// Malformed input maps to [`RepoError::Other`] with Postgres' wording, the
-/// error Go/GORM surfaced when it sent the raw string to a `uuid` column.
-pub(super) fn parse_uuid(value: &str) -> RepoResult<Uuid> {
-    Uuid::parse_str(value)
-        .map_err(|_| RepoError::other(format!("invalid input syntax for type uuid: \"{value}\"")))
-}
-
-/// Parses a list of domain ID strings (see [`parse_uuid`]).
-pub(super) fn parse_uuids<T: AsRef<str>>(values: &[T]) -> RepoResult<Vec<Uuid>> {
-    values
-        .iter()
-        .map(|value| parse_uuid(value.as_ref()))
-        .collect()
-}
+use super::common::{map_err, parse_uuid};
 
 /// Row shape shared with the support repository.
 pub(super) struct ChainRow {
@@ -438,7 +421,7 @@ mod tests {
         assert!(matches!(err, RepoError::Other(_)), "{err:?}");
         assert_eq!(
             err.to_string(),
-            "invalid input syntax for type uuid: \"chain-1\""
+            "ERROR: invalid input syntax for type uuid: \"chain-1\" (SQLSTATE 22P02)"
         );
         let err = repo.revoke_by_id(&ChainId::new("")).await.unwrap_err();
         assert!(matches!(err, RepoError::Other(_)), "{err:?}");

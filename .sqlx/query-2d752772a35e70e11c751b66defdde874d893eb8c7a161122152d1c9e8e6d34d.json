@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO otp_challenges\n                (id, authorization_request_id, email, purpose, code_hash, attempt_count,\n                 resend_count, expires_at, verified_at, last_sent_at, created_at)\n               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int4",
+        "Int4",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2d752772a35e70e11c751b66defdde874d893eb8c7a161122152d1c9e8e6d34d"
+}

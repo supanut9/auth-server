@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO oauth_client_redirect_uris\n                    (id, client_id, redirect_uri, created_at, updated_at)\n                   VALUES ($1, $2, $3, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "65c019d1bf43684b16d3af2b3e991165dcb7524db5692b77eb79d4774f23f24f"
+}

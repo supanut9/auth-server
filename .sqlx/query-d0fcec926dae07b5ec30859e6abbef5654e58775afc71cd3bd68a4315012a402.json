@@ -1,0 +1,148 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, authorization_request_id, email, purpose, code_hash, attempt_count,\n                      resend_count, expires_at, verified_at, last_sent_at, created_at\n               FROM otp_challenges WHERE id = $1 ORDER BY id LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "otp_challenges",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "authorization_request_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "otp_challenges",
+            "name": "authorization_request_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "otp_challenges",
+            "name": "email"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "purpose",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "otp_challenges",
+            "name": "purpose"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "code_hash",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "otp_challenges",
+            "name": "code_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "attempt_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "otp_challenges",
+            "name": "attempt_count"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "resend_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "otp_challenges",
+            "name": "resend_count"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "otp_challenges",
+            "name": "expires_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "verified_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "otp_challenges",
+            "name": "verified_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "last_sent_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "otp_challenges",
+            "name": "last_sent_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "otp_challenges",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "d0fcec926dae07b5ec30859e6abbef5654e58775afc71cd3bd68a4315012a402"
+}

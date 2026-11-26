@@ -7,37 +7,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use auth_core::domain::{Account, AccountId, AccountStatus, is_zero_time};
-use auth_core::ports::{AccountRepository, Clock, IdGenerator, RepoError, RepoResult};
+use auth_core::ports::{AccountRepository, Clock, IdGenerator, RepoResult};
 use sqlx::PgPool;
-use time::{OffsetDateTime, UtcOffset};
+use time::OffsetDateTime;
 use uuid::Uuid;
 
-use super::common::map_err;
-
-/// Parses a string ID for a `uuid` column.
-///
-/// GORM passed IDs to Postgres as text, so a malformed ID failed with
-/// `invalid input syntax for type uuid` (SQLSTATE 22P02) and the Go adapter
-/// returned that error, not `ErrRecordNotFound`. This returns the same text
-/// as [`RepoError::Other`] without the round trip. `urn:uuid:` input, which
-/// `uuid` accepts but Postgres rejects, is refused too.
-pub(super) fn parse_uuid(value: &str) -> RepoResult<Uuid> {
-    let parsed = if value.starts_with("urn:") {
-        None
-    } else {
-        Uuid::try_parse(value).ok()
-    };
-    parsed.ok_or_else(|| {
-        RepoError::other(format!(
-            "ERROR: invalid input syntax for type uuid: \"{value}\" (SQLSTATE 22P02)"
-        ))
-    })
-}
-
-/// Go `r.clock.Now().UTC()`.
-pub(super) fn now_utc(clock: &dyn Clock) -> OffsetDateTime {
-    clock.now().to_offset(UtcOffset::UTC)
-}
+use super::common::{map_err, now_utc, parse_uuid};
 
 /// Postgres-backed [`AccountRepository`].
 #[derive(Clone)]
@@ -246,6 +221,7 @@ pub(super) mod test_support {
 #[cfg(test)]
 mod tests {
     use auth_core::domain::ZERO_TIME;
+    use auth_core::ports::RepoError;
     use time::Duration;
 
     use super::test_support::{T0, TestClock, TestIds};

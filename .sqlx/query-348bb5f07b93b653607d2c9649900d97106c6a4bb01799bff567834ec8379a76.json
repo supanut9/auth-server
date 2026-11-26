@@ -1,0 +1,172 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, account_id, client_id, sso_session_id, scope, device_session_id,\n                      status, absolute_expires_at, inactive_expires_at, last_used_at,\n                      revoked_at, created_at, updated_at\n               FROM refresh_token_chains\n               WHERE account_id = $1\n               ORDER BY last_used_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "account_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "account_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "client_id",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "client_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "sso_session_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "sso_session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "scope",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "scope"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "device_session_id",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "device_session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "status",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "absolute_expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "absolute_expires_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "inactive_expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "inactive_expires_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "last_used_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "last_used_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "revoked_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "revoked_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "refresh_token_chains",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "348bb5f07b93b653607d2c9649900d97106c6a4bb01799bff567834ec8379a76"
+}

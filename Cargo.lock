@@ -101,6 +101,7 @@ name = "auth-http"
 version = "0.1.0"
 dependencies = [
  "auth-adapters",
+ "auth-core",
  "axum",
  "secrecy",
  "serde",

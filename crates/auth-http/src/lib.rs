@@ -10,6 +10,7 @@ pub mod json;
 pub mod middleware;
 pub mod post_logout;
 pub mod routing;
+pub mod state;
 
 use std::sync::Arc;
 
@@ -22,6 +23,7 @@ pub use crate::{
     json::{GoJson, json_response},
     middleware::{GlobalLayers, RequestId},
     routing::{FullPath, GinRouter},
+    state::AppState,
 };
 
 /// Applies the global middleware (request ID, JSON access log, CORS for

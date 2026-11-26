@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 auth-adapters.workspace = true
+auth-core.workspace = true
 axum.workspace = true
 secrecy.workspace = true
 serde.workspace = true

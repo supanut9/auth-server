@@ -30,13 +30,13 @@ use auth_core::{
     },
     token::{TokenConfig, TokenService, TokenServiceDeps},
 };
-use axum::Router;
+use axum::{Extension, Router};
 use secrecy::ExposeSecret;
 
 use crate::{
     apply_global_layers,
     cookies::CookiePolicy,
-    handlers,
+    handlers::{self, protocol::OtpHintSource},
     middleware::{RateLimiter, SupportAuth},
     state::AppState,
 };
@@ -75,12 +75,10 @@ pub fn router_from_env() -> Result<Router, BootError> {
 /// # Errors
 /// See [`build_state`].
 pub fn build_router(config: Config) -> Result<Router, BootError> {
-    let state = build_state(config)?;
+    let (state, otp_hint) = build_state_with_hint(config)?;
     let config = Arc::clone(&state.config);
-    Ok(apply_global_layers(
-        handlers::routes().with_state(state),
-        &config,
-    ))
+    let routes = handlers::routes(&config).with_state(state);
+    Ok(apply_global_layers(routes, &config).layer(Extension(otp_hint)))
 }
 
 /// Wires repositories, services and adapters like Go `NewRouterFromEnv`.
@@ -89,6 +87,12 @@ pub fn build_router(config: Config) -> Result<Router, BootError> {
 /// Invalid database URL, signing keys, envelope secret, provider or SMTP
 /// configuration.
 pub fn build_state(config: Config) -> Result<AppState, BootError> {
+    build_state_with_hint(config).map(|(state, _)| state)
+}
+
+/// [`build_state`] plus the OTP challenge store the non-production test-hint
+/// handler reads through an [`Extension`].
+fn build_state_with_hint(config: Config) -> Result<(AppState, OtpHintSource), BootError> {
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     let ids: Arc<dyn IdGenerator> = Arc::new(UuidV7Ids);
     let random: Arc<dyn RandomSource> = Arc::new(SystemRandom);
@@ -116,6 +120,7 @@ pub fn build_state(config: Config) -> Result<AppState, BootError> {
         clock.clone(),
         ids.clone(),
     ));
+    let otp_hint = OtpHintSource(otp_challenges.clone());
     let sso_sessions = Arc::new(PgSsoSessionRepository::new(
         pool.clone(),
         clock.clone(),
@@ -251,7 +256,7 @@ pub fn build_state(config: Config) -> Result<AppState, BootError> {
         providers.insert("github".to_owned(), Arc::new(github.map_err(boot_err)?));
     }
 
-    Ok(AppState {
+    let state = AppState {
         cookies: Arc::new(CookiePolicy::from_config(&config)),
         otp_rate_limiter: Arc::new(RateLimiter::otp()),
         support_auth: Arc::new(SupportAuth::from_config(&config)),
@@ -273,7 +278,8 @@ pub fn build_state(config: Config) -> Result<AppState, BootError> {
         jwks: jwks.clone(),
         jwt_verifier: jwks,
         providers: Arc::new(providers),
-    })
+    };
+    Ok((state, otp_hint))
 }
 
 /// The router to serve: the real one, or — if boot failed — one that answers

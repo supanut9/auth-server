@@ -7,10 +7,14 @@ pub mod common;
 pub mod flow;
 pub mod protocol;
 
+use auth_adapters::config::Config;
+
 use crate::{routing::GinRouter, state::AppState};
 
-/// Every route of the authorization server, in gin path syntax.
+/// Every route of the authorization server, in gin path syntax. Dev-only
+/// routes (`/dev/callback`, `/v1/auth/otp/test-hint`) are mounted only
+/// outside production, like Go.
 #[must_use]
-pub fn routes() -> GinRouter<AppState> {
-    flow::register(protocol::register(GinRouter::new()))
+pub fn routes(config: &Config) -> GinRouter<AppState> {
+    flow::register(protocol::register_for(GinRouter::new(), config))
 }

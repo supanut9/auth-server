@@ -1,171 +1,61 @@
 # auth-server
 
-Phase-1 authorization server for the platform.
+Phase-1 authorization server for the platform, built with Rust, Axum, SQLx, and PostgreSQL. It serves OAuth/OIDC, Google and GitHub login, email OTP, central SSO, and support sign-out tooling. The browser pages live in `auth-ui`.
 
-## Stack
+- [Project structure](docs/project-structure.md) and [contributor guidance](AGENTS.md)
+- [Configuration](docs/config.md), [data model](docs/data-model.md), and [HTTP endpoints](docs/endpoints.md)
+- [HTTP contract tests](contract-tests/README.md) and [cutover deviations](docs/rust-port-deviations.md)
 
-- Go
-- Gin
-- GORM
-- PostgreSQL
-- Redis support wiring
+## Local development
 
-## Local Defaults
+The workspace Compose file publishes PostgreSQL on port `55432`. The local server listens on `:8050` by default, and `auth-ui` runs on `http://localhost:3005`.
 
-- auth-server: `http://localhost:8050`
-- auth-ui: `http://localhost:3005`
-- PostgreSQL host port: `55432`
-- Redis host port: `56379`
+1. From the parent workspace, start PostgreSQL with `docker compose up -d postgres`.
+2. From `auth-server`, copy `.env.example` to `.env`, set the local database URL and base URLs, and run `make dev-keys`. The local binaries load dotenv values without overriding the process environment.
+3. Export the local `DATABASE_URL` in your shell for Atlas, then run `make migrate` and `make seed-dev`.
+4. Run `make run` to start `cargo run --bin server`. From another terminal, run `make readyz` and `make smoke`.
 
-## Responsibilities
+`make seed-clients` and `make seed-dev` both run `cargo run --bin devseed`. The seeder upserts registered clients and replaces their redirect URIs and secrets from the current configuration. Use `DEVSEED_CLIENTS` to select specific clients. When targeting a shared database, select the client explicitly and supply its intended settings.
 
-- OIDC discovery and JWKS
-- OAuth/OIDC protocol endpoints
-- auth flow state and action endpoints
-- Google and GitHub provider login
-- Email OTP flow
-- SMTP-backed OTP delivery when SMTP env vars are configured
-- explicit SSO cookie policy and OTP abuse controls for production readiness
-- support-token-protected account summary and sign-out tooling
-- central SSO session management
-- token issuance, refresh, revoke, and introspection
-
-## Read First
-
-- `AGENTS.md`
-- `docs/overview.md`
-- `docs/project-structure.md`
-- `docs/config.md`
-- `docs/data-model.md`
-- `docs/endpoints.md`
-
-## Cross-Service Source Of Truth
-
-Root planning docs remain authoritative for phase 1:
-
-- `../docs/auth/architecture-overview.md`
-- `../docs/auth/auth-flow.md`
-- `../docs/auth/phase-1-identity.md`
-- `../docs/auth/phase-1-token-model.md`
-- `../docs/auth/phase-1-storage-model.md`
-- `../docs/auth/phase-1-endpoints.md`
-
-## Migrations
-
-- the desired schema lives in `schema.sql` (Atlas desired-state SQL); `migrations/` holds the versioned files that are actually applied
-- use Atlas to generate migration files from `schema.sql`
-- do not handwrite migration SQL by default
-- current workflow (`atlas.hcl` env `schema`):
-  1. edit `schema.sql`
-  2. `atlas migrate diff <name> --env schema`
-  3. review the generated file in `migrations/` (and the updated `atlas.sum`)
-  4. `atlas migrate apply --env schema --url "$DATABASE_URL"` (or `make migrate`)
-- `make schema-check` validates `atlas.sum` and fails if `schema.sql` and `migrations/` disagree
-- the `schema` env's dev database is `docker://postgres/17-alpine/dev` (same image as the workspace compose file). Without Docker, add `--dev-url` pointing at an empty scratch database
-- the `gorm` env (GORM models loaded through `cmd/atlasloader`) stays only until the Go code is removed at the Rust cutover. Do not use it for new migrations
-
-## Dev Signing Keys
-
-The service expects RSA signing keys from one of these sources:
-
-- local/server hosts: `JWT_PRIVATE_KEY_PATH` and `JWT_PUBLIC_KEY_PATH`
-- secret-only hosts such as Vercel: `JWT_PRIVATE_KEY_PEM` and `JWT_PUBLIC_KEY_PEM`
-
-Example local generation:
-
-```bash
-mkdir -p secrets
-openssl genrsa -out secrets/jwt-private.pem 2048
-openssl rsa -in secrets/jwt-private.pem -pubout -out secrets/jwt-public.pem
+```sh
+DEVSEED_CLIENTS=language-web \
+LANGUAGE_WEB_REDIRECT_URIS='http://localhost:3008/api/auth/oauth2/callback/auth-server,https://example.com/api/auth/oauth2/callback/auth-server' \
+cargo run --bin devseed
 ```
 
-## Vercel Shape
+The plural `*_REDIRECT_URIS` takes precedence over `*_REDIRECT_URI` and accepts comma- or newline-separated lists. Confidential clients can use `*_CLIENT_SECRET` overrides. See [configuration](docs/config.md) for seed defaults and additional settings.
 
-- `api/index.go` exposes a function-compatible entrypoint for Vercel
-- `vercel.json` rewrites every request to that handler and restores the original request path via `__vercel_path`
-- for Vercel, prefer storing the RSA key pair in `JWT_PRIVATE_KEY_PEM` and `JWT_PUBLIC_KEY_PEM` secrets instead of file paths
-- the service requires a real `DATABASE_URL`; `REDIS_URL` is optional in the current runtime and can stay unset on Vercel until Redis-backed features are added
+## Migrations and SQLx
 
-## Local Boot
+`schema.sql` is the desired PostgreSQL schema. Atlas uses the `schema` environment in `atlas.hcl` and applies the versioned SQL in `migrations/`.
 
-1. start infrastructure from the root workspace:
+1. Edit `schema.sql`.
+2. Generate the migration with `atlas migrate diff <name> --env schema`.
+3. Review the generated migration and `atlas.sum`, then run `make schema-check`.
+4. Apply with `make migrate` and an exported `DATABASE_URL`, or pass `--url` explicitly to `atlas migrate apply --env schema`.
 
-```bash
-docker compose up -d
+The Atlas dev database uses the workspace's `postgres:17-alpine` image. Without Docker, pass `--dev-url` pointing to an empty disposable PostgreSQL database with `search_path=public`.
+
+Builds use the committed `.sqlx/` query metadata. After changing a checked SQL query or its schema, export a local `DATABASE_URL` for a migrated database and regenerate the metadata from the repository root:
+
+```sh
+SQLX_OFFLINE=false SQLX_OFFLINE_DIR="$PWD/.sqlx" cargo check --workspace --all-targets
 ```
 
-2. copy env and generate keys:
+## Checks
 
-```bash
-cp .env.example .env
-make dev-keys
-```
+| Target | What it runs |
+| --- | --- |
+| `make test` | `cargo test --workspace`. Supply a local `DATABASE_URL` with database creation privileges for `#[sqlx::test]`. |
+| `make build` | `cargo build --workspace`. |
+| `make check` or `make rs-check` | Formatting, Clippy, workspace tests, `cargo deny check`, and the core dependency check. Install `cargo-deny` 0.22.1. |
+| `make readyz` / `make smoke` | Local database readiness / health, readiness, discovery, and JWKS. |
+| `make contract-rust` | The standalone HTTP contract suite against an isolated local server and database. |
+| `make semgrep` / `make trivy` | Static analysis / filesystem dependency scanning. |
+| `make install-hooks` | Install `.githooks/`. Pre-commit runs Semgrep, and pre-push runs Semgrep and Trivy. |
 
-For Vercel-oriented config scaffolding, start from `.env.vercel.example` instead of `.env.example`.
+## Vercel
 
-3. apply migrations and seed demo clients:
+`vercel.json` rewrites requests to `/api/auth`, served by `api/auth.rs` through `VercelLayer`. The function initializes the same Axum router as the local server once per instance. Set `DATABASE_URL` for PostgreSQL and supply the RSA key pair in `JWT_PRIVATE_KEY_PEM` and `JWT_PUBLIC_KEY_PEM`. Use `/readyz` to check database reachability. Both health routes return `request_id` in JSON as well as the `X-Request-Id` response header.
 
-```bash
-make migrate
-make seed-dev
-```
-
-`make seed-clients` is an alias of `make seed-dev`. It becomes useful for deploys because
-`cmd/devseed` now accepts redirect URI and client-secret overrides from env vars such as
-`LANGUAGE_WEB_REDIRECT_URI`, `LANGUAGE_WEB_REDIRECT_URIS`, and `LANGUAGE_WEB_CLIENT_SECRET`.
-Use the plural `*_REDIRECT_URIS` form when one client needs both local and deployed callbacks;
-comma-separated and newline-separated lists are both accepted.
-
-4. run the server:
-
-```bash
-make run
-```
-
-## Production Baseline
-
-- `make check` runs the full test suite and a repo-wide build
-- `make readyz` probes the database-backed readiness endpoint
-- `make smoke` runs a small local smoke test across health, readiness, discovery, and JWKS
-- `GET /healthz` is the liveness endpoint
-- `GET /readyz` requires a reachable database and returns `503` if the DB is down
-- both health endpoints include a `request_id` field and every response carries `X-Request-Id`
-- `/v1/support/accounts/:accountID` summarizes sessions, consents, and refresh chains behind `Authorization: Bearer $SUPPORT_API_TOKEN`
-- `/v1/support/accounts/:accountID/sign-out` revokes all active SSO sessions and refresh chains for an account
-
-Use `readyz` for deployment probes so the service only receives traffic after the database is reachable.
-
-## Demo Clients
-
-The dev seed command creates:
-
-- public client: `dev-browser`
-- confidential client: `community-web`
-- confidential secret: `community-web-secret`
-- confidential client: `knowledge-web`
-- confidential secret: `knowledge-web-secret`
-- confidential client: `dev-worker`
-- confidential secret: `dev-worker-secret`
-- confidential client: `realtime-service`
-- confidential secret: `dev-realtime-secret`
-- demo redirect URI: `http://localhost:8050/dev/callback`
-- community web redirect URI: `http://localhost:3006/api/auth/oauth2/callback/auth-server`
-- knowledge web redirect URI: `http://localhost:3007/api/auth/oauth2/callback/auth-server`
-- language web redirect URI: `http://localhost:3008/api/auth/oauth2/callback/auth-server`
-
-Redirect URIs are stored in `oauth_client_redirect_uris` as a one-to-many relation from `oauth_clients`.
-
-Example multi-environment reseed:
-
-```bash
-LANGUAGE_WEB_REDIRECT_URIS="http://localhost:3008/api/auth/oauth2/callback/auth-server,https://supanut9-lang-web.vercel.app/api/auth/oauth2/callback/auth-server" \
-go run ./cmd/devseed
-```
-
-Example authorization URL:
-
-```text
-http://localhost:8050/v1/oauth2/authorize?response_type=code&client_id=dev-browser&redirect_uri=http%3A%2F%2Flocalhost%3A8050%2Fdev%2Fcallback&scope=openid%20email%20profile%20trading.read&state=demo-state&nonce=demo-nonce&code_challenge=demo-challenge&code_challenge_method=plain
-```
-
-The `realtime-service` client is seeded for service-to-service authentication patterns such as token introspection.
+The parent workspace's `docs/auth/` holds the cross-service phase-1 architecture and contracts.

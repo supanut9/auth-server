@@ -3,8 +3,6 @@ use std::{env, time::Duration};
 use reqwest::{Client, Response, StatusCode, redirect::Policy};
 use serde_json::Value;
 
-pub mod differential;
-pub mod dual;
 pub mod normalize;
 
 pub fn setting(key: &str, default: &str) -> String {

@@ -1,35 +1,32 @@
 # Endpoints
 
-Phase-1 endpoint groups:
+The local server and the Vercel function serve the same HTTP routes.
 
-- discovery
-  - `/.well-known/openid-configuration`
-  - `/.well-known/jwks.json`
-- health
-  - `/healthz`
-  - `/readyz`
-- protocol
-  - `/v1/oauth2/authorize`
-  - `/v1/oauth2/token`
-  - `/v1/oauth2/revoke`
-  - `/v1/oauth2/introspect`
-  - `/v1/oidc/userinfo`
-- auth flow
-  - `/v1/auth/requests/:request_id`
-  - `/v1/auth/login/google`
-  - `/v1/auth/login/github`
-  - `/v1/auth/login/callback/google`
-  - `/v1/auth/login/callback/github`
-  - `/v1/auth/otp/start`
-  - `/v1/auth/otp/verify`
-  - `/v1/auth/otp/resend`
-  - `/v1/auth/consent/accept`
-  - `/v1/auth/consent/reject`
-  - `/v1/auth/logout`
-  - `/v1/auth/logout/global`
+| Group | Method | Path |
+| --- | --- | --- |
+| Discovery | `GET` | `/.well-known/openid-configuration` |
+| Discovery | `GET` | `/.well-known/jwks.json` |
+| Health | `GET` | `/healthz` |
+| Health | `GET` | `/readyz` |
+| Protocol | `GET` | `/v1/oauth2/authorize` |
+| Protocol | `POST` | `/v1/oauth2/token` |
+| Protocol | `POST` | `/v1/oauth2/revoke` |
+| Protocol | `POST` | `/v1/oauth2/introspect` |
+| Protocol | `GET` | `/v1/oidc/userinfo` |
+| Client metadata | `GET` | `/v1/clients/:clientID/public-info` |
+| Auth flow | `GET` | `/v1/auth/me` |
+| Auth flow | `GET` | `/v1/auth/csrf` |
+| Auth flow | `POST` | `/v1/auth/login/google`, `/v1/auth/login/github` |
+| Auth flow | `GET` | `/v1/auth/login/callback/google`, `/v1/auth/login/callback/github` |
+| Auth flow | `POST` | `/v1/auth/otp/start`, `/v1/auth/otp/verify`, `/v1/auth/otp/resend` |
+| Auth flow | `POST` | `/v1/auth/consent/accept`, `/v1/auth/consent/reject` |
+| Auth flow | `GET` | `/v1/auth/logout`, `/v1/auth/logout/global` |
+| Support | `GET` | `/v1/support/accounts/:accountID` |
+| Support | `POST` | `/v1/support/accounts/:accountID/sign-out` |
+| Non-production | `GET` | `/dev/callback`, `/v1/auth/otp/test-hint` |
 
-Implementation must follow RFC/OIDC-compatible behavior where the root docs require it.
+Pending authorization uses signed flow state. The originally planned `/v1/auth/requests/:request_id` endpoint is absent from the current router. Support routes require `Authorization: Bearer <SUPPORT_API_TOKEN>`.
 
-Operational responses include `X-Request-Id`, and `/healthz` plus `/readyz` return the same `request_id` in JSON for smoke verification.
+Responses include `X-Request-Id`. `/healthz` and `/readyz` echo it as `request_id` in JSON. `/readyz` returns `503` when PostgreSQL is unreachable.
 
-Refer to `../../docs/auth/phase-1-endpoints.md` for the authoritative phase-1 endpoint contract.
+Refer to `../../docs/auth/phase-1-endpoints.md` in the parent workspace for the original phase-1 endpoint contract and [the cutover deviations](rust-port-deviations.md) for known compatibility differences.

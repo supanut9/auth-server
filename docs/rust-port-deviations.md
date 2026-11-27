@@ -1,6 +1,6 @@
 # Rust port — known deviations from Go
 
-The Rust server targets **contract parity** with the Go server (plan §3, decision D3). It passes the same black-box contract suite (`contract-tests/`, `AUTH_IMPL=rust`), and byte-level golden vectors from Go (`testdata/golden/`) for crypto, tokens, cookies, redirects, masking, OTP mail and discovery.
+Production has run the Rust server since 2026-11-27. The `go-final` tag is the Go reference for contract parity (plan §3, decision D3). `make contract-rust` checks the black-box HTTP contract, and the Rust workspace tests consume the frozen golden vectors in `testdata/golden/` for crypto, tokens, cookies, redirects, masking, OTP mail and discovery.
 
 This file lists every known difference. Anything not listed here is meant to behave exactly like Go. Report a new difference by adding a row here, and fix it in Rust unless it belongs to one of the categories below.
 
@@ -68,7 +68,7 @@ Legend:
 
 ## Unchanged on purpose
 
-These Go quirks are deliberately kept so the differential tests stay meaningful. They are fixed after cutover, one card each (plan §7):
+These behaviors were preserved at cutover. The port plan tracks them individually (§7):
 - PKCE is checked after the code is consumed.
 - ID tokens pass introspection and userinfo.
 - Inactive clients pass the token, revoke and introspect endpoints.

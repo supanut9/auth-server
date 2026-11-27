@@ -1,37 +1,17 @@
 # Project Structure
 
-Recommended phase-1 package layout should follow hexagonal architecture.
+The workspace follows hexagonal architecture.
 
-- `cmd/server`
-  server bootstrap and wiring
-- `internal/config`
-  environment-driven configuration
-- `internal/domain`
-  core entities and domain rules
-- `internal/application`
-  use cases and orchestration logic
-- `internal/port`
-  interfaces used by the application layer
-- `internal/adapter/in/http`
-  Gin handlers, request mapping, response mapping, middleware
-- `internal/adapter/out/persistence`
-  GORM repositories and PostgreSQL access
-- `internal/adapter/out/cache`
-  Redis-backed support adapters
-- `internal/adapter/out/provider`
-  Google and GitHub provider adapters
-- `internal/adapter/out/mail`
-  email delivery adapter for OTP
-- `internal/adapter/out/jwks`
-  signing keys and JWKS support
-- `migrations`
-  schema migrations
+| Crate | Responsibility |
+| --- | --- |
+| `crates/auth-core` | Domain types, OAuth validation, PKCE and envelopes, flow, identity, and token services, and port traits for storage, providers, mail, time, IDs, and randomness. |
+| `crates/auth-adapters` | SQLx repositories, configuration, JWT signing and JWKS, Google and GitHub clients, SMTP delivery, and system port implementations. |
+| `crates/auth-http` | Shared Axum router, middleware, HTTP handlers, protocol response mapping, and composition of services and adapters. |
+| `auth-server` (root) | `src/bin/server.rs` for local serving, `src/bin/devseed.rs` for OAuth client seeding, and `api/auth.rs` for Vercel. |
 
-Guidelines:
+`auth-core` must stay independent of Axum, SQLx, reqwest, lettre, and Tower. `scripts/check-core-deps.sh` enforces the boundary. Keep use cases in the core services, use ports to inject collaborators, and keep framework-specific request parsing and responses in `auth-http`.
 
-- keep handlers thin
-- keep business rules in domain/application layers
-- keep framework code in adapters only
-- avoid putting business logic in GORM hooks
-- use Atlas-generated migrations from the GORM models as the durable schema source
-- do not handwrite migration SQL by default
+- `schema.sql` defines the desired schema and `migrations/` contains the versioned SQL generated with Atlas.
+- `.sqlx/` contains the offline query metadata used at compile time.
+- `testdata/golden/` contains frozen interoperability fixtures used by workspace tests.
+- `contract-tests/` is an independent black-box crate with its own lockfile. It exercises the HTTP API over the network.

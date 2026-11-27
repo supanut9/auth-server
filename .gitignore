@@ -1,14 +1,8 @@
 .env
 .DS_Store
-bin/
-!/src/bin/
-server
-devseed
 tmp/
-coverage.out
 secrets/
 .vercel
 contract-tests/target/
 contract-tests/.keys/
 /target/
-testdata/golden/*.json.lock

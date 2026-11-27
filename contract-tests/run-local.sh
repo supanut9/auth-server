@@ -5,7 +5,7 @@ umask 077
 contract_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd -- "$contract_dir/.."
 
-for tool in atlas cargo curl docker go openssl; do
+for tool in atlas cargo curl docker openssl; do
     command -v "$tool" >/dev/null || { echo "Missing required tool: $tool" >&2; exit 1; }
 done
 
@@ -38,6 +38,11 @@ curl_local() {
 
 if curl_local --output /dev/null "$AUTH_BASE_URL/healthz" 2>/dev/null; then
     echo "Port 8060 already serves HTTP. Stop that service before running the contract suite." >&2
+    exit 1
+fi
+
+if [[ -e /.env || -L /.env ]]; then
+    echo "The contract suite requires a launch directory without dotenv configuration." >&2
     exit 1
 fi
 
@@ -83,8 +88,7 @@ compose up -d --no-recreate --wait postgres
 compose exec -T postgres createdb --username postgres "$db_name"
 db_created=1
 
-# atlas.hcl's gorm environment uses the same checked-in migration directory.
-if ! atlas migrate apply --dir file://migrations --url "$db_url" >"$scratch/atlas.log" 2>&1; then
+if ! atlas migrate apply --env schema --url "$db_url" >"$scratch/atlas.log" 2>&1; then
     cat "$scratch/atlas.log" >&2
     exit 1
 fi
@@ -93,19 +97,15 @@ echo "Applied Atlas migrations to the test database."
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$scratch/private.pem" 2>"$scratch/openssl.log"
 openssl pkey -in "$scratch/private.pem" -pubout -out "$scratch/public.pem"
 
-# Both commands use godotenv/autoload. Only the compiled program runs in the
-# empty scratch directory, while go run resolves the package from the repo.
-cat > "$scratch/launch" <<'LAUNCH'
-#!/usr/bin/env bash
-set -euo pipefail
-cd -- "$(dirname -- "$0")"
-exec "$@"
-LAUNCH
-chmod +x "$scratch/launch"
+cargo build --quiet --locked --bin server --bin devseed
+rust_bin_dir="$(cargo metadata --format-version 1 --no-deps | sed -E 's/.*"target_directory":"([^"]+)".*/\1/')/debug"
 
-test_env() {
-    env -i PATH="$PATH" HOME="$HOME" TMPDIR="${TMPDIR:-/tmp}" \
-        APP_NAME="$CONTRACT_APP_NAME" APP_ENV=development HTTP_ADDR=:8060 GIN_MODE=release \
+# The server searches parent directories for dotenv configuration. Launch at
+# the filesystem root with a clean environment and absolute fixture paths.
+test_env() (
+    cd -- /
+    exec env -i PATH="$PATH" HOME="$HOME" TMPDIR="${TMPDIR:-/tmp}" \
+        APP_NAME="$CONTRACT_APP_NAME" APP_ENV=development HTTP_ADDR=:8060 \
         DATABASE_URL="$db_url" PUBLIC_BASE_URL="$AUTH_BASE_URL" JWT_ISSUER="$CONTRACT_ISSUER" \
         AUTH_UI_BASE_URL="$AUTH_UI_BASE_URL" POST_LOGOUT_REDIRECT_ALLOWLIST=http://localhost:3406 \
         JWT_PRIVATE_KEY_PATH="$scratch/private.pem" JWT_PUBLIC_KEY_PATH="$scratch/public.pem" \
@@ -119,29 +119,11 @@ test_env() {
         DEV_WORKER_CLIENT_SECRET="$CONTRACT_WORKER_CLIENT_SECRET" \
         LANGUAGE_WEB_REDIRECT_URI="$CONTRACT_MALFORMED_REDIRECT_URI" \
         DEVSEED_CLIENTS="$CONTRACT_BROWSER_CLIENT_ID,$CONTRACT_WEB_CLIENT_ID,$CONTRACT_WORKER_CLIENT_ID,$CONTRACT_INACTIVE_CLIENT_ID,$CONTRACT_MALFORMED_CLIENT_ID" \
-        "${run_cmd[@]}" "$(impl_target "$1")"
-}
-
-# AUTH_IMPL=go (default) runs ./cmd/<name> with go run; AUTH_IMPL=rust runs
-# the prebuilt Rust binaries of the same name. Both start in the empty
-# scratch directory so neither autoloads the repo .env.
-case "${AUTH_IMPL:-go}" in
-    go)
-        run_cmd=(go run -exec "\"$scratch/launch\"")
-        impl_target() { printf '%s' "$1"; }
-        ;;
-    rust)
-        cargo build --quiet --locked --bin server --bin devseed
-        rust_bin_dir="$(cargo metadata --format-version 1 --no-deps | sed -E 's/.*"target_directory":"([^"]+)".*/\1/')/debug"
-        run_cmd=("$scratch/launch")
-        impl_target() { printf '%s' "$rust_bin_dir/$(basename -- "$1")"; }
-        ;;
-    *) echo "AUTH_IMPL must be go or rust" >&2; exit 1 ;;
-esac
-echo "Contract target implementation: ${AUTH_IMPL:-go}"
+        "$rust_bin_dir/$1"
+)
 
 flow_secret="$(openssl rand -hex 32)"
-if ! test_env ./cmd/devseed >"$scratch/devseed.log" 2>&1; then
+if ! test_env devseed >"$scratch/devseed.log" 2>&1; then
     cat "$scratch/devseed.log" >&2
     exit 1
 fi
@@ -150,9 +132,9 @@ compose exec -T postgres psql -X --username postgres --dbname "$db_name" --set O
     --command "UPDATE oauth_clients SET status = 'inactive' WHERE client_id = 'knowledge-web'"
 
 start_server() {
-    # Put go run and its child in one process group for reliable cleanup.
+    # Give the server a process group for reliable cleanup.
     set -m
-    test_env ./cmd/server >"$scratch/server.log" 2>&1 &
+    test_env server >"$scratch/server.log" 2>&1 &
     server_pid=$!
     set +m
 

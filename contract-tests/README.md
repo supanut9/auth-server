@@ -2,93 +2,38 @@
 
 The Rust tests exercise the HTTP API at `AUTH_BASE_URL`. They verify response
 status, headers, bodies, and redirects without importing server code. Redirects
-are disabled and the tests send cookies explicitly. The same tests can target a
-Go or Rust server with matching fixtures.
+are disabled and the tests send cookies explicitly.
 
-## Run locally against Go
+## Run locally
 
-Install Rust and Cargo, Go, Docker with Compose, Atlas, curl, and OpenSSL. From
-the auth-server repository, run:
-
-```sh
-./contract-tests/run-local.sh
-```
-
-The runner uses the workspace Compose Postgres on port 55432, creates an
-`auth_contract_*` database, applies the checked-in Atlas migrations, and seeds
-five test clients. It starts the server on port 8060 with ephemeral RSA keys,
-fixed OTP, and throwaway secrets. It runs the server and seeder from a scratch
-directory to isolate their dotenv autoloading. It runs the rate-limit test last
-after restarting the server, then stops the server and removes the database and
-temporary keys. The Compose Postgres service remains available.
-
-Set `AUTH_IMPL=rust` to run the same suite against the Rust binaries
-(`make contract-rust`). `CONTRACT_COMPOSE_FILE` points the runners at a Compose
-file other than `../docker-compose.yml`.
-
-## Go and Rust side by side
-
-Two more runners boot Go on port 8060 and Rust on port 8061 at the same time.
-They share `scripts/dual-harness.sh`, which builds both implementations,
-generates one throwaway RSA key, and gives both servers the same envelope
-secret, support token, fixed OTP code, issuer (`http://auth.contract.test`), and
-configuration. It also sets dummy `GOOGLE_*` values so the provider routes are
-live, and points `HTTPS_PROXY` at the closed local port 9 so a provider code
-exchange fails locally with `provider_error` instead of reaching Google. Both
-runners drop their databases, keys, and processes on exit.
-
-### Differential run
+Install Rust and Cargo, Docker with Compose, Atlas, curl, and OpenSSL. From
+`auth-server`, run:
 
 ```sh
-./contract-tests/run-differential.sh   # or: make contract-diff
+make contract-rust
 ```
 
-Each server gets its own fresh migrated database, seeded by its own devseed.
-`tests/differential.rs` runs one deterministic script of about 200 requests
-against each server. The script covers health, discovery, JWKS, authorize
-errors and redirects, OTP and consent, the token grants, refresh rotation and
-reuse, introspection, revocation, userinfo, CSRF failures, support, logout,
-provider start and callback, and router quirks. It records the status, every
-response header except transport headers, and the body. `normalize::Normalizer`
-replaces volatile values with stable aliases such as `<uuid-v7#3>` and
-`<opaque#2>`. The aliases are numbered by first use, so relationships between
-values must also match. JWTs and flow envelopes are expanded so their claims
-and payload bytes are compared. Redirect query strings keep their order and
-encoding.
+The target calls `./contract-tests/run-local.sh`. The runner uses the workspace
+Compose Postgres on port 55432, creates an `auth_contract_*` database, applies
+the checked-in Atlas migrations, and seeds five test clients. It starts the
+Rust server on port 8060 with ephemeral RSA keys, fixed OTP, and throwaway
+secrets. It supplies isolated configuration to the server and seeder. It runs
+the rate-limit test last after restarting the server, then stops the server
+and removes the database and temporary keys. The Compose Postgres service
+remains available.
 
-The run fails unless every difference matches an entry in the commented
-`ALLOWLIST` in `tests/differential.rs`. Each entry names the port plan's
-accepted deviation. The report lists every difference and the allowlist hit
-counts. Set `CONTRACT_DIFF_DUMP=<dir>` to also write the normalized observations
-of both runs as JSON. The test is skipped unless `CONTRACT_DIFFERENTIAL=1`.
+Set `CONTRACT_COMPOSE_FILE` to use a Compose file other than
+`../docker-compose.yml`.
 
-### Cutover continuity run
+## Cutover verification (AUTH-037)
 
-```sh
-./contract-tests/run-continuity.sh     # or: make contract-continuity
-```
-
-Both servers share one database, seeded by the Go devseed and then by the Rust
-devseed. `tests/continuity.rs` checks in both directions that artifacts minted by
-one implementation work on the other:
-
-- (a) SSO cookies work for `/v1/auth/me`, consent accept, and `prompt=none`
-  authorize.
-- (b) Authorization codes redeem with PKCE, and a code consumed on one server
-  is consumed on the other.
-- (c) Refresh tokens rotate across implementations.
-- (d) Reuse of a token rotated by one server is detected by the other, and the
-  whole chain is revoked on both.
-- (e) Access and ID tokens give identical userinfo and introspection answers,
-  and the JWKS documents are byte-identical.
-- (f) A provider-state envelope signed by one server passes verification on the
-  other. The callback then fails at the provider exchange with 502. A replay at
-  the signer fails with `oauth: jti replay` because the JTI was burned in the
-  shared table.
-- (g) Support sign-out and global logout on one server revoke the session and
-  refresh chain on the other.
-
-The test is skipped unless `CONTRACT_CONTINUITY=1`.
+The Go-vs-Rust differential run passed all 200 normalized steps with only
+allowlisted differences. The shared-database continuity run passed 67/67
+checks for artifacts issued and accepted across both implementations.
+`go-final` tags the last Go runtime. The dual-run scripts and recorded results
+are in commit `2411406`, which adds the harness after that tag. Commit
+`de94811` contains the last pre-cleanup tree with both implementations and
+both runners.
 
 ## Run against an existing test server
 
@@ -157,9 +102,6 @@ to run the fixed-behavior checks.
 
 OTP and consent actions carry the redirect target in a JSON `redirect_to` field.
 An absent CSRF body field produces a 400 binding error. The 403 cases have a
-supplied token and a missing or mismatched cookie. The binding error text may
-differ across implementations as described in the port plan.
-
-The `normalize` module supplies JSON, redirect, and request ID helpers for
-later differential comparisons. The HTTP assertions validate raw responses
-before any normalization.
+supplied token and a missing or mismatched cookie. See the [cutover deviations](../docs/rust-port-deviations.md) for binding error
+wording. The `normalize` module masks volatile values in assertion diagnostics.
+The HTTP assertions validate raw responses.

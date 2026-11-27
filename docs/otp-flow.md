@@ -3,8 +3,8 @@
 ## Overview
 
 auth-server provides a password-less email OTP flow alongside the standard
-Google and GitHub OAuth providers. A 6-digit code is emailed to the learner;
-once verified, an SSO session is created and the OAuth authorization code flow
+Google and GitHub OAuth providers. An 8-character code is emailed to the learner.
+Once verified, an SSO session is created and the OAuth authorization code flow
 completes normally.
 
 ---
@@ -54,7 +54,7 @@ Browser                interview-web           auth-server            Email (Res
    and emails the code via the configured SMTP relay.
 
 2. **SMTP delivery** — Resend (or any RFC 5321–compliant relay) delivers the
-   HTML + plain-text email with the 6-digit code and expiry notice.
+   HTML + plain-text email with the code and expiry notice.
 
 3. **POST `/v1/auth/otp/verify`** — client sends `otp_challenge_id`, `email`,
    `code` (same OAuth params). auth-server verifies the code hash, marks the
@@ -94,9 +94,8 @@ Set these on the auth-server Vercel project (`supanut9-auth-server`):
 5. Set `SMTP_FROM` to an address on the verified domain.
 
 When `SMTP_HOST` is blank, auth-server boots without email delivery (OTP
-challenges are created but the email is silently dropped). Use
-`FIXED_OTP_CODE=123456` in non-production environments to bypass SMTP during
-development.
+challenges are created without sending email). To test without SMTP, leave
+`SMTP_HOST` blank and set `FIXED_OTP_CODE=123456` in a non-production environment.
 
 ---
 
@@ -119,7 +118,7 @@ In non-production environments (e.g. `APP_ENV=staging` or `APP_ENV=development`)
 1. Set `OTP_TEST_HINT_ALLOWLIST=ci-smoke@yourdomain.com` (comma-separated for
    multiple addresses).
 2. Set `FIXED_OTP_CODE=123456` so auth-server always issues a known code.
-   This avoids SMTP delivery entirely for CI.
+   Leave `SMTP_HOST` blank to skip email delivery in CI.
 3. The endpoint returns `{ otp_challenge_id, email, expires_at, code_hash_prefix }`.
    The `code_hash_prefix` is the first 8 characters of the stored code hash —
    it confirms the challenge is active without revealing the raw code over the
@@ -179,8 +178,8 @@ The test mailbox does not need to receive real email if `FIXED_OTP_CODE` is set.
 
 ## Rate Limiting
 
-The OTP endpoints are protected by a shared per-IP rate limiter: **20 requests
-per minute**. Application-level limits also apply:
+The OTP endpoints allow **20 requests per minute per IP and route**.
+Application-level limits also apply:
 
 | Limit | Value | Config env |
 |---|---|---|
@@ -194,10 +193,10 @@ per minute**. Application-level limits also apply:
 ## Cross-references
 
 - interview-web login UI: `interview-web/src/app/login/login-form.tsx`
-- SMTP adapter: `auth-server/internal/adapter/out/mail/smtp.go`
-- OTP email template: `auth-server/internal/adapter/out/mail/otp_template.go`
-- OTP challenge repository: `auth-server/internal/adapter/out/persistence/otp_challenge_repository.go`
-- Test-hint handler: `auth-server/internal/adapter/in/http/handlers_otp_test_hint.go`
-- Test-hint tests: `auth-server/internal/adapter/in/http/handlers_otp_test_hint_test.go`
+- SMTP adapter: `crates/auth-adapters/src/mail/smtp.rs`
+- OTP email template: `crates/auth-adapters/src/mail/otp_template.rs`
+- OTP challenge repository: `crates/auth-adapters/src/persistence/otp.rs`
+- Test-hint handler: `crates/auth-http/src/handlers/protocol/otp_hint.rs`
+- Test-hint tests: `crates/auth-http/tests/protocol_logout_support.rs`
 - Release-readiness runbook: `interview-web/docs/plan/interview-release-readiness-runbook.md`
 - Root mirror: `docs/interview/otp-flow.md`

@@ -1,13 +1,13 @@
 # Golden vectors (AUTH-027)
 
-Byte-exact outputs of the Go auth-server for crypto- and format-sensitive
-behavior. The Rust port (AUTH-029 onward) consumes these files **read-only** and
-must reproduce them, except where `docs/rust-port-deviations.md` accepts a
-difference (e.g. `encoding/json` HTML escaping in JSON response bodies).
+These **frozen fixtures** capture byte-exact crypto- and format-sensitive
+outputs from the Go implementation tagged `go-final`. The Rust tests consume
+them **read-only**. Accepted differences are documented in
+[`docs/rust-port-deviations.md`](../../docs/rust-port-deviations.md).
 
 ## Files
 
-| File | Contents | Owning Go packages |
+| File | Contents | Historical Go packages |
 |---|---|---|
 | `jwks.json` | kid derivation, JWKS document bytes, exponent encoding, accepted PEM variants | `internal/adapter/out/jwks` |
 | `jwt.json` | access (user, client_credentials, refresh) and ID tokens: header JSON, claims JSON, compact JWS | `internal/application/token` |
@@ -27,21 +27,25 @@ Each file is a JSON object of named **sections**; every section has a
 value reads exactly as Go produced it. Raw bytes that are not valid UTF-8 are
 given as hex (`*_hex`).
 
-## Workflow
+## Reproduce the fixtures
+
+Check out `go-final` in a disposable checkout to inspect the reference
+implementation. The tag predates the generator. To regenerate the vectors,
+switch that checkout to `696a363` (AUTH-027), which adds the generator tests
+and fixture inputs to the same Go implementation. Use the Go version in that
+checkout's `go.mod`.
 
 ```sh
-go test ./...                                          # verify: fails if Go behavior drifts
-GOLDEN_UPDATE=1 go test ./... -run Golden -count=1     # rewrite sections after an intended change
+git switch --detach 696a363
+GOLDEN_UPDATE=1 go test ./... -run Golden -count=1
 ```
 
-Review the diff after regenerating. Generation is deterministic: two runs, or a
-run from an empty directory, produce identical files.
+Review the diff in the historical checkout after regenerating. Generation is
+deterministic. Keep the checked-in Rust fixtures frozen.
 
-The tests live in `*_golden_test.go` next to the code they exercise (they call
-unexported functions). Every such package carries an identical copy of
-`goldenio_golden_test.go` (only the package clause differs); keep the copies in
-sync. In update mode, writers serialize on `<area>.json.lock`; if a run is
-killed mid-write, delete the stale lock file.
+The generator tests are named `*_golden_test.go` next to the historical code
+they exercise. Writers serialize on `<area>.json.lock` in the disposable
+checkout. If generation is killed mid-write, remove the stale lock there.
 
 ## Determinism notes
 

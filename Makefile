@@ -7,33 +7,30 @@ dev-keys:
 	openssl genrsa -out secrets/jwt-private.pem 2048
 	openssl rsa -in secrets/jwt-private.pem -pubout -out secrets/jwt-public.pem
 
+# DATABASE_URL selects the migration target in atlas.hcl.
 migrate:
 	atlas migrate apply --env schema
 
 # Fails unless schema.sql and migrations/ describe the same schema.
 schema-check:
 	atlas migrate validate --env schema
-	@out="$$(atlas schema diff --env schema --from file://migrations --to file://schema.sql 2>&1)"; \
+	@out="$$(atlas schema diff --env schema --from file://migrations --to env://src 2>&1)" || { echo "$$out"; exit 1; }; \
 		echo "$$out"; \
 		grep -q "Schemas are synced" <<<"$$out"
 
-seed-dev:
-	go run ./cmd/devseed
-
-seed-clients:
-	go run ./cmd/devseed
+seed-dev seed-clients:
+	cargo run --bin devseed
 
 run:
-	go run ./cmd/server
+	cargo run --bin server
 
 test:
-	go test ./internal/... ./cmd/server
+	cargo test --workspace
 
 build:
-	go build ./...
+	cargo build --workspace
 
-check:
-	go test ./... && go build ./...
+check: rs-check
 
 readyz:
 	curl -fsS http://localhost:8050/readyz
@@ -65,8 +62,7 @@ rs-fmt:
 rs-lint:
 	cargo clippy --workspace --all-targets -- -D warnings
 
-rs-test:
-	cargo test --workspace
+rs-test: test
 
 rs-deny:
 	cargo deny check
@@ -76,14 +72,7 @@ rs-core-deps:
 
 rs-check: rs-fmt rs-lint rs-test rs-deny rs-core-deps
 
-# AUTH-037 contract runs. Each needs Docker Compose Postgres, Atlas, Go, Cargo.
-.PHONY: contract-rust contract-diff contract-continuity
+.PHONY: contract-rust
 
 contract-rust:
-	AUTH_IMPL=rust ./contract-tests/run-local.sh
-
-contract-diff:
-	./contract-tests/run-differential.sh
-
-contract-continuity:
-	./contract-tests/run-continuity.sh
+	./contract-tests/run-local.sh

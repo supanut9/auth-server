@@ -1,7 +1,7 @@
 //! Builds the router from [`Config`] (Go `httpserver.NewRouterFromEnv`).
 //! Shared by the Vercel function and the local server binary.
 
-use std::{collections::BTreeMap, fmt, sync::Arc};
+use std::{collections::BTreeMap, fmt, sync::Arc, time::Duration};
 
 use auth_adapters::{
     config::Config,
@@ -99,6 +99,13 @@ fn build_state_with_hint(config: Config) -> Result<(AppState, OtpHintSource), Bo
 
     let pool = persistence::connect_lazy(config.database_url.expose_secret(), DB_MAX_CONNECTIONS)
         .map_err(boot_err)?;
+    if let Ok(handle) = tokio::runtime::Handle::try_current() {
+        let pool = pool.clone();
+        handle.spawn(async move {
+            // Warm one connection without making startup depend on PostgreSQL.
+            let _ = tokio::time::timeout(Duration::from_secs(5), pool.acquire()).await;
+        });
+    }
 
     let clients = Arc::new(PgOAuthClientRepository::new(
         pool.clone(),

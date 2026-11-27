@@ -3,3 +3,8 @@
 #   SQLX_OFFLINE=false SQLX_OFFLINE_DIR=$PWD/.sqlx cargo check --workspace --all-targets
 [env]
 SQLX_OFFLINE = "true"
+
+# Keep this table: @vercel/rust 29.0.0 reads `config.build.target` without
+# checking that [build] exists, so a config without it crashes the Vercel
+# build ("Cannot read properties of undefined (reading 'target')").
+[build]

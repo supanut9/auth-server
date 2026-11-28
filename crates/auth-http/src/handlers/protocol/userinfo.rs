@@ -30,10 +30,8 @@ fn invalid_token(challenge: &'static str) -> Response {
     response
 }
 
-/// Go `userInfo`: `401 {"error":"invalid_token"}` for a missing or
-/// unverifiable token, an empty `sub`, a `sub` equal to `client_id`
-/// (client_credentials tokens) or an unknown account. `email` +
-/// `email_verified` need the `email` scope; `name` + `picture` need
+/// Requires a platform access token for a known account. `email` and
+/// `email_verified` need the `email` scope. `name` and `picture` need
 /// `profile`.
 pub async fn userinfo(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let token = bearer_token(&headers);
@@ -44,6 +42,9 @@ pub async fn userinfo(State(state): State<AppState>, headers: HeaderMap) -> Resp
     let Ok(claims) = state.jwt_verifier.verify(&token) else {
         return invalid();
     };
+    if !state.token.is_access_token(&claims) {
+        return invalid();
+    }
     let subject = string_claim(&claims, "sub");
     if subject.is_empty() || subject == string_claim(&claims, "client_id") {
         return invalid();

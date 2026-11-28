@@ -311,12 +311,14 @@ fn inactive() -> Value {
     json!({"active": false})
 }
 
-/// Go `introspectAccessToken`. Any verifiable JWT (including an ID token)
-/// is reported active until `exp`.
+/// Report a verifiable platform access token as active until `exp`.
 fn introspect_access_token(state: &AppState, token: &str) -> Value {
     let Ok(claims) = state.jwt_verifier.verify(token) else {
         return inactive();
     };
+    if !state.token.is_access_token(&claims) {
+        return inactive();
+    }
     let exp = number_claim(&claims, "exp").unwrap_or(0.0);
     // Go `int64(float64)`: `as` truncates toward zero like Go for every
     // realistic timestamp.

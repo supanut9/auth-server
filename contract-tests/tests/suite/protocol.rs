@@ -452,6 +452,23 @@ async fn client_credentials_scope_and_auth_methods() {
         assert_eq!(claims["client_id"], api.worker.id);
         assert_eq!(claims["scope"], scope);
         assert_uuid_v7(string(&claims, "jti"));
+        let introspected = response_json(
+            api.form(
+                INTROSPECT,
+                &api.worker,
+                ClientAuth::Basic,
+                &[("token", token)],
+            ),
+            StatusCode::OK,
+        )
+        .await;
+        assert_eq!(
+            introspected,
+            json!({
+                "active": true, "scope": scope, "client_id": api.worker.id, "sub": api.worker.id,
+                "token_type": "Bearer", "exp": claims["exp"], "iat": claims["iat"], "aud": api.audience,
+            })
+        );
         assert_error(
             send(api.get(USERINFO).bearer_auth(token)).await,
             StatusCode::UNAUTHORIZED,

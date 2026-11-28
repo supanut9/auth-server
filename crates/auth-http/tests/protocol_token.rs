@@ -10,7 +10,7 @@ use auth_core::{
         SessionId,
     },
     oauth::pkce::s256_challenge,
-    ports::JwtVerifier,
+    ports::{JwtSigner, JwtVerifier},
     token::UserTokenRequest,
 };
 use axum::http::StatusCode;
@@ -803,15 +803,9 @@ async fn introspection_rules() {
     assert_no_store(&reply);
     reply.assert_json(StatusCode::UNAUTHORIZED, INVALID_CLIENT);
 
-    // ID tokens are accepted on the JWT path (kept Go behavior).
     let reply = introspect(&router, &id_token, "").await;
     assert_no_store(&reply);
-    let body = reply.json();
-    assert_eq!(body["active"], true);
-    assert_eq!(body["client_id"], "");
-    assert_eq!(body["scope"], "");
-    assert_eq!(body["aud"], BROWSER);
-    assert_eq!(body["token_type"], "Bearer");
+    reply.assert_json(StatusCode::OK, INACTIVE);
 
     // Inactive: garbage, empty, expired.
     for token in ["garbage", ""] {
@@ -975,4 +969,35 @@ async fn userinfo_rules() {
     call(Some(format!("Bearer {openid}")))
         .await
         .assert_json(StatusCode::UNAUTHORIZED, INVALID_TOKEN);
+}
+
+#[tokio::test]
+async fn jwt_endpoints_require_platform_audience_and_scope() {
+    let fixture = Fixture::new();
+    let router = fixture.router();
+    let (account, session) = fixture.login("ada@example.com");
+    let (access, id) = user_tokens(&fixture, &account, &session, &["openid"]).await;
+    let claims = fixture.jwks.verify(&access).unwrap();
+
+    // Test each condition independently with valid signatures and an account subject.
+    let mut wrong_audience = claims.clone();
+    wrong_audience.insert("aud".into(), json!("another-api"));
+    let mut missing_scope = claims;
+    missing_scope.remove("scope");
+    for token in [
+        id,
+        fixture.jwks.sign(&wrong_audience).unwrap().token,
+        fixture.jwks.sign(&missing_scope).unwrap().token,
+    ] {
+        introspect(&router, &token, "access_token")
+            .await
+            .assert_json(StatusCode::OK, INACTIVE);
+        let bearer = bearer(&token);
+        let reply = get(&router, USERINFO, &[("authorization", &bearer)]).await;
+        assert_eq!(
+            reply.header("www-authenticate"),
+            Some(r#"Bearer error="invalid_token""#)
+        );
+        reply.assert_json(StatusCode::UNAUTHORIZED, INVALID_TOKEN);
+    }
 }

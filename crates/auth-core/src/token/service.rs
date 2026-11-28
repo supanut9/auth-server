@@ -212,6 +212,13 @@ impl TokenService {
         &self.config
     }
 
+    /// Checks whether verified JWT claims identify a platform access token.
+    #[must_use]
+    pub fn is_access_token(&self, claims: &JwtClaims) -> bool {
+        claims.get("aud").and_then(Value::as_str) == Some(self.config.audience.as_str())
+            && claims.contains_key("scope")
+    }
+
     fn now(&self) -> OffsetDateTime {
         self.clock.now().to_offset(UtcOffset::UTC)
     }

@@ -68,12 +68,8 @@ async fn otp_pkce_lifecycle(api: &Api, client: &OAuthClient) {
     assert_user_access(&access, client, sub, sid, FULL_SCOPE);
     let discovery =
         response_json(api.get("/.well-known/openid-configuration"), StatusCode::OK).await;
-    let id = verify_jwt(
-        string(&discovery, "issuer"),
-        &keys,
-        string(&tokens, "id_token"),
-        &client.id,
-    );
+    let id_token = string(&tokens, "id_token");
+    let id = verify_jwt(string(&discovery, "issuer"), &keys, id_token, &client.id);
     assert_keys(
         &id,
         &[
@@ -105,6 +101,16 @@ async fn otp_pkce_lifecycle(api: &Api, client: &OAuthClient) {
     assert_eq!(
         userinfo(api, access_token).await,
         json!({"sub": sub, "email": email, "email_verified": true, "name": id["name"], "picture": ""}),
+    );
+    let response = send(api.get(USERINFO).bearer_auth(id_token)).await;
+    assert_eq!(
+        response.headers()["www-authenticate"],
+        r#"Bearer error="invalid_token""#
+    );
+    assert_error(response, StatusCode::UNAUTHORIZED, "invalid_token", None).await;
+    assert_eq!(
+        introspect(api, id_token, "").await,
+        json!({"active": false})
     );
     let response = send(flow.exchange(api, client, &code, &flow.verifier)).await;
     assert_error(response, StatusCode::BAD_REQUEST, "invalid_grant", None).await;

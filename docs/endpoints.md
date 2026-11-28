@@ -31,4 +31,6 @@ Responses include `X-Request-Id`. `/healthz` and `/readyz` echo it as `request_i
 
 Token and introspection responses carry `Cache-Control: no-store` and `Pragma: no-cache` on success and error. Userinfo returns `WWW-Authenticate: Bearer` on a 401 with a missing token and `WWW-Authenticate: Bearer error="invalid_token"` on a 401 with an invalid token.
 
+Authorization-code exchange checks PKCE before consuming the code. A wrong verifier returns `400 invalid_grant` with `error_description` set to `pkce validation failed`. The client can retry with the correct verifier until the code expires.
+
 Refer to `../../docs/auth/phase-1-endpoints.md` in the parent workspace for the original phase-1 endpoint contract and [the cutover deviations](rust-port-deviations.md) for known compatibility differences.

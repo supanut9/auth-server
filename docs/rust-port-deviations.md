@@ -18,6 +18,7 @@ Legend:
 | Client IP when the peer is unknown | gin returns `""` and ignores headers | reads `X-Forwarded-For` / `X-Real-IP`. Required on Vercel, which gives no peer address, so OTP rate-limit keys stay per-client | Internal |
 | Panic response | 500 from gin.Recovery | same, and CORS headers are still present | Client-visible (only on a crash) |
 | Protocol response headers (AUTH-042) | no cache directives or bearer challenge | token and introspection send `Cache-Control: no-store` and `Pragma: no-cache` on success and error. Userinfo 401s send a bearer challenge | Client-visible |
+| Authorization-code PKCE (AUTH-043) | consumed the code before checking the verifier | failed PKCE leaves the code usable through its existing expiry | Client-visible |
 
 ## Accepted deviations (plan §3)
 
@@ -70,7 +71,6 @@ Legend:
 ## Unchanged on purpose
 
 These behaviors were preserved at cutover. The port plan tracks them individually (§7):
-- PKCE is checked after the code is consumed.
 - ID tokens pass introspection and userinfo.
 - Inactive clients pass the token, revoke and introspect endpoints.
 - Token `iss` is untrimmed while discovery's `issuer` is trimmed.

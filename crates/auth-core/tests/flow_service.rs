@@ -20,6 +20,7 @@ use time::macros::{datetime, offset};
 const ACCOUNT: &str = "account-1";
 const CLIENT: &str = "client-1";
 const REDIRECT: &str = "https://app.example.com/callback";
+const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
 
 fn issue_request() -> IssueDirectCodeRequest {
     IssueDirectCodeRequest {
@@ -40,6 +41,7 @@ fn consume_request(code: &str) -> ConsumeAuthorizationCodeRequest {
         code: code.to_owned(),
         client_id: ClientId::from(CLIENT),
         redirect_uri: REDIRECT.to_owned(),
+        code_verifier: String::new(),
     }
 }
 
@@ -222,7 +224,10 @@ async fn issue_direct_code_keeps_nonce_for_the_token_exchange() {
 
     let consumed = h
         .service
-        .consume_authorization_code(consume_request(&value))
+        .consume_authorization_code(ConsumeAuthorizationCodeRequest {
+            code_verifier: VERIFIER.to_owned(),
+            ..consume_request(&value)
+        })
         .await
         .expect("consume code");
     assert_eq!(
@@ -269,9 +274,13 @@ async fn consume_issued_code_round_trip_and_single_use() {
         .await
         .expect("issue");
 
+    let request = ConsumeAuthorizationCodeRequest {
+        code_verifier: VERIFIER.to_owned(),
+        ..consume_request(&value)
+    };
     let consumed = h
         .service
-        .consume_authorization_code(consume_request(&value))
+        .consume_authorization_code(request.clone())
         .await
         .expect("first consume");
     assert_eq!(consumed.consumed_at, Some(NOW));
@@ -279,7 +288,7 @@ async fn consume_issued_code_round_trip_and_single_use() {
 
     let error = h
         .service
-        .consume_authorization_code(consume_request(&value))
+        .consume_authorization_code(request)
         .await
         .expect_err("second consume");
     assert!(matches!(error, FlowError::AuthorizationCodeAlreadyConsumed));
@@ -320,16 +329,18 @@ async fn consume_unknown_code_returns_repository_not_found() {
 
 type Fix = fn(&mut AuthorizationCode);
 
-/// Go order: client, redirect URI, consumed, expired. Each fix reveals the
+/// Check client, redirect URI, consumed, expired, then PKCE. Each fix reveals the
 /// next error, and no failure writes the code.
 #[tokio::test]
-async fn consume_checks_in_go_order() {
+async fn consume_checks_in_order() {
     let h = Harness::new();
     let mut code = stored_code(&h, "code-a", "the-code");
     code.client_id = ClientId::from("other-client");
     code.redirect_uri = "https://evil.example.com/cb".to_owned();
     code.consumed_at = Some(NOW - Duration::minutes(1));
     code.expires_at = NOW - Duration::seconds(1);
+    code.pkce_code_challenge = auth_core::oauth::pkce::s256_challenge(VERIFIER);
+    code.pkce_code_challenge_method = "S256".to_owned();
     h.codes.insert(code.clone());
 
     let steps: [(Fix, &str); 4] = [
@@ -361,8 +372,18 @@ async fn consume_checks_in_go_order() {
         fix(&mut code);
         h.codes.insert(code.clone());
     }
-    h.service
+    let error = h
+        .service
         .consume_authorization_code(consume_request("the-code"))
+        .await
+        .expect_err("missing verifier");
+    assert!(matches!(error, FlowError::PkceValidationFailed));
+    assert_eq!(h.codes.get("code-a"), code, "no write on PKCE failure");
+    h.service
+        .consume_authorization_code(ConsumeAuthorizationCodeRequest {
+            code_verifier: VERIFIER.to_owned(),
+            ..consume_request("the-code")
+        })
         .await
         .expect("all checks pass");
     assert_eq!(

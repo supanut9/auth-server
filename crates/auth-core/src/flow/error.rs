@@ -2,7 +2,7 @@
 
 use crate::ports::{RandomError, RepoError};
 
-/// Display strings match the Go sentinels verbatim.
+/// Flow error messages, including Go-compatible sentinels.
 #[derive(Debug, thiserror::Error)]
 pub enum FlowError {
     #[error("authorization request expired")]
@@ -20,6 +20,8 @@ pub enum FlowError {
     AuthorizationCodeClientMismatch,
     #[error("authorization code redirect uri mismatch")]
     AuthorizationCodeRedirectMismatch,
+    #[error("pkce validation failed")]
+    PkceValidationFailed,
     #[error(transparent)]
     Repo(#[from] RepoError),
     #[error(transparent)]

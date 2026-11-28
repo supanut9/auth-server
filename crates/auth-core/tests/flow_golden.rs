@@ -34,6 +34,7 @@ fn consume(code: &str) -> ConsumeAuthorizationCodeRequest {
         code: code.to_owned(),
         client_id: ClientId::from("client-1"),
         redirect_uri: REDIRECT.to_owned(),
+        code_verifier: String::new(),
     }
 }
 

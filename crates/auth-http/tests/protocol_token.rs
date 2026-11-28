@@ -266,7 +266,7 @@ async fn authorization_code_echoes_the_request_nonce_in_the_id_token() {
 }
 
 #[tokio::test]
-async fn pkce_is_checked_after_the_code_is_consumed() {
+async fn pkce_failure_leaves_the_authorization_code_usable() {
     let fixture = Fixture::new();
     let router = fixture.router();
     let (account, session) = fixture.login("ada@example.com");
@@ -286,7 +286,10 @@ async fn pkce_is_checked_after_the_code_is_consumed() {
             StatusCode::BAD_REQUEST,
             r#"{"error":"invalid_grant","error_description":"pkce validation failed"}"#,
         );
-    // The failed attempt burned the code.
+    assert_eq!(
+        exchange(&router, &code, VERIFIER).await.status,
+        StatusCode::OK
+    );
     exchange(&router, &code, VERIFIER)
         .await
         .assert_json(StatusCode::BAD_REQUEST, INVALID_GRANT);

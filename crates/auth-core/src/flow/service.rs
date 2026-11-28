@@ -1,8 +1,6 @@
 //! Flow application service (`internal/application/flow/service.go`).
 //!
-//! Authorization codes, consent grants and the SSO session lifecycle. Every
-//! method mirrors its Go counterpart, including the order of checks and
-//! repository calls.
+//! Authorization codes, consent grants and the SSO session lifecycle.
 
 use std::fmt;
 use std::ops::Deref;
@@ -16,6 +14,7 @@ use crate::domain::{
     AccountId, AuthorizationCode, ChainId, ClientId, ConsentGrant, Scopes, SessionId, SsoSession,
     SsoSessionStatus,
 };
+use crate::oauth::pkce;
 use crate::ports::{
     AuthorizationCodeRepository, Clock, ConsentGrantRepository, IdGenerator, RandomSource,
     RefreshTokenChainRepository, RefreshTokenRepository, SsoSessionRepository,
@@ -79,6 +78,7 @@ pub struct ConsumeAuthorizationCodeRequest {
     pub code: String,
     pub client_id: ClientId,
     pub redirect_uri: String,
+    pub code_verifier: String,
 }
 
 impl fmt::Debug for ConsumeAuthorizationCodeRequest {
@@ -87,6 +87,7 @@ impl fmt::Debug for ConsumeAuthorizationCodeRequest {
             .field("code", &"[redacted]")
             .field("client_id", &self.client_id)
             .field("redirect_uri", &self.redirect_uri)
+            .field("code_verifier", &"[redacted]")
             .finish()
     }
 }
@@ -200,8 +201,8 @@ impl FlowService {
     }
 
     /// Go `ConsumeAuthorizationCode`. Checks, in order: hash lookup, client
-    /// ID, exact redirect URI, not yet consumed, not expired; then stores
-    /// `consumed_at = now`.
+    /// ID, exact redirect URI, not yet consumed, not expired, then PKCE.
+    /// Stores `consumed_at = now` only after all checks pass.
     ///
     /// Like Go this is a read-then-update, not an atomic compare-and-set.
     ///
@@ -209,7 +210,8 @@ impl FlowService {
     /// [`FlowError::AuthorizationCodeExpired`] for an empty code or an expired
     /// one, [`FlowError::AuthorizationCodeClientMismatch`],
     /// [`FlowError::AuthorizationCodeRedirectMismatch`],
-    /// [`FlowError::AuthorizationCodeAlreadyConsumed`], or the repository
+    /// [`FlowError::AuthorizationCodeAlreadyConsumed`],
+    /// [`FlowError::PkceValidationFailed`], or the repository
     /// error (including `NotFound` for an unknown code).
     pub async fn consume_authorization_code(
         &self,
@@ -234,6 +236,13 @@ impl FlowService {
         }
         if now > code.expires_at {
             return Err(FlowError::AuthorizationCodeExpired);
+        }
+        if !pkce::verify(
+            &code.pkce_code_challenge,
+            &code.pkce_code_challenge_method,
+            &req.code_verifier,
+        ) {
+            return Err(FlowError::PkceValidationFailed);
         }
 
         code.consumed_at = Some(now);

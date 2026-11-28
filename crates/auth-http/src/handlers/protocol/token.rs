@@ -4,8 +4,7 @@
 use auth_core::{
     crypto::{hash_opaque, match_client_secret},
     domain::{ClientId, ClientType, OAuthClient, RefreshTokenChainStatus, Scopes, SessionId},
-    flow::ConsumeAuthorizationCodeRequest,
-    oauth::pkce,
+    flow::{ConsumeAuthorizationCodeRequest, FlowError},
     ports::JwtClaims,
     token::{
         ClientCredentialsTokenRequest, RefreshTokenRequest, UserTokenRequest,
@@ -121,8 +120,7 @@ pub async fn token(State(state): State<AppState>, request: Request) -> Response 
     no_store(response)
 }
 
-/// Go `handleAuthorizationCodeToken`: the code is consumed first, PKCE is
-/// checked afterwards (so a failed PKCE check still burns the code).
+/// Exchange a valid authorization code for user tokens.
 async fn authorization_code_grant(state: &AppState, request: &TokenRequest) -> Response {
     let client =
         match authenticate_client(state, &request.client_id, &request.client_secret, false).await {
@@ -130,28 +128,25 @@ async fn authorization_code_grant(state: &AppState, request: &TokenRequest) -> R
             Err(error) => return error.into_response(),
         };
 
-    let Ok(code) = state
+    let code = match state
         .flow
         .consume_authorization_code(ConsumeAuthorizationCodeRequest {
             code: request.form.get("code").to_owned(),
             client_id: client.client_id.clone(),
             redirect_uri: request.form.get("redirect_uri").to_owned(),
+            code_verifier: request.form.get("code_verifier").to_owned(),
         })
         .await
-    else {
-        return error_json(StatusCode::BAD_REQUEST, "invalid_grant");
+    {
+        Ok(code) => code,
+        Err(error @ FlowError::PkceValidationFailed) => {
+            return json_response(
+                StatusCode::BAD_REQUEST,
+                &json!({"error": "invalid_grant", "error_description": error.to_string()}),
+            );
+        }
+        Err(_) => return error_json(StatusCode::BAD_REQUEST, "invalid_grant"),
     };
-
-    if !pkce::verify(
-        &code.pkce_code_challenge,
-        &code.pkce_code_challenge_method,
-        request.form.get("code_verifier"),
-    ) {
-        return json_response(
-            StatusCode::BAD_REQUEST,
-            &json!({"error": "invalid_grant", "error_description": "pkce validation failed"}),
-        );
-    }
 
     let Ok(account) = state.accounts.find_by_id(&code.account_id).await else {
         return error_json(StatusCode::INTERNAL_SERVER_ERROR, "server_error");

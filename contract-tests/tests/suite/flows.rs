@@ -195,6 +195,11 @@ async fn otp_pkce_lifecycle(api: &Api, client: &OAuthClient) {
         Some("pkce validation failed"),
     )
     .await;
+    response_json(
+        subsequent.exchange(api, client, &code, &subsequent.verifier),
+        StatusCode::OK,
+    )
+    .await;
     let response = send(subsequent.exchange(api, client, &code, &subsequent.verifier)).await;
     assert_error(response, StatusCode::BAD_REQUEST, "invalid_grant", None).await;
 

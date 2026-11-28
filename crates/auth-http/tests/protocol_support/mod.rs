@@ -5,6 +5,9 @@
 
 #![allow(dead_code)]
 
+#[path = "../common/otp_rate_limit.rs"]
+mod otp_rate_limit;
+
 use std::{
     collections::{BTreeMap, HashMap, VecDeque},
     sync::{
@@ -40,7 +43,7 @@ use auth_http::{
     AppState, GlobalLayers,
     cookies::CookiePolicy,
     handlers::protocol::{self, OtpHintSource},
-    middleware::{AccessLog, RateLimiter, SupportAuth},
+    middleware::{AccessLog, SupportAuth},
     routing::GinRouter,
 };
 use axum::{
@@ -772,7 +775,7 @@ impl Fixture {
             jwt_verifier: jwks.clone(),
             providers: Arc::new(BTreeMap::new()),
             cookies: Arc::new(CookiePolicy::from_config(&config)),
-            otp_rate_limiter: Arc::new(RateLimiter::new(std::time::Duration::from_secs(60), 20)),
+            otp_rate_limiter: Arc::new(otp_rate_limit::TestOtpRateLimiter::default()),
             support_auth: Arc::new(SupportAuth::from_config(&config)),
         };
 

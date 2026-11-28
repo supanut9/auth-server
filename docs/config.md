@@ -38,6 +38,12 @@ Duration values retain the pre-cutover syntax. Use forms such as `300ms`, `10m`,
 - `OTP_MAX_ATTEMPTS` defaults to `6` and must be positive. `OTP_MAX_RESENDS` defaults to `3` and can be zero. `OTP_RESEND_COOLDOWN` must be positive.
 - `FIXED_OTP_CODE` and `OTP_TEST_HINT_ALLOWLIST` are for non-production verification. Production startup rejects both when set.
 
+The OTP routes share a PostgreSQL rate limit. On Vercel the service uses
+`x-vercel-forwarded-for`, then the first hop of `X-Forwarded-For`, then
+`X-Real-IP`, then the socket peer. Vercel sets the forwarding headers at its
+edge and overwrites incoming `X-Forwarded-For` to prevent spoofing. The
+standalone server uses its socket peer. [Vercel request headers](https://vercel.com/docs/headers/request-headers)
+
 ## Dev seeding
 
 Run `make seed-dev` or `cargo run --bin devseed` against a local database. Example clients include `dev-browser`, `community-web`, `knowledge-web`, `language-web`, `dev-worker`, and `realtime-service`. `DEVSEED_CLIENTS` selects client IDs separated by commas, spaces, or newlines. Supply the intended redirect URIs and secrets when seeding selected clients in a shared database.

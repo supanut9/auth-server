@@ -10,16 +10,14 @@ use auth_core::{
     oauth::{AuthorizeRequestValidator, envelope::EnvelopeSigner},
     ports::{
         AccountRepository, Clock, IdentityProvider, JwksProvider, JwtVerifier,
-        OAuthClientRepository, RandomSource, ReadinessProbe, RefreshTokenChainRepository,
-        RefreshTokenRepository, SsoSessionRepository, SupportRepository,
+        OAuthClientRepository, OtpRateLimiter, RandomSource, ReadinessProbe,
+        RefreshTokenChainRepository, RefreshTokenRepository, SsoSessionRepository,
+        SupportRepository,
     },
     token::TokenService,
 };
 
-use crate::{
-    cookies::CookiePolicy,
-    middleware::{RateLimiter, SupportAuth},
-};
+use crate::{cookies::CookiePolicy, middleware::SupportAuth};
 
 /// Everything the handlers need. Mirrors Go's `application.App` plus the
 /// handler-level pieces (cookie policy, OTP limiter, support auth).
@@ -49,6 +47,6 @@ pub struct AppState {
     pub providers: Arc<BTreeMap<String, Arc<dyn IdentityProvider>>>,
 
     pub cookies: Arc<CookiePolicy>,
-    pub otp_rate_limiter: Arc<RateLimiter>,
+    pub otp_rate_limiter: Arc<dyn OtpRateLimiter>,
     pub support_auth: Arc<SupportAuth>,
 }

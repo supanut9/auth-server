@@ -1,7 +1,5 @@
 //! Response helpers shared by the flow handlers.
 
-use std::time::Instant;
-
 use auth_core::{
     domain::SsoSession,
     flow::{FlowError, IssueDirectCodeRequest},
@@ -21,10 +19,7 @@ use super::redirects::{
 use crate::{
     cookies::sso_max_age,
     json::{JSON_CONTENT_TYPE, json_response, to_go_json},
-    middleware::{
-        client_ip::client_ip,
-        rate_limit::{otp_rate_limit_key, retry_after_seconds},
-    },
+    middleware::client_ip,
     routing::FullPath,
     state::AppState,
 };
@@ -191,12 +186,12 @@ impl FromRequestParts<AppState> for OtpRateLimit {
         let full_path = parts
             .extensions
             .get::<FullPath>()
-            .map(|path| path.as_str().to_owned())
-            .unwrap_or_default();
-        let key = otp_rate_limit_key(&full_path, &client_ip(&parts.headers, &parts.extensions));
-        match state.otp_rate_limiter.allow(&key, Instant::now()) {
-            Ok(()) => Ok(Self),
-            Err(retry_after) => {
+            .map_or("", FullPath::as_str);
+        let ip = client_ip(&parts.headers, &parts.extensions);
+        let key = format!("otp:{full_path}:{ip}");
+        match state.otp_rate_limiter.check_and_record(&key).await {
+            Ok(None) => Ok(Self),
+            Ok(Some(retry_after)) => {
                 let mut response = json_response(
                     StatusCode::TOO_MANY_REQUESTS,
                     &json!({
@@ -204,12 +199,15 @@ impl FromRequestParts<AppState> for OtpRateLimit {
                         "error_description": "too many requests; try again in a moment",
                     }),
                 );
-                response.headers_mut().insert(
-                    header::RETRY_AFTER,
-                    HeaderValue::from(retry_after_seconds(retry_after)),
-                );
+                response
+                    .headers_mut()
+                    .insert(header::RETRY_AFTER, HeaderValue::from(retry_after));
                 Err(response)
             }
+            Err(_) => Err(error_only(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "rate_limit_unavailable",
+            )),
         }
     }
 }

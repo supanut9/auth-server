@@ -1,4 +1,4 @@
-h1:OOE89Nsif8tZrQrV4KYFVWZpvSeF7YKQabbM0KsbKKw=
+h1:5NE7gLz9cwp1sX+nF33ngxI1ZQJ35DifB36N2xMYGbo=
 20260401121613_phase1_initial.sql h1:h7lLhYzgqrgfINIf+jjuIQtDF0cUcbp+ZFzdv/f5rwg=
 20260401165000_auth005_provider_otp.sql h1:16LfggQlkAfybXZrEHCRTQWnkybY2QlAOfMpL4CQijE=
 20260401165001_add_refresh_chain_scope.sql h1:cNxrWKzgvHyrk1AkxXLnUWIIPstYZn8L7dE+83gBypY=
@@ -11,3 +11,4 @@ h1:OOE89Nsif8tZrQrV4KYFVWZpvSeF7YKQabbM0KsbKKw=
 20260522162000_ensure_authorization_code_request_nullable.sql h1:9RYR/7Kf8YswGD99csXK4bbe/YowVYVUPkp9kOM6sFQ=
 20261126071600_add_authorization_code_nonce.sql h1:EvnBY4oXAJntllJvn9a6Y/QYhAjFMR7eIgRtJA7iNQI=
 20261128155302_consent_grants_unique_account_client.sql h1:sCPE/MSSRJlkegBnRtF9d7uf+8ypxl1o34GRRhJsZDc=
+20261128155600_otp_rate_limit_hits.sql h1:rpMXeBtumH3ZNro/oqfw7Dy568U8TZ+Cs00hTRmFE3U=

@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH active AS (\n                 SELECT count(*) AS hits, min(hit_at) AS oldest\n                 FROM otp_rate_limit_hits\n                 WHERE key = $1 AND hit_at >= statement_timestamp() - interval '60 seconds'\n               ), recorded AS (\n                 INSERT INTO otp_rate_limit_hits (key, hit_at)\n                 SELECT $1, statement_timestamp() FROM active WHERE hits < 20\n                 RETURNING 1\n               )\n               SELECT greatest(1, floor(extract(epoch FROM\n                   (oldest + interval '60 seconds' - statement_timestamp())))::bigint) AS \"retry_after!\"\n               FROM active\n               WHERE NOT EXISTS (SELECT 1 FROM recorded)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "retry_after!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9f47fcd36466fbf0c4f3a074b74f8e16b700d19266669fec463db32e69abb33b"
+}

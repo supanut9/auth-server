@@ -4,12 +4,16 @@ use serde_json::json;
 use uuid::Uuid;
 
 #[tokio::test]
-#[ignore = "consumes the OTP rate-limit budget; run separately against an idle or restarted server"]
+#[ignore = "consumes the OTP rate-limit budget; run separately against a server with a fresh resend window"]
 async fn otp_rate_limit_rejects_the_twenty_first_request() {
     let client = http_client();
     let url = format!("{}/v1/auth/otp/resend", base_url());
     let body = json!({"otp_challenge_id": Uuid::new_v4().to_string()});
-    for attempt in 1..=21 {
+    // The local runner admits one request before restarting the server.
+    let preused = std::env::var("CONTRACT_OTP_RATE_LIMIT_PREUSED")
+        .map_or(0, |value| value.parse::<u8>().expect("preused budget"));
+    assert!(preused < 20);
+    for attempt in (preused + 1)..=21 {
         let response = client
             .post(&url)
             .json(&body)

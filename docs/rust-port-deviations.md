@@ -15,7 +15,7 @@ Legend:
 |---|---|---|---|
 | JWKS key loading | never checked that the public key matches the private key | boot fails with `jwt key pair mismatch` | Internal (boot) |
 | devseed upsert | update, delete and insert are 3 separate statements | one transaction per client, so a failure never leaves a prod client without redirect URIs | Internal |
-| Client IP when the peer is unknown | gin returns `""` and ignores headers | reads `X-Forwarded-For` / `X-Real-IP`. Required on Vercel, which gives no peer address, so OTP rate-limit keys stay per-client | Internal |
+| Client IP (AUTH-048) | trusted forwarding headers from all peers | Vercel edge headers in priority order, with the socket peer as fallback. Standalone uses the socket peer | Internal |
 | Panic response | 500 from gin.Recovery | same, and CORS headers are still present | Client-visible (only on a crash) |
 | Protocol response headers (AUTH-042) | no cache directives or bearer challenge | token and introspection send `Cache-Control: no-store` and `Pragma: no-cache` on success and error. Userinfo 401s send a bearer challenge | Client-visible |
 | Authorization-code PKCE (AUTH-043) | consumed the code before checking the verifier | failed PKCE leaves the code usable through its existing expiry | Client-visible |
@@ -70,7 +70,7 @@ Legend:
 | SMTP AUTH detection | any advertised AUTH | AUTH with a mechanism lettre knows (PLAIN/LOGIN/XOAUTH2) |
 | `updated_at` on update | GORM's own wall clock | the injected clock (same in prod; deterministic in tests) |
 | Expiry arithmetic | wraps on overflow | saturates |
-| OTP rate limiter | route middleware | request extractor running before the body is read; same keys, limits and 429 body |
+| OTP rate limiter (AUTH-048) | per-instance route middleware | shared PostgreSQL window checked before the body is read, with the same 20/60 limit and 429 response. Returns 503 if the limiter is unavailable |
 
 ## Unchanged on purpose
 

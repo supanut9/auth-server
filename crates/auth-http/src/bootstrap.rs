@@ -12,9 +12,9 @@ use auth_adapters::{
         chains::PgRefreshTokenChainRepository, clients::PgOAuthClientRepository,
         codes::PgAuthorizationCodeRepository, consents::PgConsentGrantRepository,
         jtis::PgSignedStateJtiRepository, otp::PgOtpChallengeRepository,
-        providers::PgAccountProviderRepository, readiness::PgReadinessProbe,
-        refresh_tokens::PgRefreshTokenRepository, sessions::PgSsoSessionRepository,
-        support::PgSupportRepository,
+        providers::PgAccountProviderRepository, rate_limit::PgOtpRateLimiter,
+        readiness::PgReadinessProbe, refresh_tokens::PgRefreshTokenRepository,
+        sessions::PgSsoSessionRepository, support::PgSupportRepository,
     },
     provider::{GitHubProvider, GoogleProvider},
     system::{SystemClock, UuidV7Ids},
@@ -37,7 +37,7 @@ use crate::{
     apply_global_layers,
     cookies::CookiePolicy,
     handlers::{self, protocol::OtpHintSource},
-    middleware::{RateLimiter, SupportAuth},
+    middleware::SupportAuth,
     state::AppState,
 };
 
@@ -156,7 +156,7 @@ fn build_state_with_hint(config: Config) -> Result<(AppState, OtpHintSource), Bo
     ));
     let jtis = Arc::new(PgSignedStateJtiRepository::new(pool.clone(), clock.clone()));
     let support = Arc::new(PgSupportRepository::new(pool.clone()));
-    let readiness = Arc::new(PgReadinessProbe::new(pool));
+    let readiness = Arc::new(PgReadinessProbe::new(pool.clone()));
 
     let jwks = Arc::new(
         JwksManager::from_sources(
@@ -265,7 +265,7 @@ fn build_state_with_hint(config: Config) -> Result<(AppState, OtpHintSource), Bo
 
     let state = AppState {
         cookies: Arc::new(CookiePolicy::from_config(&config)),
-        otp_rate_limiter: Arc::new(RateLimiter::otp()),
+        otp_rate_limiter: Arc::new(PgOtpRateLimiter::new(pool.clone())),
         support_auth: Arc::new(SupportAuth::from_config(&config)),
         validator: Arc::new(AuthorizeRequestValidator::new(clients.clone())),
         config: Arc::new(config),

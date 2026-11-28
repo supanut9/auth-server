@@ -61,6 +61,13 @@ CREATE INDEX "idx_otp_challenges_expires_at" ON "otp_challenges" ("expires_at");
 CREATE INDEX "idx_otp_challenges_last_sent_at" ON "otp_challenges" ("last_sent_at");
 -- Create index "idx_otp_challenges_purpose" to table: "otp_challenges"
 CREATE INDEX "idx_otp_challenges_purpose" ON "otp_challenges" ("purpose");
+-- Create "otp_rate_limit_hits" table
+CREATE TABLE "otp_rate_limit_hits" (
+  "key" text NOT NULL,
+  "hit_at" timestamptz NOT NULL
+);
+-- Create index "idx_otp_rate_limit_hits_key_hit_at" to table: "otp_rate_limit_hits"
+CREATE INDEX "idx_otp_rate_limit_hits_key_hit_at" ON "otp_rate_limit_hits" ("key", "hit_at");
 -- Create "signed_state_jtis" table
 CREATE TABLE "signed_state_jtis" (
   "jti" character varying(64) NOT NULL,

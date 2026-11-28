@@ -1,17 +1,17 @@
 mod common;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 
 use auth_http::{
     FullPath, GinRouter, RequestId, build_router, json_response,
-    middleware::{LogErrors, RateLimiter, SupportAuth, otp_rate_limit, support_auth_middleware},
+    middleware::{LogErrors, SupportAuth, client_ip::VercelEdge, support_auth_middleware},
 };
 use axum::{
     extract::{ConnectInfo, Path},
     http::{Method, StatusCode},
     middleware::from_fn_with_state,
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::get,
 };
 use common::{UI, app, call, config, config_with, request, send};
 use secrecy::SecretString;
@@ -140,6 +140,7 @@ async fn access_log_writes_one_sorted_line_without_query() {
     );
     req.extensions_mut()
         .insert(ConnectInfo("10.0.0.2:4000".parse::<SocketAddr>().unwrap()));
+    req.extensions_mut().insert(VercelEdge);
     let reply = send(&router, req).await;
     assert_eq!(reply.status, StatusCode::OK);
     assert_eq!(reply.body, r#"{"client_id":"a b"}"#);
@@ -516,90 +517,6 @@ async fn full_path_is_the_gin_pattern() {
     assert_eq!(
         serde_json::from_str::<Value>(&reply.body).unwrap(),
         json!({"full_path": "/v1/clients/:clientID/public-info", "request_id": "fp"})
-    );
-}
-
-// --- OTP rate limit -------------------------------------------------------
-
-fn otp_routes(limiter: Arc<RateLimiter>) -> GinRouter {
-    let limited = |method_router: axum::routing::MethodRouter| {
-        method_router.route_layer(from_fn_with_state(limiter.clone(), otp_rate_limit))
-    };
-    GinRouter::new()
-        .route(Method::POST, "/v1/auth/otp/start", limited(post(echo)))
-        .route(Method::POST, "/v1/auth/otp/resend", limited(post(echo)))
-}
-
-#[tokio::test]
-async fn otp_rate_limit_rejects_the_twenty_first_request() {
-    let (router, _) = app(otp_routes(Arc::new(RateLimiter::otp())), &config());
-    let from = [("x-forwarded-for", "198.51.100.1")];
-    for attempt in 1..=20 {
-        let reply = call(&router, Method::POST, "/v1/auth/otp/resend", &from).await;
-        assert_eq!(reply.status, StatusCode::OK, "attempt {attempt}");
-        assert_eq!(reply.header("retry-after"), None);
-    }
-    for _ in 0..2 {
-        let reply = call(&router, Method::POST, "/v1/auth/otp/resend", &from).await;
-        assert_eq!(reply.status, StatusCode::TOO_MANY_REQUESTS);
-        let retry: i64 = reply.header("retry-after").unwrap().parse().unwrap();
-        assert!((1..=60).contains(&retry), "{retry}");
-        assert_eq!(
-            reply.header("content-type"),
-            Some("application/json; charset=utf-8")
-        );
-        assert_eq!(
-            reply.body,
-            r#"{"error":"rate_limited","error_description":"too many requests; try again in a moment"}"#
-        );
-        assert!(reply.header("x-request-id").is_some());
-    }
-
-    // Keys are per route and per client IP.
-    let other_ip = [("x-forwarded-for", "198.51.100.2")];
-    assert_eq!(
-        call(&router, Method::POST, "/v1/auth/otp/resend", &other_ip)
-            .await
-            .status,
-        StatusCode::OK
-    );
-    assert_eq!(
-        call(&router, Method::POST, "/v1/auth/otp/start", &from)
-            .await
-            .status,
-        StatusCode::OK
-    );
-    // X-Real-IP is the second source.
-    let real_ip = [("x-real-ip", "198.51.100.1")];
-    assert_eq!(
-        call(&router, Method::POST, "/v1/auth/otp/resend", &real_ip)
-            .await
-            .status,
-        StatusCode::TOO_MANY_REQUESTS
-    );
-}
-
-#[tokio::test]
-async fn otp_rate_limit_keys_on_peer_without_headers() {
-    let limiter = Arc::new(RateLimiter::new(std::time::Duration::from_secs(60), 1));
-    let (router, _) = app(otp_routes(limiter), &config());
-    let from_peer = |peer: &str| {
-        let mut req = request(Method::POST, "/v1/auth/otp/start", &[]);
-        req.extensions_mut()
-            .insert(ConnectInfo(peer.parse::<SocketAddr>().unwrap()));
-        req
-    };
-    assert_eq!(
-        send(&router, from_peer("192.0.2.1:1")).await.status,
-        StatusCode::OK
-    );
-    assert_eq!(
-        send(&router, from_peer("192.0.2.1:2")).await.status,
-        StatusCode::TOO_MANY_REQUESTS
-    );
-    assert_eq!(
-        send(&router, from_peer("192.0.2.2:1")).await.status,
-        StatusCode::OK
     );
 }
 

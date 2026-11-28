@@ -18,8 +18,9 @@ Compose Postgres on port 55432, creates an `auth_contract_*` database, applies
 the checked-in Atlas migrations, and seeds five test clients. It starts the
 Rust server on port 8060 with ephemeral RSA keys, fixed OTP, and throwaway
 secrets. It supplies isolated configuration to the server and seeder. It runs
-the rate-limit test last after restarting the server, then stops the server
-and removes the database and temporary keys. The Compose Postgres service
+the rate-limit test last. It clears the test database's hit log, spends one
+request before restarting the server, then verifies the budget persists across
+the restart. It stops the server and removes the database and temporary keys. The Compose Postgres service
 remains available.
 
 Set `CONTRACT_COMPOSE_FILE` to use a Compose file other than
@@ -48,7 +49,7 @@ export AUTH_UI_BASE_URL=http://localhost:3005
 export CONTRACT_OTP_CODE=423817
 export CONTRACT_SUPPORT_TOKEN=replace-with-your-test-support-token
 cargo test --locked --lib --test contract
-# Restart the target or let its OTP resend window expire before this run.
+# Let the target's OTP resend window expire before this run.
 cargo test --locked --test otp_rate_limit -- --ignored
 ```
 

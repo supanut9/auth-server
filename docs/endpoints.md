@@ -41,4 +41,10 @@ JWT introspection and Userinfo require a JWT with the configured platform audien
 
 Consent acceptance adds the approved scopes to the remembered grant for that account and client. It also reactivates a revoked grant and records when consent was last used.
 
+OTP start, verify, and resend each allow 20 requests per client IP in a shared
+60-second sliding window. The next request returns `429` with
+`{"error":"rate_limited","error_description":"too many requests; try again in a moment"}`
+and a `Retry-After` header in whole seconds, with a minimum of one. If the
+shared limiter is unavailable, these endpoints return `503 {"error":"rate_limit_unavailable"}`.
+
 Refer to `../../docs/auth/phase-1-endpoints.md` in the parent workspace for the original phase-1 endpoint contract and [the cutover deviations](rust-port-deviations.md) for known compatibility differences.

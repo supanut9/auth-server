@@ -10,7 +10,6 @@
 pub mod client_ip;
 pub mod cors;
 pub mod logger;
-pub mod rate_limit;
 pub mod request_id;
 pub mod support_auth;
 
@@ -29,7 +28,6 @@ pub use self::{
     client_ip::client_ip,
     cors::Cors,
     logger::{AccessLog, LogErrors},
-    rate_limit::{RateLimiter, otp_rate_limit},
     request_id::RequestId,
     support_auth::{SupportAuth, support_auth_middleware},
 };

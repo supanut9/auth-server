@@ -7,6 +7,7 @@ mod error;
 mod jwt;
 mod mail;
 mod provider;
+mod rate_limit;
 mod repositories;
 mod support;
 mod system;
@@ -16,6 +17,7 @@ pub use error::{BoxError, JwtError, MailError, ProviderError, RandomError, RepoE
 pub use jwt::{JwksProvider, JwtClaims, JwtSigner, JwtVerifier, SignedJwt};
 pub use mail::{MailMessage, MailSender};
 pub use provider::{IdentityProvider, ProviderProfile};
+pub use rate_limit::OtpRateLimiter;
 pub use repositories::{
     AccessTokenRepository, AccountProviderRepository, AccountRepository,
     AuthorizationCodeRepository, ConsentGrantRepository, OAuthClientRepository,

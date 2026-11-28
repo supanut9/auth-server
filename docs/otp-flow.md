@@ -178,7 +178,7 @@ The test mailbox does not need to receive real email if `FIXED_OTP_CODE` is set.
 
 ## Rate Limiting
 
-The OTP endpoints allow **20 requests per minute per IP and route**.
+The OTP endpoints share a PostgreSQL limit of **20 requests per minute per IP and route**.
 Application-level limits also apply:
 
 | Limit | Value | Config env |

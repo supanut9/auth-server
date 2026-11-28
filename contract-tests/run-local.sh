@@ -162,8 +162,14 @@ start_server
 result=0
 cargo_tests --lib --test contract || result=$?
 
-# The OTP error test has used the resend route. Reset the in-memory window.
+# Reset previous checks' hits in this disposable database. Record one new hit
+# before restarting to verify that the next process shares the same budget.
+compose exec -T postgres psql -X --username postgres --dbname "$db_name" --set ON_ERROR_STOP=1 \
+    --command "TRUNCATE otp_rate_limit_hits"
+status="$(curl_local --output /dev/null --write-out '%{http_code}' --request POST \
+    --header 'Content-Type: application/json' --data '{}' "$AUTH_BASE_URL/v1/auth/otp/resend")"
+[[ "$status" == 400 ]] || { echo "Expected OTP resend to return 400, got $status" >&2; exit 1; }
 stop_server
 start_server
-cargo_tests --test otp_rate_limit -- --ignored || result=$?
+CONTRACT_OTP_RATE_LIMIT_PREUSED=1 cargo_tests --test otp_rate_limit -- --ignored || result=$?
 exit "$result"

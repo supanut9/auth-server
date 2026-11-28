@@ -4,6 +4,9 @@
 
 #![allow(dead_code)]
 
+#[path = "../common/otp_rate_limit.rs"]
+mod otp_rate_limit;
+
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap, VecDeque},
     sync::{Arc, Mutex},
@@ -36,7 +39,7 @@ use auth_http::{
     AppState, GinRouter, GlobalLayers,
     cookies::CookiePolicy,
     handlers::flow,
-    middleware::{AccessLog, RateLimiter, SupportAuth},
+    middleware::{AccessLog, SupportAuth},
 };
 use axum::{
     Router,
@@ -758,7 +761,7 @@ pub fn harness_with(options: Options) -> Harness {
         jwt_verifier: Arc::new(NoJwt),
         providers: Arc::new(providers),
         cookies: Arc::new(CookiePolicy::from_config(&config)),
-        otp_rate_limiter: Arc::new(RateLimiter::otp()),
+        otp_rate_limiter: Arc::new(otp_rate_limit::TestOtpRateLimiter::default()),
         support_auth: Arc::new(SupportAuth::from_config(&config)),
     };
     let layers = GlobalLayers::from_config(&config).with_access_log(AccessLog::new(|_| {}));

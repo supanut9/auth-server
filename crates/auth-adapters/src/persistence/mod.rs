@@ -12,6 +12,7 @@ pub mod consents;
 pub mod jtis;
 pub mod otp;
 pub mod providers;
+pub mod rate_limit;
 pub mod readiness;
 pub mod refresh_tokens;
 pub mod sessions;

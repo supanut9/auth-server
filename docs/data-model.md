@@ -26,6 +26,7 @@ Rules:
 - tables that reference OAuth clients use the public `oauth_clients.client_id` value for relational consistency with protocol inputs
 - redirect URIs are normalized into `oauth_client_redirect_uris` as a one-to-many relation from `oauth_clients`
 - `refresh_token_chains` stores the granted scope set so refresh can reissue equivalent access
+- `consent_grants` has one row per account and client. Accepting consent updates scopes and last use, clears revocation, and preserves the original grant timestamp.
 - `otp_challenges` tracks verification attempts and resend timing so OTP abuse controls can be enforced without relying on the UI
 
 Refer to `../../docs/auth/phase-1-storage-model.md` for the cross-service storage contract.

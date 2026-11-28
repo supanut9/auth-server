@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, account_id, client_id, granted_scopes, granted_at, last_used_at, revoked_at\n               FROM consent_grants\n               WHERE account_id = $1 AND client_id = $2\n               ORDER BY id\n               LIMIT 1",
+  "query": "INSERT INTO consent_grants\n                (id, account_id, client_id, granted_scopes, granted_at, last_used_at, revoked_at)\n               VALUES ($1, $2, $3, $4, $5, $6, $7)\n               ON CONFLICT (account_id, client_id) DO UPDATE SET\n                 granted_scopes = EXCLUDED.granted_scopes,\n                 last_used_at = $8,\n                 revoked_at = NULL\n               RETURNING id, account_id, client_id, granted_scopes, granted_at, last_used_at, revoked_at",
   "describe": {
     "columns": [
       {
@@ -84,7 +84,13 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Text"
+        "Uuid",
+        "Varchar",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz"
       ]
     },
     "nullable": [
@@ -97,5 +103,5 @@
       true
     ]
   },
-  "hash": "0015586baf251761262c9dea2bc43e59c14090be6dcb82cbb44bf512f709c4e7"
+  "hash": "3425ab7c04be24fb12683ea0aa25ce595339e3d347a30f7f46fb0b4ee03ec33a"
 }

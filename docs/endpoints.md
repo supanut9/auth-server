@@ -39,4 +39,6 @@ ID tokens include `azp` with the client ID and include `sid` when the authorizat
 
 JWT introspection and Userinfo require a JWT with the configured platform audience and a `scope` claim. ID tokens return `200 {"active":false}` from introspection and `401 invalid_token` from Userinfo. Client credentials access tokens can be active in introspection, including with an empty scope.
 
+Consent acceptance adds the approved scopes to the remembered grant for that account and client. It also reactivates a revoked grant and records when consent was last used.
+
 Refer to `../../docs/auth/phase-1-endpoints.md` in the parent workspace for the original phase-1 endpoint contract and [the cutover deviations](rust-port-deviations.md) for known compatibility differences.

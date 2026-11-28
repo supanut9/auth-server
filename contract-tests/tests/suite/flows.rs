@@ -64,9 +64,16 @@ async fn otp_pkce_lifecycle(api: &Api, client: &OAuthClient) {
 
     let keys = jwks(api).await;
     let access_token = string(&tokens, "access_token");
-    let access = verify_jwt(api, &keys, access_token, &api.audience);
+    let access = verify_jwt(&api.issuer, &keys, access_token, &api.audience);
     assert_user_access(&access, client, sub, sid, FULL_SCOPE);
-    let id = verify_jwt(api, &keys, string(&tokens, "id_token"), &client.id);
+    let discovery =
+        response_json(api.get("/.well-known/openid-configuration"), StatusCode::OK).await;
+    let id = verify_jwt(
+        string(&discovery, "issuer"),
+        &keys,
+        string(&tokens, "id_token"),
+        &client.id,
+    );
     assert_keys(
         &id,
         &[
@@ -76,14 +83,18 @@ async fn otp_pkce_lifecycle(api: &Api, client: &OAuthClient) {
             "exp",
             "iat",
             "auth_time",
+            "azp",
             "email",
             "email_verified",
             "name",
             "picture",
             "nonce",
+            "sid",
         ],
     );
     assert_eq!(id["sub"], sub);
+    assert_eq!(id["azp"], client.id);
+    assert_eq!(id["sid"], sid);
     assert_eq!(id["nonce"], flow.params["nonce"].as_str());
     assert_eq!(id["email"], email);
     assert_eq!(id["email_verified"], true);
@@ -148,7 +159,12 @@ async fn otp_pkce_lifecycle(api: &Api, client: &OAuthClient) {
     let replacement = string(&rotated, "refresh_token");
     assert_opaque(replacement);
     assert_ne!(replacement, refresh);
-    let rotated_access = verify_jwt(api, &keys, string(&rotated, "access_token"), &api.audience);
+    let rotated_access = verify_jwt(
+        &api.issuer,
+        &keys,
+        string(&rotated, "access_token"),
+        &api.audience,
+    );
     assert_user_access(&rotated_access, client, sub, sid, FULL_SCOPE);
     assert_ne!(rotated_access["jti"], access["jti"]);
     assert_eq!(
@@ -212,7 +228,12 @@ async fn otp_pkce_lifecycle(api: &Api, client: &OAuthClient) {
     )
     .await;
     let new_refresh = string(&tokens, "refresh_token");
-    let new_access = verify_jwt(api, &keys, string(&tokens, "access_token"), &api.audience);
+    let new_access = verify_jwt(
+        &api.issuer,
+        &keys,
+        string(&tokens, "access_token"),
+        &api.audience,
+    );
     assert_user_access(&new_access, client, sub, sid, FULL_SCOPE);
     for token in ["", "contract-unknown-token", new_refresh, new_refresh] {
         let response = send(api.form(REVOKE, client, ClientAuth::Post, &[("token", token)])).await;

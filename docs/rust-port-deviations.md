@@ -20,6 +20,7 @@ Legend:
 | Protocol response headers (AUTH-042) | no cache directives or bearer challenge | token and introspection send `Cache-Control: no-store` and `Pragma: no-cache` on success and error. Userinfo 401s send a bearer challenge | Client-visible |
 | Authorization-code PKCE (AUTH-043) | consumed the code before checking the verifier | failed PKCE leaves the code usable through its existing expiry | Client-visible |
 | Protocol client status (AUTH-044) | authenticated inactive clients at token, revoke, and introspect | rejects inactive clients with `401 invalid_client`. Empty status counts as active | Client-visible |
+| ID token claims (AUTH-045) | omitted `azp` and `sid` and used `JWT_ISSUER` verbatim | includes `azp` and the SSO `sid` when present. ID token `iss` matches discovery. Access token `iss` uses the configured issuer verbatim | Client-visible |
 
 ## Accepted deviations (plan §3)
 
@@ -73,7 +74,6 @@ Legend:
 
 These behaviors were preserved at cutover. The port plan tracks them individually (§7):
 - ID tokens pass introspection and userinfo.
-- Token `iss` is untrimmed while discovery's `issuer` is trimmed.
 - OTP email is case-sensitive, and the code compare is not constant-time.
 - Resend can revive an expired OTP challenge.
 - A missing SSO session on refresh returns the repository error; the HTTP layer maps every refresh error to `invalid_grant`.

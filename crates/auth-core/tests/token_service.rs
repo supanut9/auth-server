@@ -315,9 +315,9 @@ async fn issue_user_tokens_claims_and_rows() {
     );
     assert_eq!(
         h.signer.claims_json(1),
-        r#"{"aud":"trading-web","auth_time":1775044500,"email":"user@example.com","email_verified":true,"exp":1775045400,"iat":1775044800,"iss":"http://localhost:8050","name":"Trader","picture":"https://example.com/avatar.png","sub":"account-123"}"#
+        r#"{"aud":"trading-web","auth_time":1775044500,"azp":"trading-web","email":"user@example.com","email_verified":true,"exp":1775045400,"iat":1775044800,"iss":"http://localhost:8050","name":"Trader","picture":"https://example.com/avatar.png","sid":"sso-123","sub":"account-123"}"#
     );
-    for absent in ["nonce", "azp", "at_hash", "sid"] {
+    for absent in ["nonce", "at_hash"] {
         assert!(!recorded[1].contains_key(absent), "id token has {absent}");
     }
 
@@ -408,7 +408,7 @@ async fn id_token_echoes_nonce() {
         // Sorted like Go's map marshalling: "nonce" lands between "name" and "picture".
         assert_eq!(
             h.signer.claims_json(1),
-            r#"{"aud":"trading-web","auth_time":1775044500,"email":"user@example.com","email_verified":true,"exp":1775045400,"iat":1775044800,"iss":"http://localhost:8050","name":"Trader","nonce":"n-0S6_WzA2Mj","picture":"https://example.com/avatar.png","sub":"account-123"}"#,
+            r#"{"aud":"trading-web","auth_time":1775044500,"azp":"trading-web","email":"user@example.com","email_verified":true,"exp":1775045400,"iat":1775044800,"iss":"http://localhost:8050","name":"Trader","nonce":"n-0S6_WzA2Mj","picture":"https://example.com/avatar.png","sid":"sso-123","sub":"account-123"}"#,
             "{name}"
         );
     }
@@ -451,14 +451,14 @@ async fn expires_in_truncates_like_go() {
 }
 
 #[tokio::test]
-async fn issuer_is_used_verbatim() {
+async fn id_token_issuer_trims_trailing_slashes() {
     let mut cfg = config(Duration::ZERO);
-    cfg.issuer = "https://auth.example.com/".into();
+    cfg.issuer = "https://auth.example.com///".into();
     let h = Harness::new(cfg, TestIds::default());
     h.service.issue_user_tokens(user_request()).await.unwrap();
-    for claims in h.signer.recorded() {
-        assert_eq!(claims["iss"], "https://auth.example.com/");
-    }
+    let claims = h.signer.recorded();
+    assert_eq!(claims[0]["iss"], "https://auth.example.com///");
+    assert_eq!(claims[1]["iss"], "https://auth.example.com");
 }
 
 #[tokio::test]

@@ -120,9 +120,18 @@ async fn user_tokens() {
             s(&case["access_token"], "claims_json"),
             "{name}: access token claims"
         );
+        // AUTH-045 changes ID token claims while the source vectors stay frozen.
+        let mut expected_id: Value =
+            serde_json::from_str(s(&case["id_token"], "claims_json")).expect("ID token claims");
+        let issuer = s(&case["config"], "issuer").trim_end_matches('/');
+        expected_id["iss"] = Value::from(issuer);
+        expected_id["azp"] = req["client_id"].clone();
+        if !s(req, "sso_session_id").is_empty() {
+            expected_id["sid"] = req["sso_session_id"].clone();
+        }
         assert_eq!(
             h.signer.claims_json(1),
-            s(&case["id_token"], "claims_json"),
+            auth_core::crypto::gojson::to_string(&expected_id),
             "{name}: id token claims"
         );
         check_token_fields(name, &issued, &case["token_fields"]);

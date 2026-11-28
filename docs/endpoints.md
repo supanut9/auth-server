@@ -35,4 +35,6 @@ Authorization-code exchange checks PKCE before consuming the code. A wrong verif
 
 Token, revocation, and introspection require an active client. Empty client status counts as active. Inactive clients receive `401 {"error":"invalid_client"}`. Revocation returns an empty `200` for authenticated active clients, including requests for an unknown token, and `401` when client authentication fails.
 
+ID tokens include `azp` with the client ID and include `sid` when the authorization code carries an SSO session ID. The ID token's `iss` matches discovery's `issuer` by trimming trailing slashes from `JWT_ISSUER`. Configurations without trailing slashes already use the same issuer. Access tokens continue to use the configured issuer verbatim.
+
 Refer to `../../docs/auth/phase-1-endpoints.md` in the parent workspace for the original phase-1 endpoint contract and [the cutover deviations](rust-port-deviations.md) for known compatibility differences.

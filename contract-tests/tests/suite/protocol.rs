@@ -100,7 +100,7 @@ pub async fn jwks(api: &Api) -> Vec<Value> {
         .clone()
 }
 
-pub fn verify_jwt(api: &Api, keys: &[Value], raw: &str, audience: &str) -> Value {
+pub fn verify_jwt(issuer: &str, keys: &[Value], raw: &str, audience: &str) -> Value {
     let header = decode_header(raw).expect("JWT header");
     assert_eq!(header.alg, Algorithm::RS256);
     assert_eq!(header.typ.as_deref(), Some("JWT"));
@@ -112,13 +112,13 @@ pub fn verify_jwt(api: &Api, keys: &[Value], raw: &str, audience: &str) -> Value
     let decoding_key = DecodingKey::from_rsa_components(string(key, "n"), string(key, "e"))
         .expect("RSA public key");
     let mut validation = Validation::new(Algorithm::RS256);
-    validation.set_issuer(&[&api.issuer]);
+    validation.set_issuer(&[issuer]);
     validation.set_audience(&[audience]);
     validation.set_required_spec_claims(&["exp", "iss", "aud", "sub"]);
     let claims = decode::<Value>(raw, &decoding_key, &validation)
         .expect("valid JWT signature and registered claims")
         .claims;
-    assert_eq!(claims["iss"], api.issuer);
+    assert_eq!(claims["iss"], issuer);
     assert_eq!(claims["aud"], audience);
     assert_eq!(integer(&claims, "exp") - integer(&claims, "iat"), 600);
     claims
@@ -434,7 +434,7 @@ async fn client_credentials_scope_and_auth_methods() {
         assert_eq!(result["token_type"], "Bearer");
         assert_eq!(result["expires_in"], 600);
         let token = string(&result, "access_token");
-        let claims = verify_jwt(&api, &keys, token, &api.audience);
+        let claims = verify_jwt(&api.issuer, &keys, token, &api.audience);
         assert_keys(
             &claims,
             &[

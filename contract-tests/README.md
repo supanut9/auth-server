@@ -72,7 +72,7 @@ to run the fixed-behavior checks.
 | `CONTRACT_INACTIVE_CLIENT_ID`, `CONTRACT_INACTIVE_CLIENT_SECRET` | `knowledge-web`, `knowledge-web-secret`. Seed the confidential client with inactive status and the matching secret. |
 | `CONTRACT_MALFORMED_CLIENT_ID`, `CONTRACT_MALFORMED_REDIRECT_URI` | `language-web`, `/contract-callback`. Register the relative URI on this active client. |
 | `CONTRACT_BROWSER_DISPLAY_NAME` | `Development Browser Client`. Match the public client's seeded display name. |
-| `CONTRACT_APP_NAME`, `CONTRACT_AUDIENCE`, `CONTRACT_ISSUER` | `auth-server`, `platform-api`, and the base URL without a trailing slash. |
+| `CONTRACT_APP_NAME`, `CONTRACT_AUDIENCE`, `CONTRACT_ISSUER` | `auth-server`, `platform-api`, and the base URL. Set `CONTRACT_ISSUER` to the exact `JWT_ISSUER` value, including any trailing slashes. |
 | `CONTRACT_COOKIE_SECURE`, `CONTRACT_COOKIE_SAME_SITE`, `CONTRACT_COOKIE_DOMAIN` | `false`, `Lax`, and an empty domain. Match the server's cookie configuration. |
 | `CONTRACT_LOGOUT_REDIRECT_URI` | An auth UI URL by default. Set this to a registered logout origin to exercise the explicit allowlist. |
 | `CONTRACT_REFRESH_REUSE_GRACE_SECS` | `0`. Match the server's reuse grace in seconds. |

@@ -25,7 +25,7 @@ export CONTRACT_MALFORMED_CLIENT_ID=language-web
 export CONTRACT_MALFORMED_REDIRECT_URI=/contract-callback
 export CONTRACT_SUPPORT_TOKEN="$(openssl rand -hex 32)"
 export CONTRACT_LOGOUT_REDIRECT_URI='http://localhost:3406/signed-out?from=contract#return'
-export CONTRACT_ISSUER="$AUTH_BASE_URL"
+export CONTRACT_ISSUER="$AUTH_BASE_URL///"
 export CONTRACT_AUDIENCE=platform-api
 export CONTRACT_APP_NAME=auth-server
 export CONTRACT_COOKIE_SECURE=false

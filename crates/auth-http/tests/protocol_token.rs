@@ -133,6 +133,8 @@ async fn authorization_code_end_to_end_with_real_keys() {
         .verify(tokens["id_token"].as_str().unwrap())
         .unwrap();
     assert_eq!(id["aud"], BROWSER);
+    assert_eq!(id["azp"], BROWSER);
+    assert_eq!(id["sid"], session.as_str());
     assert_eq!(id["sub"], account.as_str());
     assert_eq!(id["email"], "ada@example.com");
     assert_eq!(id["email_verified"], true);

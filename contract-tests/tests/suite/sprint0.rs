@@ -29,11 +29,15 @@ async fn sprint0_provider_login_account() {
     )
     .await;
     let keys = jwks(&api).await;
-    for (key, audience) in [
-        ("access_token", &api.audience),
-        ("id_token", &api.browser.id),
+    for (key, issuer, audience) in [
+        ("access_token", api.issuer.as_str(), &api.audience),
+        (
+            "id_token",
+            api.issuer.trim_end_matches('/'),
+            &api.browser.id,
+        ),
     ] {
-        let claims = verify_jwt(&api, &keys, string(&tokens, key), audience);
+        let claims = verify_jwt(issuer, &keys, string(&tokens, key), audience);
         assert_eq!(claims["sub"], second);
     }
 }

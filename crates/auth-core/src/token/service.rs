@@ -26,7 +26,7 @@ pub const TOKEN_TYPE_BEARER: &str = "Bearer";
 /// Go `token.Config`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TokenConfig {
-    /// `iss` claim, used verbatim (not trimmed; a trailing `/` is kept).
+    /// Configured issuer, used verbatim in access tokens.
     pub issuer: String,
     /// `aud` of access tokens (the platform audience).
     pub audience: String,
@@ -38,6 +38,14 @@ pub struct TokenConfig {
     /// sibling token set instead of revoking the chain. Zero or negative
     /// disables the grace window.
     pub refresh_reuse_grace: Duration,
+}
+
+impl TokenConfig {
+    /// Issuer shared by discovery metadata and ID tokens.
+    #[must_use]
+    pub fn oidc_issuer(&self) -> &str {
+        self.issuer.trim_end_matches('/')
+    }
 }
 
 /// Go `token.UserTokenRequest` (authorization_code grant).
@@ -273,9 +281,13 @@ impl TokenService {
 
         let id_exp = now.saturating_add(self.config.id_token_ttl);
         let mut id_claims = JwtClaims::new();
-        id_claims.insert("iss".into(), Value::from(self.config.issuer.as_str()));
+        id_claims.insert("iss".into(), Value::from(self.config.oidc_issuer()));
         id_claims.insert("sub".into(), Value::from(req.account_id.as_str()));
         id_claims.insert("aud".into(), Value::from(req.client_id.as_str()));
+        id_claims.insert("azp".into(), Value::from(req.client_id.as_str()));
+        if !req.sso_session_id.is_empty() {
+            id_claims.insert("sid".into(), Value::from(req.sso_session_id.as_str()));
+        }
         id_claims.insert("exp".into(), Value::from(id_exp.unix_timestamp()));
         id_claims.insert("iat".into(), Value::from(now.unix_timestamp()));
         id_claims.insert(

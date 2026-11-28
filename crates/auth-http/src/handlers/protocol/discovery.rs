@@ -11,10 +11,9 @@ use serde_json::json;
 use super::gohttp::error_json;
 use crate::{json::json_response, state::AppState};
 
-/// Go `openIDConfiguration`: `issuer` is `JWT_ISSUER` with every trailing
-/// `/` trimmed (the JWT `iss` claim is not trimmed).
+/// Publish the same issuer that appears in ID tokens.
 pub async fn openid_configuration(State(state): State<AppState>) -> Response {
-    let issuer = state.config.jwt_issuer.trim_end_matches('/');
+    let issuer = state.token.config().oidc_issuer();
     json_response(
         StatusCode::OK,
         &json!({

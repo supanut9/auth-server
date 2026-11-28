@@ -24,6 +24,7 @@ export CONTRACT_INACTIVE_CLIENT_SECRET=contract-only-inactive-secret
 export CONTRACT_MALFORMED_CLIENT_ID=language-web
 export CONTRACT_MALFORMED_REDIRECT_URI=/contract-callback
 export CONTRACT_SUPPORT_TOKEN="$(openssl rand -hex 32)"
+export CONTRACT_CRON_SECRET="$(openssl rand -hex 32)"
 export CONTRACT_LOGOUT_REDIRECT_URI='http://localhost:3406/signed-out?from=contract#return'
 export CONTRACT_ISSUER="$AUTH_BASE_URL///"
 export CONTRACT_AUDIENCE=platform-api
@@ -112,6 +113,7 @@ test_env() (
         JWT_PRIVATE_KEY_PATH="$scratch/private.pem" JWT_PUBLIC_KEY_PATH="$scratch/public.pem" \
         FIXED_OTP_CODE="$CONTRACT_OTP_CODE" OTP_TEST_HINT_ALLOWLIST=contract-hint@example.test \
         FLOW_ENVELOPE_SECRET="$flow_secret" SUPPORT_API_TOKEN="$CONTRACT_SUPPORT_TOKEN" \
+        CRON_SECRET="$CONTRACT_CRON_SECRET" \
         REFRESH_TOKEN_REUSE_GRACE="${CONTRACT_REFRESH_REUSE_GRACE_SECS}s" \
         SSO_COOKIE_SECURE="$CONTRACT_COOKIE_SECURE" SSO_COOKIE_SAME_SITE="$CONTRACT_COOKIE_SAME_SITE" \
         DEV_BROWSER_REDIRECT_URI="$CONTRACT_BROWSER_REDIRECT_URI" \

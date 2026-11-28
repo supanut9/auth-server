@@ -21,6 +21,7 @@ The local server and the Vercel function serve the same HTTP routes.
 | Auth flow | `POST` | `/v1/auth/otp/start`, `/v1/auth/otp/verify`, `/v1/auth/otp/resend` |
 | Auth flow | `POST` | `/v1/auth/consent/accept`, `/v1/auth/consent/reject` |
 | Auth flow | `GET` | `/v1/auth/logout`, `/v1/auth/logout/global` |
+| Internal | `GET` | `/v1/internal/cleanup` |
 | Support | `GET` | `/v1/support/accounts/:accountID` |
 | Support | `POST` | `/v1/support/accounts/:accountID/sign-out` |
 | Non-production | `GET` | `/dev/callback`, `/v1/auth/otp/test-hint` |
@@ -51,5 +52,14 @@ OTP start trims and lowercases the email used in the challenge, masked
 response, and auth-ui redirect. Verify accepts case variations of the
 challenge email. Resend after expiry returns
 `400 {"error":"invalid_request","error_description":"otp challenge expired"}`.
+
+`GET /v1/internal/cleanup` requires `Authorization: Bearer <CRON_SECRET>`.
+It returns `503 {"error":"cleanup_unavailable"}` when the secret is unset
+and `401 {"error":"invalid_token"}` for missing or invalid credentials.
+A successful run returns `200` with deleted row counts.
+
+```json
+{"deleted":{"signed_state_jtis":0,"authorization_codes":0,"otp_challenges":0,"otp_rate_limit_hits":0}}
+```
 
 Refer to `../../docs/auth/phase-1-endpoints.md` in the parent workspace for the original phase-1 endpoint contract and [the cutover deviations](rust-port-deviations.md) for known compatibility differences.

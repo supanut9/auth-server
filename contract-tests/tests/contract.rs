@@ -1,3 +1,5 @@
+#[path = "suite/cleanup.rs"]
+mod cleanup;
 #[path = "suite/flows.rs"]
 mod flows;
 #[path = "suite/protocol.rs"]

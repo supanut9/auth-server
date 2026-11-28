@@ -14,10 +14,14 @@ The Rust server uses environment variables. The local server and dev seeder also
 | `JWT_PRIVATE_KEY_PEM`, `JWT_PUBLIC_KEY_PEM` | Inline RSA keys, recommended on Vercel. Inline values take precedence over file paths. |
 | `SSO_COOKIE_SECURE`, `SSO_COOKIE_SAME_SITE`, `SSO_COOKIE_DOMAIN` | `SameSite` defaults to `lax`. Use `none` only with `SSO_COOKIE_SECURE=true`. Secure cookies are the default for HTTPS outside development. |
 | `POST_LOGOUT_REDIRECT_ALLOWLIST` | Additional origins permitted for post-logout redirects. The auth UI origin is already permitted. |
+| `CRON_SECRET` | Optional bearer secret for daily cleanup. Set a random value in the Vercel Production environment without leading or trailing spaces. Vercel sends it as `Authorization: Bearer <CRON_SECRET>`. The route returns 503 when unset. |
 | `SUPPORT_API_TOKEN` | Bearer token for the support endpoints. Development defaults to `dev-support-token`. Set it in other environments. |
 | `FLOW_ENVELOPE_SECRET` | Set a random value of at least 32 bytes after trimming whitespace in production. Other environments use a deterministic fallback derived from `PUBLIC_BASE_URL` when unset. |
 
 `REDIS_URL` and `AUTHORIZATION_REQUEST_TTL` are accepted for compatibility and unused by the runtime. Pending authorization uses signed state with `FLOW_ENVELOPE_TTL`. If supplied, `AUTHORIZATION_REQUEST_TTL` is still parsed as a duration.
+
+Vercel runs the cleanup cron during the 19:00 UTC hour each day, which is
+02:00–02:59 ICT on Hobby. [Managing cron jobs](https://vercel.com/docs/schedules/cron-jobs/manage-cron-jobs) · [Hobby scheduling limits](https://vercel.com/docs/schedules/cron-jobs/usage-and-pricing)
 
 ## Lifetimes
 

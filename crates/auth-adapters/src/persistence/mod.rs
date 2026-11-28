@@ -6,6 +6,7 @@ mod common;
 pub mod access_audit;
 pub mod accounts;
 pub mod chains;
+pub mod cleanup;
 pub mod clients;
 pub mod codes;
 pub mod consents;

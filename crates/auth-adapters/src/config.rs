@@ -48,6 +48,8 @@ pub struct Config {
     /// Emails allowed to use `GET /v1/auth/otp/test-hint`. Refused in production.
     pub otp_test_hint_allowlist: Vec<String>,
     pub support_api_token: SecretString,
+    /// Bearer secret for the scheduled cleanup endpoint.
+    pub cron_secret: Option<SecretString>,
     pub platform_audience: String,
     pub access_token_ttl: Duration,
     pub id_token_ttl: Duration,
@@ -197,6 +199,7 @@ impl Config {
             support_api_token: env
                 .or("SUPPORT_API_TOKEN", default_support_api_token(&app_env))
                 .into(),
+            cron_secret: env.get("CRON_SECRET").map(SecretString::from),
             platform_audience: env.or("PLATFORM_AUDIENCE", "platform-api"),
             app_env,
             public_base_url,

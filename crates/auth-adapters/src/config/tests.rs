@@ -74,6 +74,7 @@ fn base_test_config() -> Config {
         fixed_otp_code: String::new(),
         otp_test_hint_allowlist: Vec::new(),
         support_api_token: "dev-support-token".into(),
+        cron_secret: None,
         platform_audience: String::new(),
         access_token_ttl: Duration::minutes(10),
         id_token_ttl: Duration::minutes(10),
@@ -289,6 +290,7 @@ fn defaults_for_every_env_var() {
         assert_eq!(got, want, "{key}");
     }
 
+    assert!(cfg.cron_secret.is_none(), "CRON_SECRET");
     assert_eq!(cfg.otp_max_attempts, 6, "OTP_MAX_ATTEMPTS");
     assert_eq!(cfg.otp_max_resends, 3, "OTP_MAX_RESENDS");
     assert!(
@@ -323,6 +325,9 @@ fn defaults_for_every_env_var() {
 fn every_env_var_is_read() {
     type Check = fn(&Config) -> bool;
     let cases: &[(&'static str, &str, Check)] = &[
+        ("CRON_SECRET", "test-cron-token", |c| {
+            c.cron_secret.as_ref().map(ExposeSecret::expose_secret) == Some("test-cron-token")
+        }),
         ("APP_NAME", "my-auth", |c| c.app_name == "my-auth"),
         ("APP_ENV", "Development", |c| c.app_env == "Development"),
         ("HTTP_ADDR", ":9000", |c| c.http_addr == ":9000"),
@@ -776,9 +781,14 @@ fn production_only_rules() {
 
 #[test]
 fn debug_redacts_secrets() {
-    let cfg = load_with(&[("SUPPORT_API_TOKEN", "super-secret-token")]).expect("loads");
+    let cfg = load_with(&[
+        ("SUPPORT_API_TOKEN", "super-secret-token"),
+        ("CRON_SECRET", "secret-cron-token"),
+    ])
+    .expect("loads");
     let debug = format!("{cfg:?}");
     assert!(!debug.contains("super-secret-token"));
+    assert!(!debug.contains("secret-cron-token"));
     assert!(!debug.contains("postgres://localhost/auth_test"));
     assert!(!debug.contains("dev-flow-envelope-secret"));
 }

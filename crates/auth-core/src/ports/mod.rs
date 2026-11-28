@@ -24,7 +24,9 @@ pub use repositories::{
     OtpChallengeRepository, RefreshTokenChainRepository, RefreshTokenRepository,
     SignedStateJtiRepository, SsoSessionRepository,
 };
-pub use support::{ReadinessProbe, SupportAccountSummary, SupportRepository};
+pub use support::{
+    CleanupCounts, CleanupRepository, ReadinessProbe, SupportAccountSummary, SupportRepository,
+};
 pub use system::{Clock, IdGenerator, OtpCodeGenerator, RandomSource};
 
 #[cfg(test)]

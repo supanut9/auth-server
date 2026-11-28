@@ -261,3 +261,38 @@ fn hex(text: &str) -> Vec<u8> {
         .map(|i| u8::from_str_radix(&text[i..i + 2], 16).unwrap())
         .collect()
 }
+
+#[tokio::test]
+async fn cleanup_is_unavailable_without_a_secret() {
+    let router = Fixture::new().router();
+    get(&router, "/v1/internal/cleanup", &[]).await.assert_json(
+        StatusCode::SERVICE_UNAVAILABLE,
+        r#"{"error":"cleanup_unavailable"}"#,
+    );
+}
+
+#[tokio::test]
+async fn cleanup_requires_the_bearer_scheme_and_token() {
+    let router = Fixture::with_config(config_with(&[("CRON_SECRET", "cron-test-token")])).router();
+    for header in ["cron-test-token", "Bearercron-test-token", "Bearer wrong"] {
+        let reply = get(
+            &router,
+            "/v1/internal/cleanup",
+            &[("authorization", header)],
+        )
+        .await;
+        reply.assert_json(StatusCode::UNAUTHORIZED, r#"{"error":"invalid_token"}"#);
+        assert_eq!(reply.header("www-authenticate"), Some("Bearer"));
+        assert_eq!(reply.header("cache-control"), Some("no-store"));
+    }
+    get(
+        &router,
+        "/v1/internal/cleanup",
+        &[("authorization", "Bearer cron-test-token")],
+    )
+    .await
+    .assert_json(
+        StatusCode::OK,
+        r#"{"deleted":{"authorization_codes":0,"otp_challenges":0,"otp_rate_limit_hits":0,"signed_state_jtis":0}}"#,
+    );
+}

@@ -9,6 +9,7 @@
 //! `serde_json::json!` (sorted keys) and Go structs with ordered
 //! `Serialize` structs.
 
+mod cleanup;
 mod discovery;
 mod gohttp;
 mod health;
@@ -54,7 +55,8 @@ pub fn register_for(router: GinRouter<AppState>, config: &Config) -> GinRouter<A
 fn register_routes(router: GinRouter<AppState>, non_production: bool) -> GinRouter<AppState> {
     let mut router = router
         .get("/healthz", health::healthz)
-        .get("/readyz", health::readyz);
+        .get("/readyz", health::readyz)
+        .get("/v1/internal/cleanup", cleanup::cleanup);
     if non_production {
         router = router.get("/dev/callback", health::dev_callback);
     }

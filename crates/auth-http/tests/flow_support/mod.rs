@@ -4,6 +4,8 @@
 
 #![allow(dead_code)]
 
+#[path = "../common/cleanup.rs"]
+mod cleanup;
 #[path = "../common/otp_rate_limit.rs"]
 mod otp_rate_limit;
 
@@ -762,6 +764,7 @@ pub fn harness_with(options: Options) -> Harness {
         providers: Arc::new(providers),
         cookies: Arc::new(CookiePolicy::from_config(&config)),
         otp_rate_limiter: Arc::new(otp_rate_limit::TestOtpRateLimiter::default()),
+        cleanup: Arc::new(cleanup::TestCleanup),
         support_auth: Arc::new(SupportAuth::from_config(&config)),
     };
     let layers = GlobalLayers::from_config(&config).with_access_log(AccessLog::new(|_| {}));

@@ -48,3 +48,19 @@ pub trait SupportRepository: Send + Sync {
 pub trait ReadinessProbe: Send + Sync {
     async fn ping(&self) -> RepoResult<()>;
 }
+
+/// Deleted row counts from one cleanup run.
+#[derive(Debug, Default, PartialEq, Eq, serde::Serialize)]
+pub struct CleanupCounts {
+    pub signed_state_jtis: i64,
+    pub authorization_codes: i64,
+    pub otp_challenges: i64,
+    pub otp_rate_limit_hits: i64,
+}
+
+#[async_trait]
+pub trait CleanupRepository: Send + Sync {
+    /// Deletes expired state JTIs, codes and challenges expired for more
+    /// than 24 hours, and rate-limit hits older than one hour, atomically.
+    async fn delete_expired(&self, now: OffsetDateTime) -> RepoResult<CleanupCounts>;
+}

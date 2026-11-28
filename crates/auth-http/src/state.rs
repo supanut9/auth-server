@@ -9,7 +9,7 @@ use auth_core::{
     identity::IdentityService,
     oauth::{AuthorizeRequestValidator, envelope::EnvelopeSigner},
     ports::{
-        AccountRepository, Clock, IdentityProvider, JwksProvider, JwtVerifier,
+        AccountRepository, CleanupRepository, Clock, IdentityProvider, JwksProvider, JwtVerifier,
         OAuthClientRepository, OtpRateLimiter, RandomSource, ReadinessProbe,
         RefreshTokenChainRepository, RefreshTokenRepository, SsoSessionRepository,
         SupportRepository,
@@ -34,6 +34,7 @@ pub struct AppState {
     pub refresh_tokens: Arc<dyn RefreshTokenRepository>,
     pub support: Arc<dyn SupportRepository>,
     pub readiness: Arc<dyn ReadinessProbe>,
+    pub cleanup: Arc<dyn CleanupRepository>,
 
     pub validator: Arc<AuthorizeRequestValidator>,
     pub flow: Arc<FlowService>,

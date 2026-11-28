@@ -5,6 +5,8 @@
 
 #![allow(dead_code)]
 
+#[path = "../common/cleanup.rs"]
+mod cleanup;
 #[path = "../common/otp_rate_limit.rs"]
 mod otp_rate_limit;
 
@@ -782,6 +784,7 @@ impl Fixture {
             providers: Arc::new(BTreeMap::new()),
             cookies: Arc::new(CookiePolicy::from_config(&config)),
             otp_rate_limiter: Arc::new(otp_rate_limit::TestOtpRateLimiter::default()),
+            cleanup: Arc::new(cleanup::TestCleanup),
             support_auth: Arc::new(SupportAuth::from_config(&config)),
         };
 

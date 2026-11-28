@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH jtis AS (\n                 DELETE FROM signed_state_jtis WHERE expires_at < $1 RETURNING 1\n               ), codes AS (\n                 DELETE FROM authorization_codes WHERE expires_at < $2 RETURNING 1\n               ), challenges AS (\n                 DELETE FROM otp_challenges WHERE expires_at < $2 RETURNING 1\n               ), hits AS (\n                 DELETE FROM otp_rate_limit_hits WHERE hit_at < $3 RETURNING 1\n               )\n               SELECT (SELECT count(*) FROM jtis) AS \"signed_state_jtis!\",\n                      (SELECT count(*) FROM codes) AS \"authorization_codes!\",\n                      (SELECT count(*) FROM challenges) AS \"otp_challenges!\",\n                      (SELECT count(*) FROM hits) AS \"otp_rate_limit_hits!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "signed_state_jtis!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "authorization_codes!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "otp_challenges!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "otp_rate_limit_hits!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "3506573f7fa2dbf0247ea1f79c2c016969642d40e7b3f9da8be3ff4cf1e953c6"
+}

@@ -24,6 +24,7 @@ Legend:
 | Access token checks (AUTH-046) | JWT introspection and Userinfo accepted ID tokens | verifies the platform audience and presence of `scope` for both endpoints. ID tokens introspect as inactive and get a 401 from Userinfo | Client-visible |
 | Consent persistence (AUTH-047) | concurrent inserts could create duplicate grants | one grant per account and client, written with an atomic upsert | Internal |
 | OTP correctness (AUTH-049) | kept the casing at OTP start and account lookup, compared hashes directly, allowed expired resend, and truncated email minutes | lowercases OTP start emails, looks up emails case-insensitively, compares OTP hashes in constant time, rejects expired resend, and rounds email minutes up | Client-visible |
+| Retention cleanup (AUTH-050) | no daily cleanup for short-lived auth records | daily bearer-protected cleanup of expired state JTIs, aged codes and OTP challenges, and old OTP rate-limit hits | Internal |
 
 ## Accepted deviations (plan §3)
 

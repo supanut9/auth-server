@@ -66,6 +66,7 @@ to run the fixed-behavior checks.
 | `AUTH_BASE_URL` | `http://localhost:8060` |
 | `AUTH_UI_BASE_URL` | `http://localhost:3005`. Must match the server's auth UI URL. |
 | `CONTRACT_OTP_CODE` | Required. Match the server's `FIXED_OTP_CODE`. |
+| `CONTRACT_CRON_SECRET` | Match the server's `CRON_SECRET`. Leave it unset to check the disabled response. |
 | `CONTRACT_SUPPORT_TOKEN` | Required. Match the server's `SUPPORT_API_TOKEN`. |
 | `CONTRACT_BROWSER_CLIENT_ID`, `CONTRACT_BROWSER_REDIRECT_URI` | `dev-browser`, `http://localhost:8050/dev/callback` |
 | `CONTRACT_WEB_CLIENT_ID`, `CONTRACT_WEB_CLIENT_SECRET`, `CONTRACT_WEB_REDIRECT_URI` | `community-web`, `community-web-secret`, `http://localhost:3006/api/auth/oauth2/callback/auth-server` |
@@ -96,6 +97,7 @@ to run the fixed-behavior checks.
   expiry, and logout redirect allowlisting.
 - Plain-text 404s, OPTIONS, and trailing-slash redirects.
 - OTP rate limiting on the 21st request to one route from one IP.
+- Cron cleanup bearer authentication and deleted row counts.
 - Sprint 0 checks for switching accounts through OTP, local logout chain
   isolation, and global logout refresh revocation. The account-switch case
   exercises the OTP equivalent because real provider callbacks require a

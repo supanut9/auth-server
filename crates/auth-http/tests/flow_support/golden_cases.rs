@@ -200,7 +200,7 @@ async fn authorize_without_session_matches_go() {
 }
 
 #[tokio::test]
-async fn otp_start_response_matches_go() {
+async fn otp_start_response_matches_fixture_with_normalized_email() {
     let file = golden("redirects.json");
     let section = &file["otp_start_response"];
     let h = harness();
@@ -231,7 +231,11 @@ async fn otp_start_response_matches_go() {
             Some(s(want, "content_type")),
             "{name}"
         );
-        assert_eq!(reply.body, s(want, "body"), "{name}");
+        // AUTH-049 changes the email spelling in the masked value and redirect.
+        let expected = s(want, "body")
+            .replace("A*********h@Example.com", "a*********h@example.com")
+            .replace("Alice.Smith%40Example.com", "alice.smith%40example.com");
+        assert_eq!(reply.body, expected, "{name}");
         if reply.status != StatusCode::OK {
             // The queued ID was not consumed.
             let _ = h.db.ids_take();
@@ -297,7 +301,9 @@ async fn otp_start_masks_email_byte_exact() {
         body["email"] = Value::from(input);
         let reply = h.post_json("/v1/auth/otp/start", &body, None).await;
         assert_eq!(reply.status, StatusCode::OK, "{input}: {}", reply.body);
-        let prefix = format!("{{\"email\":{},\"expires_at\":", s(case, "json_rendered"));
+        // AUTH-049 lowercases the email before applying the frozen masking rules.
+        let masked = s(case, "json_rendered").to_lowercase();
+        let prefix = format!("{{\"email\":{masked},\"expires_at\":");
         assert!(
             reply.body.starts_with(&prefix),
             "{input}: {} does not start with {prefix}",

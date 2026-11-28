@@ -50,7 +50,7 @@ async fn start_returns_masked_email_and_otp_redirect() {
     let reply = h
         .post_json(
             "/v1/auth/otp/start",
-            &body_with(&params, &[("email", " alice@example.com ")]),
+            &body_with(&params, &[("email", " Alice@EXAMPLE.com ")]),
             None,
         )
         .await;
@@ -261,6 +261,13 @@ async fn resend_throttles_then_returns_new_expiry() {
         StatusCode::BAD_REQUEST,
         r#"{"error":"invalid_request","error_description":"otp_challenge_id is required"}"#,
     );
+    h.clock.advance(Duration::minutes(11));
+    h.post_json(path, &body, None).await.assert_json(
+        StatusCode::BAD_REQUEST,
+        r#"{"error":"invalid_request","error_description":"otp challenge expired"}"#,
+    );
+    assert_eq!(h.db.otp(&id).resend_count, 1);
+
     h.post_json(path, &json!({"otp_challenge_id": "missing"}), None)
         .await
         .assert_json(

@@ -125,7 +125,7 @@ impl OtpChallengeRepository for PgOtpChallengeRepository {
             r#"SELECT id, authorization_request_id, email, purpose, code_hash, attempt_count,
                       resend_count, expires_at, verified_at, last_sent_at, created_at
                FROM otp_challenges
-               WHERE authorization_request_id = $1 AND email = $2 AND verified_at IS NULL
+               WHERE authorization_request_id = $1 AND lower(email) = lower($2) AND verified_at IS NULL
                ORDER BY created_at DESC, id LIMIT 1"#,
             request_id,
             email,
@@ -217,7 +217,7 @@ impl OtpChallengeRepository for PgOtpChallengeRepository {
         Ok(challenge)
     }
 
-    /// `email = ? AND verified_at IS NULL AND expires_at > now`, newest first.
+    /// The newest case-insensitive email match that is unverified and unexpired.
     async fn find_latest_active_by_email(&self, email: &str) -> RepoResult<OtpChallenge> {
         let now = now_utc(&*self.clock);
         sqlx::query_as!(
@@ -225,7 +225,7 @@ impl OtpChallengeRepository for PgOtpChallengeRepository {
             r#"SELECT id, authorization_request_id, email, purpose, code_hash, attempt_count,
                       resend_count, expires_at, verified_at, last_sent_at, created_at
                FROM otp_challenges
-               WHERE email = $1 AND verified_at IS NULL AND expires_at > $2
+               WHERE lower(email) = lower($1) AND verified_at IS NULL AND expires_at > $2
                ORDER BY created_at DESC, id LIMIT 1"#,
             email,
             now,
@@ -311,7 +311,7 @@ mod tests {
         let (repo, clock) = repo(pool);
         let older = repo.create(challenge("ada@example.com")).await.unwrap();
         clock.advance(Duration::seconds(30));
-        let newer = repo.create(challenge("ada@example.com")).await.unwrap();
+        let newer = repo.create(challenge("Ada@Example.com")).await.unwrap();
         clock.advance(Duration::seconds(30));
         // Newest overall, but verified: skipped.
         repo.create(OtpChallenge {
@@ -338,7 +338,7 @@ mod tests {
         );
 
         for (request, email) in [
-            (REQUEST, "Ada@example.com"),
+            (REQUEST, "other@example.com"),
             ("0190cccc-0000-7000-8000-000000000002", "ada@example.com"),
         ] {
             let err = repo
@@ -396,7 +396,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            repo.find_latest_active_by_email("ada@example.com")
+            repo.find_latest_active_by_email("ADA@EXAMPLE.COM")
                 .await
                 .unwrap(),
             short_lived

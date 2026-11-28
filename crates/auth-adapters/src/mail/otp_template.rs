@@ -26,16 +26,15 @@ pub fn app_name_or_default(app_name: &str) -> &str {
     }
 }
 
-/// `max(1, int(remaining.Minutes()))`: whole minutes, truncated, at least 1.
+/// Remaining minutes rounded up, with a minimum of one.
 #[must_use]
 pub fn otp_minutes_left(remaining: Duration) -> i64 {
-    remaining.whole_minutes().max(1)
+    let whole = remaining.whole_minutes();
+    let has_fraction = remaining > Duration::minutes(whole);
+    (whole + i64::from(has_fraction)).max(1)
 }
 
-/// Renders the OTP email. Go read the wall clock (`time.Until(expiresAt)`) at
-/// render time; here the caller passes `now`. The identity service sets
-/// `expires_at = now + OTP_CHALLENGE_TTL` and renders a moment later, so the
-/// default 10m TTL shows "9 minute(s)".
+/// Renders the OTP email using the time remaining at `now`.
 #[must_use]
 pub fn render_otp_email(
     code: &str,
@@ -125,8 +124,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn minutes_truncate_and_clamp() {
-        assert_eq!(otp_minutes_left(Duration::milliseconds(599_999)), 9);
+    fn minutes_round_up_and_clamp() {
+        assert_eq!(otp_minutes_left(Duration::milliseconds(599_999)), 10);
         assert_eq!(otp_minutes_left(Duration::minutes(10)), 10);
         assert_eq!(otp_minutes_left(Duration::seconds(30)), 1);
         assert_eq!(otp_minutes_left(Duration::minutes(-5)), 1);
@@ -149,7 +148,7 @@ mod tests {
     #[test]
     fn render_uses_clock_difference() {
         let now = OffsetDateTime::UNIX_EPOCH;
-        let email = render_otp_email("123", "", now + Duration::minutes(10), now);
+        let email = render_otp_email("123", "", now + Duration::milliseconds(599_999), now);
         assert_eq!(email.subject, "Your auth-server verification code");
         assert!(email.text.contains("expires in 10 minute(s)"));
     }

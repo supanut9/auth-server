@@ -50,11 +50,12 @@ Browser                interview-web           auth-server            Email (Res
 
 1. **POST `/v1/auth/otp/start`** — client sends `email` + OAuth params
    (`client_id`, `redirect_uri`, `scope`, `response_type`, `state`, `nonce`).
-   auth-server validates the OAuth request, creates an `otp_challenges` record,
-   and emails the code via the configured SMTP relay.
+   auth-server validates the OAuth request, trims and lowercases the email,
+   creates an `otp_challenges` record, and sends the code via the configured
+   SMTP relay. Resend accepts only unexpired challenges.
 
 2. **SMTP delivery** — Resend (or any RFC 5321–compliant relay) delivers the
-   HTML + plain-text email with the code and expiry notice.
+   HTML + plain-text email with the code and expiry in rounded-up minutes.
 
 3. **POST `/v1/auth/otp/verify`** — client sends `otp_challenge_id`, `email`,
    `code` (same OAuth params). auth-server verifies the code hash, marks the

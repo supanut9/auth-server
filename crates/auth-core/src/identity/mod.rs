@@ -13,4 +13,4 @@ pub use service::{
     IdentityService, OTP_LOGIN_METHOD, OtpResendRequest, OtpStartRequest, OtpVerifyRequest,
     OtpVerifyResult, ProviderLoginRequest, ProviderLoginResult, SsoSessionStarter,
 };
-pub use text::{equal_fold, fallback_display_name};
+pub use text::{equal_fold, fallback_display_name, normalize_otp_email};

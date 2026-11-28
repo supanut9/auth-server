@@ -2,8 +2,7 @@
 //! provider login and account linking, and the stateless email OTP
 //! challenge (start, verify, resend).
 //!
-//! Check order, error values and the "ignored error" spots follow Go exactly;
-//! they are observable through the HTTP responses.
+//! Check order and error values are observable through the HTTP responses.
 
 use std::fmt;
 use std::sync::Arc;
@@ -12,8 +11,8 @@ use async_trait::async_trait;
 use time::{Duration, OffsetDateTime};
 
 use super::IdentityError;
-use super::text::{equal_fold, fallback_display_name};
-use crate::crypto::hash_opaque;
+use super::text::{equal_fold, fallback_display_name, normalize_otp_email};
+use crate::crypto::{constant_time_eq, hash_opaque};
 use crate::domain::{
     Account, AccountId, AccountProvider, AccountStatus, OtpChallenge, OtpChallengeId, SsoSession,
     is_zero_time,
@@ -236,8 +235,8 @@ impl IdentityService {
     /// `HandleProviderLoginStateless`.
     ///
     /// The provider email must be verified and not blank. The account is
-    /// found by `(provider, provider_account_id)`, else by exact
-    /// (case-sensitive) `primary_verified_email`, else created. A new
+    /// found by `(provider, provider_account_id)`, then by case-insensitive
+    /// `primary_verified_email`, and otherwise created. A new
     /// `account_providers` row is written whenever the first lookup misses.
     /// The account profile is never refreshed on later logins.
     ///
@@ -324,7 +323,7 @@ impl IdentityService {
 
     /// `StartOTPChallengeStateless`.
     ///
-    /// The email is trimmed but not case-folded. Older challenges for the
+    /// The email is trimmed and lowercased. Older challenges for the
     /// same email stay valid. The email is sent before returning and a
     /// delivery failure is ignored.
     ///
@@ -335,7 +334,7 @@ impl IdentityService {
         &self,
         req: OtpStartRequest,
     ) -> Result<OtpChallenge, IdentityError> {
-        let email = req.email.trim();
+        let email = normalize_otp_email(&req.email);
         if email.is_empty() {
             return Err(IdentityError::OtpEmailRequired);
         }
@@ -354,7 +353,7 @@ impl IdentityService {
             .otp_challenges
             .create(OtpChallenge {
                 authorization_request_id: None,
-                email: email.to_owned(),
+                email: email.clone(),
                 purpose: purpose.to_owned(),
                 code_hash,
                 expires_at: now + self.otp_challenge_ttl,
@@ -364,7 +363,7 @@ impl IdentityService {
             })
             .await?;
 
-        self.send_code(email, &code, challenge.expires_at).await;
+        self.send_code(&email, &code, challenge.expires_at).await;
 
         Ok(challenge)
     }
@@ -375,7 +374,7 @@ impl IdentityService {
     /// => invalid; email mismatch (case-insensitive, trimmed) => not found;
     /// attempts used up => too many attempts; expired; empty code; wrong code
     /// => count the attempt, then too many attempts or invalid. On success
-    /// the account is found by exact email or created, the challenge is
+    /// the account is found by case-insensitive email or created, the challenge is
     /// marked verified and an `email_otp` SSO session starts.
     ///
     /// # Errors
@@ -400,7 +399,8 @@ impl IdentityService {
         if challenge.verified_at.is_some() {
             return Err(IdentityError::OtpChallengeInvalid);
         }
-        if !equal_fold(challenge.email.trim(), req.email.trim()) {
+        let email = normalize_otp_email(&challenge.email);
+        if !equal_fold(&email, &normalize_otp_email(&req.email)) {
             return Err(IdentityError::OtpChallengeNotFound);
         }
         if i64::from(challenge.attempt_count) >= self.otp_max_attempts {
@@ -411,7 +411,7 @@ impl IdentityService {
         }
 
         let hash = hash_otp_code(&req.code)?;
-        if hash != challenge.code_hash {
+        if !constant_time_eq(hash.as_bytes(), challenge.code_hash.as_bytes()) {
             challenge.attempt_count += 1;
             let attempts = i64::from(challenge.attempt_count);
             // Go ignores the update error.
@@ -425,7 +425,7 @@ impl IdentityService {
         let account = match self
             .deps
             .accounts
-            .find_by_primary_verified_email(&challenge.email)
+            .find_by_primary_verified_email(&email)
             .await
         {
             Ok(existing) => existing,
@@ -433,8 +433,8 @@ impl IdentityService {
                 self.deps
                     .accounts
                     .create(Account {
-                        primary_verified_email: challenge.email.clone(),
-                        display_name: fallback_display_name("", &challenge.email),
+                        display_name: fallback_display_name("", &email),
+                        primary_verified_email: email,
                         status: AccountStatus::Active,
                         ..Account::default()
                     })
@@ -458,11 +458,11 @@ impl IdentityService {
     /// `ResendOTPChallengeStateless`.
     ///
     /// Order: blank ID or unknown challenge => not found; verified =>
-    /// invalid; attempts used up => too many attempts; resends used up =>
-    /// too many resends; within the cooldown since `last_sent_at` (or
-    /// `created_at` when unset) => throttled. Expiry is not checked. On
-    /// success a new code replaces the old one, the expiry restarts and the
-    /// attempt count is kept.
+    /// invalid; past expiry => expired; attempts used up => too many
+    /// attempts; resends used up => too many resends; within the cooldown
+    /// since `last_sent_at` (or `created_at` when unset) => throttled.
+    /// On success a new code replaces the old one, the expiry restarts
+    /// and the attempt count is kept.
     ///
     /// # Errors
     /// The [`IdentityError`] OTP variants above, or a code generator or
@@ -486,13 +486,16 @@ impl IdentityService {
         if challenge.verified_at.is_some() {
             return Err(IdentityError::OtpChallengeInvalid);
         }
+        let now = self.now();
+        if now > challenge.expires_at {
+            return Err(IdentityError::OtpChallengeExpired);
+        }
         if i64::from(challenge.attempt_count) >= self.otp_max_attempts {
             return Err(IdentityError::OtpChallengeTooManyAttempts);
         }
         if i64::from(challenge.resend_count) >= self.otp_max_resends {
             return Err(IdentityError::OtpChallengeTooManyResends);
         }
-        let now = self.now();
         let last_sent_at = if is_zero_time(challenge.last_sent_at) {
             challenge.created_at
         } else {

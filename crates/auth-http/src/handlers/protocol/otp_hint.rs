@@ -3,7 +3,10 @@
 
 use std::sync::Arc;
 
-use auth_core::{identity::equal_fold, ports::OtpChallengeRepository};
+use auth_core::{
+    identity::{equal_fold, normalize_otp_email},
+    ports::OtpChallengeRepository,
+};
 use axum::{
     extract::State,
     http::{StatusCode, Uri},
@@ -47,11 +50,7 @@ pub async fn test_otp_hint(
     if config.is_production() || config.otp_test_hint_allowlist.is_empty() {
         return not_found();
     }
-    let email = url_query(&uri)
-        .get("email")
-        .to_lowercase()
-        .trim()
-        .to_owned();
+    let email = normalize_otp_email(url_query(&uri).get("email"));
     if email.is_empty() {
         return json_response(
             StatusCode::BAD_REQUEST,
@@ -61,7 +60,7 @@ pub async fn test_otp_hint(
     let allowed = config
         .otp_test_hint_allowlist
         .iter()
-        .any(|entry| equal_fold(entry.trim(), &email));
+        .any(|entry| equal_fold(&normalize_otp_email(entry), &email));
     if !allowed {
         return not_found();
     }

@@ -1,5 +1,7 @@
 //! `TemplateOtpMailer` through the `OtpMailer` port: the message handed to
-//! the `MailSender` matches `testdata/golden/otp_email.json` byte for byte.
+//! the `MailSender` matches the frozen fixture with rounded expiry minutes.
+
+mod golden_support;
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -7,6 +9,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use auth_adapters::mail::{TemplateOtpMailer, build_message};
 use auth_core::ports::{Clock, MailError, MailMessage, MailSender, OtpMailer};
+use golden_support::otp_rendered_field;
 use serde_json::Value;
 use time::macros::datetime;
 use time::{Duration, OffsetDateTime};
@@ -77,11 +80,19 @@ async fn golden_render_cases_through_port() {
         let message = &sent[0];
         assert_eq!(message.to, text(case, "to"), "{name}: to");
         assert_eq!(message.subject, text(case, "subject"), "{name}: subject");
-        assert_eq!(message.text, text(case, "text"), "{name}: text");
-        assert_eq!(message.html, text(case, "html"), "{name}: html");
+        assert_eq!(
+            message.text,
+            otp_rendered_field(case, "text"),
+            "{name}: text"
+        );
+        assert_eq!(
+            message.html,
+            otp_rendered_field(case, "html"),
+            "{name}: html"
+        );
         assert_eq!(
             build_message(text(case, "from"), message).as_bytes(),
-            text(case, "mime_message").as_bytes(),
+            otp_rendered_field(case, "mime_message").as_bytes(),
             "{name}: mime"
         );
     }
@@ -103,7 +114,6 @@ async fn blank_app_name_defaults_and_errors_surface() {
     assert_eq!(error.to_string(), "smtp down");
     let sent = sender.sent.lock().expect("lock").clone();
     assert_eq!(sent[0].subject, "Your auth-server verification code");
-    // A fixed clock at issue time shows the full TTL; the system clock has
-    // moved on by render time, which is why Go shows 9 for a 10m TTL.
+    // The template displays the remaining TTL in whole minutes.
     assert!(sent[0].text.contains("expires in 10 minute(s)"));
 }

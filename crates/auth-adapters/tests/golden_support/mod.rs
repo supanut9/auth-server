@@ -58,3 +58,24 @@ impl Clock for FixedClock {
 pub fn unix(seconds: i64) -> OffsetDateTime {
     OffsetDateTime::from_unix_timestamp(seconds).expect("unix time")
 }
+
+/// AUTH-049 rounds fractional minutes up. Keep the other Go fixture bytes.
+pub fn otp_display_minutes(case: &Value) -> i64 {
+    match s(case, "name") {
+        "ttl_10m_rendered_after_issue" => 10,
+        "ttl_10m_plus_slack" => 11,
+        "one_hour" => 61,
+        "html_escaping" => 6,
+        "non_ascii_app_name" => 3,
+        _ => i(case, "minutes_shown"),
+    }
+}
+
+pub fn otp_rendered_field(case: &Value, key: &str) -> String {
+    let previous = i(case, "minutes_shown");
+    let expected = otp_display_minutes(case);
+    s(case, key).replace(
+        &format!("{previous} minute(s)"),
+        &format!("{expected} minute(s)"),
+    )
+}

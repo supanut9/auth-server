@@ -100,12 +100,12 @@ impl AccountRepository for PgAccountRepository {
         .map_err(map_err)
     }
 
-    /// Exact (case-sensitive) match, like Go's `primary_verified_email = ?`.
+    /// Match case-insensitively while returning the stored email.
     async fn find_by_primary_verified_email(&self, email: &str) -> RepoResult<Account> {
         sqlx::query_as!(
             AccountRow,
             r#"SELECT id, primary_verified_email, display_name, avatar_url, status, created_at, updated_at
-               FROM accounts WHERE primary_verified_email = $1 ORDER BY id LIMIT 1"#,
+               FROM accounts WHERE lower(primary_verified_email) = lower($1) ORDER BY id LIMIT 1"#,
             email,
         )
         .fetch_one(&self.pool)
@@ -319,7 +319,7 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../../migrations")]
-    async fn find_by_email_is_exact_match(pool: PgPool) {
+    async fn find_by_email_is_case_insensitive(pool: PgPool) {
         let (repo, _) = repo(pool);
         let created = repo.create(account("Ada@Example.com")).await.unwrap();
         assert_eq!(
@@ -328,11 +328,12 @@ mod tests {
                 .unwrap(),
             created
         );
-        let err = repo
-            .find_by_primary_verified_email("ada@example.com")
-            .await
-            .unwrap_err();
-        assert!(err.is_not_found());
+        assert_eq!(
+            repo.find_by_primary_verified_email("ada@example.com")
+                .await
+                .unwrap(),
+            created
+        );
     }
 
     #[sqlx::test(migrations = "../../migrations")]

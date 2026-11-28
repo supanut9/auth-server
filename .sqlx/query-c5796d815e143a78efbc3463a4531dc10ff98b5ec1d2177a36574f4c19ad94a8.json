@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, authorization_request_id, email, purpose, code_hash, attempt_count,\n                      resend_count, expires_at, verified_at, last_sent_at, created_at\n               FROM otp_challenges\n               WHERE email = $1 AND verified_at IS NULL AND expires_at > $2\n               ORDER BY created_at DESC, id LIMIT 1",
+  "query": "SELECT id, authorization_request_id, email, purpose, code_hash, attempt_count,\n                      resend_count, expires_at, verified_at, last_sent_at, created_at\n               FROM otp_challenges\n               WHERE lower(email) = lower($1) AND verified_at IS NULL AND expires_at > $2\n               ORDER BY created_at DESC, id LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -145,5 +145,5 @@
       false
     ]
   },
-  "hash": "ba78ca28b2de63826889afe15f43d96c1ee959afc9ca685f9c63d246757e9999"
+  "hash": "c5796d815e143a78efbc3463a4531dc10ff98b5ec1d2177a36574f4c19ad94a8"
 }

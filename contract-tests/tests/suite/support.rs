@@ -309,8 +309,12 @@ impl Browser {
         let account = &result["account"];
         assert_keys(account, &["display_name", "email", "id"]);
         assert_uuid_v7(string(account, "id"));
-        assert_eq!(account["email"], email);
-        assert_eq!(account["display_name"], email.split_once('@').unwrap().0);
+        let normalized = email.trim().to_lowercase();
+        assert_eq!(account["email"], normalized);
+        assert_eq!(
+            account["display_name"],
+            normalized.split_once('@').unwrap().0
+        );
         self.sso = Some(value);
         result
     }
@@ -380,7 +384,8 @@ pub async fn otp_start(api: &Api, flow: &Flow, email: &str) -> String {
     let challenge = string(&result, "otp_challenge_id");
     assert_uuid_v7(challenge);
     assert_timestamp(&result, "expires_at");
-    let (local, domain) = email.split_once('@').unwrap();
+    let normalized = email.trim().to_lowercase();
+    let (local, domain) = normalized.split_once('@').unwrap();
     let masked = format!(
         "{}{}{}@{domain}",
         &local[..1],
@@ -390,7 +395,7 @@ pub async fn otp_start(api: &Api, flow: &Flow, email: &str) -> String {
     assert_eq!(result["email"], masked);
     let mut params = flow.params.clone();
     params.insert("otp_challenge_id".into(), challenge.into());
-    params.insert("email".into(), email.into());
+    params.insert("email".into(), normalized);
     assert_eq!(result["redirect_to"], api.ui_route("/otp", &params));
     challenge.into()
 }

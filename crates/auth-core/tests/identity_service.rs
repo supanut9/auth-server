@@ -77,7 +77,7 @@ impl AccountRepository for MemAccounts {
     async fn find_by_primary_verified_email(&self, email: &str) -> RepoResult<Account> {
         let rows = self.rows.lock().expect("lock");
         rows.iter()
-            .find(|a| a.primary_verified_email == email)
+            .find(|a| a.primary_verified_email.to_lowercase() == email.to_lowercase())
             .cloned()
             .ok_or(RepoError::NotFound)
     }
@@ -503,7 +503,7 @@ async fn provider_login_display_name_falls_back_to_local_part() {
 }
 
 #[tokio::test]
-async fn provider_login_links_by_exact_email() {
+async fn provider_login_links_by_case_insensitive_email() {
     let h = harness();
     let existing = h.seed_account("alice@example.com", "Old Name");
 
@@ -517,12 +517,12 @@ async fn provider_login_links_by_exact_email() {
     assert!(h.accounts.created.lock().expect("lock").is_empty());
     assert_eq!(h.providers.rows.lock().expect("lock").len(), 1);
 
-    // Email matching is case-sensitive: a different case creates an account.
+    // A second verified provider identity can resolve the same email in another case.
     let mut req = provider_req("Alice@example.com");
     req.provider_account_id = "g-999".into();
     let other = h.service.handle_provider_login(req).await.expect("login");
-    assert_ne!(other.account.id, existing.id);
-    assert_eq!(h.accounts.created.lock().expect("lock").len(), 1);
+    assert_eq!(other.account, existing);
+    assert!(h.accounts.created.lock().expect("lock").is_empty());
 }
 
 #[tokio::test]
@@ -604,10 +604,7 @@ async fn otp_start_stores_challenge_and_mails_code() {
         .expect("start");
 
     assert_eq!(challenge.id, "otp-1");
-    assert_eq!(
-        challenge.email, "User@Example.COM",
-        "trimmed, not lowercased"
-    );
+    assert_eq!(challenge.email, "user@example.com");
     assert_eq!(challenge.purpose, "login");
     assert_eq!(challenge.authorization_request_id, None);
     assert_eq!(challenge.code_hash, sha256_b64url(CODE));
@@ -621,7 +618,7 @@ async fn otp_start_stores_challenge_and_mails_code() {
     assert_eq!(
         h.mailer.sent(),
         [(
-            "User@Example.COM".to_owned(),
+            "user@example.com".to_owned(),
             CODE.to_owned(),
             T0 + Duration::minutes(10)
         )]
@@ -827,9 +824,9 @@ async fn otp_verify_success_creates_account_and_session() {
 
     assert_eq!(
         result.account.primary_verified_email,
-        "New.User@Example.com"
+        "new.user@example.com"
     );
-    assert_eq!(result.account.display_name, "New.User");
+    assert_eq!(result.account.display_name, "new.user");
     assert_eq!(result.account.avatar_url, "");
     assert_eq!(result.account.status, AccountStatus::Active);
     assert_eq!(result.session.login_method, "email_otp");
@@ -850,35 +847,21 @@ async fn otp_verify_success_creates_account_and_session() {
 }
 
 #[tokio::test]
-async fn otp_verify_reuses_account_by_exact_email() {
+async fn otp_verify_reuses_account_by_case_insensitive_email() {
     let h = harness();
-    let existing = h.seed_account("a@x.com", "Alice");
+    let existing = h.seed_account("A@X.COM", "Alice");
     let challenge = h.start("a@x.com").await;
     let result = h
         .service
         .verify_otp_challenge(OtpVerifyRequest {
             otp_challenge_id: challenge.id.to_string(),
-            email: "a@x.com".into(),
+            email: "A@x.com".into(),
             code: CODE.into(),
         })
         .await
         .expect("verify");
     assert_eq!(result.account, existing);
     assert!(h.accounts.created.lock().expect("lock").is_empty());
-
-    // The account lookup uses the challenge's stored email, exactly.
-    let challenge = h.start("A@x.com").await;
-    let result = h
-        .service
-        .verify_otp_challenge(OtpVerifyRequest {
-            otp_challenge_id: challenge.id.to_string(),
-            email: "a@x.com".into(),
-            code: CODE.into(),
-        })
-        .await
-        .expect("verify");
-    assert_ne!(result.account.id, existing.id);
-    assert_eq!(result.account.primary_verified_email, "A@x.com");
 }
 
 #[tokio::test]
@@ -974,6 +957,19 @@ async fn otp_resend_cooldown_falls_back_to_created_at() {
 }
 
 #[tokio::test]
+async fn otp_resend_after_expiry_leaves_challenge_untouched() {
+    let h = harness();
+    let challenge = h.start("a@x.com").await;
+    h.clock.set(challenge.expires_at + Duration::nanoseconds(1));
+    assert_eq!(
+        h.resend(&challenge.id).await,
+        Err("otp challenge expired".into())
+    );
+    assert_eq!(h.otp.get(&challenge.id), challenge);
+    assert_eq!(h.mailer.sent().len(), 1);
+}
+
+#[tokio::test]
 async fn otp_resend_rotates_code_and_keeps_attempts() {
     let h = harness_with(Options {
         generator: Arc::new(ScriptedCodes::new(&["OLDCODE1", "NEWCODE2"])),
@@ -985,8 +981,7 @@ async fn otp_resend_rotates_code_and_keeps_attempts() {
         Err("otp challenge invalid".into())
     );
 
-    // Long past expiry: resend does not check it.
-    let later = T0 + Duration::hours(2);
+    let later = T0 + Duration::minutes(2);
     h.clock.set(later);
     let updated = h.resend(&challenge.id).await.expect("resend");
     assert_eq!(updated.resend_count, 1);
@@ -995,12 +990,12 @@ async fn otp_resend_rotates_code_and_keeps_attempts() {
     assert_eq!(updated.expires_at, later + Duration::minutes(10));
     assert_eq!(updated.last_sent_at, later);
     assert_eq!(updated.created_at, T0);
-    assert_eq!(updated.email, "User@x.com");
+    assert_eq!(updated.email, "user@x.com");
     assert_eq!(h.otp.get(&challenge.id), updated);
     assert_eq!(
         h.mailer.sent()[1],
         (
-            "User@x.com".to_owned(),
+            "user@x.com".to_owned(),
             "NEWCODE2".to_owned(),
             later + Duration::minutes(10)
         )

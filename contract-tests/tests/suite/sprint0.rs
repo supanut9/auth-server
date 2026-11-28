@@ -17,7 +17,8 @@ async fn sprint0_provider_login_account() {
     let response = send(browser.request(api.authorize(&flow.params))).await;
     assert_eq!(location(&response), api.ui_route("/login", &flow.params));
 
-    let result = browser.verify_otp(&api, &flow, &expected.email).await;
+    let mixed_case_email = format!("  {}  ", expected.email.to_uppercase());
+    let result = browser.verify_otp(&api, &flow, &mixed_case_email).await;
     let second = string(&result["account"], "id");
     assert_eq!(second, expected.sub);
     assert_ne!(second, first.sub);

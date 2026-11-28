@@ -47,6 +47,12 @@ fn single(mut chars: impl Iterator<Item = char>) -> Option<char> {
     chars.next().is_none().then_some(first)
 }
 
+/// Canonical email spelling for new OTP challenges.
+#[must_use]
+pub fn normalize_otp_email(email: &str) -> String {
+    email.trim().to_lowercase()
+}
+
 /// Go `fallbackDisplayName`: `name` when it is not blank, else the part of
 /// `email` before the first `@` (when that part is non-empty), else `email`.
 #[must_use]

@@ -1,6 +1,10 @@
 //! OTP template and MIME builder against `testdata/golden/otp_email.json`.
 
+mod golden_support;
+
 use std::path::PathBuf;
+
+use golden_support::{otp_display_minutes, otp_rendered_field};
 
 use auth_adapters::mail::{build_message, otp_minutes_left, render_otp_email_with_remaining};
 use auth_core::ports::MailMessage;
@@ -22,7 +26,7 @@ fn text<'a>(value: &'a Value, key: &str) -> &'a str {
 }
 
 #[test]
-fn render_cases_match_go_byte_for_byte() {
+fn render_cases_match_fixture_with_rounded_minutes() {
     let golden = golden("otp_email.json");
     let cases = golden["render"]["cases"].as_array().expect("cases");
     assert_eq!(cases.len(), 7, "every recorded case is checked");
@@ -31,16 +35,16 @@ fn render_cases_match_go_byte_for_byte() {
         let remaining =
             Duration::milliseconds(case["remaining_ms_at_render"].as_i64().expect("remaining"));
         assert_eq!(
-            Some(otp_minutes_left(remaining)),
-            case["minutes_shown"].as_i64(),
+            otp_minutes_left(remaining),
+            otp_display_minutes(case),
             "{name}: minutes"
         );
 
         let email =
             render_otp_email_with_remaining(text(case, "code"), text(case, "app_name"), remaining);
         assert_eq!(email.subject, text(case, "subject"), "{name}: subject");
-        assert_eq!(email.text, text(case, "text"), "{name}: text");
-        assert_eq!(email.html, text(case, "html"), "{name}: html");
+        assert_eq!(email.text, otp_rendered_field(case, "text"), "{name}: text");
+        assert_eq!(email.html, otp_rendered_field(case, "html"), "{name}: html");
 
         let mime = build_message(
             text(case, "from"),
@@ -53,7 +57,7 @@ fn render_cases_match_go_byte_for_byte() {
         );
         assert_eq!(
             mime.as_bytes(),
-            text(case, "mime_message").as_bytes(),
+            otp_rendered_field(case, "mime_message").as_bytes(),
             "{name}: mime"
         );
     }

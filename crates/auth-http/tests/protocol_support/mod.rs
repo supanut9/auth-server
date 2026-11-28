@@ -226,7 +226,9 @@ impl AccountRepository for Accounts {
     async fn find_by_primary_verified_email(&self, email: &str) -> RepoResult<Account> {
         self.fail.check()?;
         let rows = self.rows.lock().unwrap();
-        let found = rows.iter().find(|a| a.primary_verified_email == email);
+        let found = rows
+            .iter()
+            .find(|a| a.primary_verified_email.to_lowercase() == email.to_lowercase());
         found.cloned().ok_or(RepoError::NotFound)
     }
     async fn update(&self, account: Account) -> RepoResult<Account> {
@@ -548,7 +550,11 @@ impl OtpChallengeRepository for Otps {
         let now = self.clock.now();
         let rows = self.rows.lock().unwrap();
         rows.iter()
-            .filter(|c| c.email == email && c.verified_at.is_none() && now <= c.expires_at)
+            .filter(|c| {
+                c.email.to_lowercase() == email.to_lowercase()
+                    && c.verified_at.is_none()
+                    && now <= c.expires_at
+            })
             .max_by_key(|c| c.created_at)
             .cloned()
             .ok_or(RepoError::NotFound)

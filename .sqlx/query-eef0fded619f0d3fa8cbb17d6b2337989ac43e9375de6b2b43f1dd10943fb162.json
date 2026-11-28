@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, primary_verified_email, display_name, avatar_url, status, created_at, updated_at\n               FROM accounts WHERE primary_verified_email = $1 ORDER BY id LIMIT 1",
+  "query": "SELECT id, primary_verified_email, display_name, avatar_url, status, created_at, updated_at\n               FROM accounts WHERE lower(primary_verified_email) = lower($1) ORDER BY id LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -96,5 +96,5 @@
       false
     ]
   },
-  "hash": "a4569387c7e2ad5073c32d890b98a7321cf6031ed51dad636704de82584219f3"
+  "hash": "eef0fded619f0d3fa8cbb17d6b2337989ac43e9375de6b2b43f1dd10943fb162"
 }

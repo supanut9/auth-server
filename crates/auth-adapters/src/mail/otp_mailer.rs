@@ -12,9 +12,7 @@ use super::otp_template::{app_name_or_default, render_otp_email};
 
 /// Renders the OTP email template and sends it.
 ///
-/// The minutes shown are `expires_at - clock.now()` at send time, truncated:
-/// with the system clock a 10m TTL shows "9 minute(s)", as in Go, because a
-/// little time passes between issuing the challenge and rendering.
+/// Rounds the remaining time up to whole minutes at send time.
 #[derive(Clone)]
 pub struct TemplateOtpMailer {
     sender: Arc<dyn MailSender>,

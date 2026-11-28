@@ -47,4 +47,9 @@ OTP start, verify, and resend each allow 20 requests per client IP in a shared
 and a `Retry-After` header in whole seconds, with a minimum of one. If the
 shared limiter is unavailable, these endpoints return `503 {"error":"rate_limit_unavailable"}`.
 
+OTP start trims and lowercases the email used in the challenge, masked
+response, and auth-ui redirect. Verify accepts case variations of the
+challenge email. Resend after expiry returns
+`400 {"error":"invalid_request","error_description":"otp challenge expired"}`.
+
 Refer to `../../docs/auth/phase-1-endpoints.md` in the parent workspace for the original phase-1 endpoint contract and [the cutover deviations](rust-port-deviations.md) for known compatibility differences.

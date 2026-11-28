@@ -35,6 +35,7 @@ Duration values retain the pre-cutover syntax. Use forms such as `300ms`, `10m`,
 
 - Configure all three variables for each enabled provider: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URL`, or `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and `GITHUB_REDIRECT_URL`.
 - Configure `SMTP_HOST` and `SMTP_FROM` for OTP email delivery. `SMTP_PORT` defaults to `587`. Set `SMTP_USERNAME` and `SMTP_PASSWORD` as required by the relay.
+- OTP email displays the remaining lifetime rounded up to whole minutes.
 - `OTP_MAX_ATTEMPTS` defaults to `6` and must be positive. `OTP_MAX_RESENDS` defaults to `3` and can be zero. `OTP_RESEND_COOLDOWN` must be positive.
 - `FIXED_OTP_CODE` and `OTP_TEST_HINT_ALLOWLIST` are for non-production verification. Production startup rejects both when set.
 

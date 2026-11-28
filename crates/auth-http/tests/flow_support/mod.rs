@@ -275,7 +275,7 @@ impl AccountRepository for Db {
                 .lock()
                 .unwrap()
                 .iter()
-                .find(|a| a.primary_verified_email == email),
+                .find(|a| a.primary_verified_email.to_lowercase() == email.to_lowercase()),
         )
     }
 

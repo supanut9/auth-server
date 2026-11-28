@@ -38,7 +38,7 @@ fn challenge_response(challenge: &OtpChallenge, extra: Map<String, Value>) -> Re
 /// create and mail the challenge (`400 invalid_request` + error text) →
 /// `200 {"email","expires_at","otp_challenge_id","redirect_to"}` where
 /// `redirect_to` is auth-ui `/otp` with the body's OAuth params as sent
-/// (`response_type` not defaulted), the challenge ID and the trimmed,
+/// (`response_type` not defaulted), the challenge ID and the normalized,
 /// unmasked email.
 pub async fn start(_: OtpRateLimit, State(state): State<AppState>, body: Bytes) -> Response {
     let (body, extra) = match bind_authorize_with(&body, &["email"]) {
@@ -67,7 +67,7 @@ pub async fn start(_: OtpRateLimit, State(state): State<AppState>, body: Bytes) 
 
     let mut query = oauth_values_from_request(body.raw());
     query.set("otp_challenge_id", challenge.id.as_str());
-    query.set("email", email.trim());
+    query.set("email", &challenge.email);
     let mut extra = Map::new();
     extra.insert(
         "redirect_to".to_owned(),

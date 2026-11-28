@@ -23,6 +23,7 @@ Legend:
 | ID token claims (AUTH-045) | omitted `azp` and `sid` and used `JWT_ISSUER` verbatim | includes `azp` and the SSO `sid` when present. ID token `iss` matches discovery. Access token `iss` uses the configured issuer verbatim | Client-visible |
 | Access token checks (AUTH-046) | JWT introspection and Userinfo accepted ID tokens | verifies the platform audience and presence of `scope` for both endpoints. ID tokens introspect as inactive and get a 401 from Userinfo | Client-visible |
 | Consent persistence (AUTH-047) | concurrent inserts could create duplicate grants | one grant per account and client, written with an atomic upsert | Internal |
+| OTP correctness (AUTH-049) | kept the casing at OTP start and account lookup, compared hashes directly, allowed expired resend, and truncated email minutes | lowercases OTP start emails, looks up emails case-insensitively, compares OTP hashes in constant time, rejects expired resend, and rounds email minutes up | Client-visible |
 
 ## Accepted deviations (plan §3)
 
@@ -75,6 +76,4 @@ Legend:
 ## Unchanged on purpose
 
 These behaviors were preserved at cutover. The port plan tracks them individually (§7):
-- OTP email is case-sensitive, and the code compare is not constant-time.
-- Resend can revive an expired OTP challenge.
 - A missing SSO session on refresh returns the repository error; the HTTP layer maps every refresh error to `invalid_grant`.

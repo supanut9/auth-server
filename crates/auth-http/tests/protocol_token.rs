@@ -52,6 +52,11 @@ fn worker_auth() -> String {
     basic(WORKER, WORKER_SECRET)
 }
 
+fn assert_no_store(reply: &Reply) {
+    assert_eq!(reply.header("cache-control"), Some("no-store"));
+    assert_eq!(reply.header("pragma"), Some("no-cache"));
+}
+
 fn keys(value: &Value) -> Vec<&str> {
     value
         .as_object()
@@ -377,14 +382,15 @@ async fn grant_type_dispatch_and_form_parsing() {
     let router = Fixture::new().router();
     let unsupported = r#"{"error":"unsupported_grant_type"}"#;
     for grant in ["", "password", "AUTHORIZATION_CODE"] {
-        post_form(
+        let reply = post_form(
             &router,
             TOKEN,
             &[],
             &[("grant_type", grant), ("client_id", "nope")],
         )
-        .await
-        .assert_json(StatusCode::BAD_REQUEST, unsupported);
+        .await;
+        assert_no_store(&reply);
+        reply.assert_json(StatusCode::BAD_REQUEST, unsupported);
     }
     // Only an urlencoded body counts: JSON, multipart and query strings do
     // not.
@@ -420,6 +426,7 @@ async fn grant_type_dispatch_and_form_parsing() {
     )
     .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.body);
+    assert_no_store(&reply);
 }
 
 #[tokio::test]
@@ -744,17 +751,19 @@ async fn introspection_rules() {
     )
     .await
     .assert_json(StatusCode::UNAUTHORIZED, UNAUTHORIZED_CLIENT);
-    post_form(
+    let reply = post_form(
         &router,
         INTROSPECT,
         &[],
         &[("client_id", "nope"), ("token", &access)],
     )
-    .await
-    .assert_json(StatusCode::UNAUTHORIZED, INVALID_CLIENT);
+    .await;
+    assert_no_store(&reply);
+    reply.assert_json(StatusCode::UNAUTHORIZED, INVALID_CLIENT);
 
     // ID tokens are accepted on the JWT path (kept Go behavior).
     let reply = introspect(&router, &id_token, "").await;
+    assert_no_store(&reply);
     let body = reply.json();
     assert_eq!(body["active"], true);
     assert_eq!(body["client_id"], "");
@@ -880,15 +889,15 @@ async fn userinfo_rules() {
             }
         }
     };
-    for auth in [
-        None,
-        Some("Bearer".to_owned()),
-        Some("Bearer   ".to_owned()),
-        Some("Bearer garbage".to_owned()),
+    for (auth, challenge) in [
+        (None, "Bearer"),
+        (Some("Bearer"), "Bearer"),
+        (Some("Bearer   "), "Bearer"),
+        (Some("Bearer garbage"), r#"Bearer error="invalid_token""#),
     ] {
-        call(auth)
-            .await
-            .assert_json(StatusCode::UNAUTHORIZED, INVALID_TOKEN);
+        let reply = call(auth.map(str::to_owned)).await;
+        assert_eq!(reply.header("www-authenticate"), Some(challenge));
+        reply.assert_json(StatusCode::UNAUTHORIZED, INVALID_TOKEN);
     }
 
     let (openid, _) = user_tokens(&fixture, &account, &session, &["openid"]).await;

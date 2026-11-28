@@ -14,7 +14,7 @@ use auth_core::{
 };
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
     response::Response,
 };
 use secrecy::ExposeSecret;
@@ -53,6 +53,13 @@ async fn read_token_request(request: Request) -> TokenRequest {
 
 fn basic_credentials(headers: &HeaderMap) -> (String, String) {
     basic_auth(headers).unwrap_or_default()
+}
+
+fn no_store(mut response: Response) -> Response {
+    let headers = response.headers_mut();
+    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    headers.insert(header::PRAGMA, HeaderValue::from_static("no-cache"));
+    response
 }
 
 /// A failed client authentication; both render as `401`.
@@ -105,12 +112,13 @@ async fn authenticate_client(
 /// Go `token`: dispatch on `grant_type` before any client authentication.
 pub async fn token(State(state): State<AppState>, request: Request) -> Response {
     let request = read_token_request(request).await;
-    match request.form.get("grant_type") {
+    let response = match request.form.get("grant_type") {
         "authorization_code" => authorization_code_grant(&state, &request).await,
         "refresh_token" => refresh_token_grant(&state, &request).await,
         "client_credentials" => client_credentials_grant(&state, &request).await,
         _ => error_json(StatusCode::BAD_REQUEST, "unsupported_grant_type"),
-    }
+    };
+    no_store(response)
 }
 
 /// Go `handleAuthorizationCodeToken`: the code is consumed first, PKCE is
@@ -291,7 +299,7 @@ pub async fn introspect(State(state): State<AppState>, request: Request) -> Resp
     if let Err(error) =
         authenticate_client(&state, &request.client_id, &request.client_secret, true).await
     {
-        return error.into_response();
+        return no_store(error.into_response());
     }
     let token = request.form.get("token");
     let body = if request.form.get("token_type_hint") == "refresh_token" {
@@ -299,7 +307,7 @@ pub async fn introspect(State(state): State<AppState>, request: Request) -> Resp
     } else {
         introspect_access_token(&state, token)
     };
-    json_response(StatusCode::OK, &body)
+    no_store(json_response(StatusCode::OK, &body))
 }
 
 fn inactive() -> Value {

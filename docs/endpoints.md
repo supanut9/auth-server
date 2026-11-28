@@ -29,4 +29,6 @@ Pending authorization uses signed flow state. The originally planned `/v1/auth/r
 
 Responses include `X-Request-Id`. `/healthz` and `/readyz` echo it as `request_id` in JSON. `/readyz` returns `503` when PostgreSQL is unreachable.
 
+Token and introspection responses carry `Cache-Control: no-store` and `Pragma: no-cache` on success and error. Userinfo returns `WWW-Authenticate: Bearer` on a 401 with a missing token and `WWW-Authenticate: Bearer error="invalid_token"` on a 401 with an invalid token.
+
 Refer to `../../docs/auth/phase-1-endpoints.md` in the parent workspace for the original phase-1 endpoint contract and [the cutover deviations](rust-port-deviations.md) for known compatibility differences.

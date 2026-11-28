@@ -324,6 +324,60 @@ async fn authorize_without_session() {
 }
 
 #[tokio::test]
+async fn token_and_introspection_cache_headers_and_userinfo_challenges() {
+    let api = Api::new();
+    for (path, auth, fields, status) in [
+        (
+            TOKEN,
+            ClientAuth::Basic,
+            [("grant_type", "client_credentials")],
+            StatusCode::OK,
+        ),
+        (
+            TOKEN,
+            ClientAuth::Basic,
+            [("grant_type", "unsupported")],
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            INTROSPECT,
+            ClientAuth::Basic,
+            [("token", "not-a-token")],
+            StatusCode::OK,
+        ),
+        (
+            INTROSPECT,
+            ClientAuth::Post,
+            [("token", "not-a-token")],
+            StatusCode::UNAUTHORIZED,
+        ),
+    ] {
+        let client = if status == StatusCode::UNAUTHORIZED {
+            &api.browser
+        } else {
+            &api.worker
+        };
+        let response = send(api.form(path, client, auth, &fields)).await;
+        assert_eq!(response.status(), status);
+        assert_eq!(response.headers()["cache-control"], "no-store");
+        assert_eq!(response.headers()["pragma"], "no-cache");
+    }
+    for (token, challenge) in [
+        (None, "Bearer"),
+        (Some("not-a-token"), r#"Bearer error="invalid_token""#),
+    ] {
+        let request = api.get(USERINFO);
+        let request = match token {
+            Some(token) => request.bearer_auth(token),
+            None => request,
+        };
+        let response = send(request).await;
+        assert_eq!(response.headers()["www-authenticate"], challenge);
+        assert_error(response, StatusCode::UNAUTHORIZED, "invalid_token", None).await;
+    }
+}
+
+#[tokio::test]
 async fn client_credentials_scope_and_auth_methods() {
     let api = Api::new();
     let keys = jwks(&api).await;

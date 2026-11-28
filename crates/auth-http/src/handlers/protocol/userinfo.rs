@@ -3,7 +3,7 @@
 use auth_core::domain::AccountId;
 use axum::{
     extract::State,
-    http::{HeaderMap, StatusCode, header},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
     response::Response,
 };
 use serde_json::{Value, json};
@@ -21,17 +21,26 @@ fn bearer_token(headers: &HeaderMap) -> String {
     String::from_utf8_lossy(raw).trim().to_owned()
 }
 
+fn invalid_token(challenge: &'static str) -> Response {
+    let mut response = error_json(StatusCode::UNAUTHORIZED, "invalid_token");
+    response.headers_mut().insert(
+        header::WWW_AUTHENTICATE,
+        HeaderValue::from_static(challenge),
+    );
+    response
+}
+
 /// Go `userInfo`: `401 {"error":"invalid_token"}` for a missing or
 /// unverifiable token, an empty `sub`, a `sub` equal to `client_id`
 /// (client_credentials tokens) or an unknown account. `email` +
 /// `email_verified` need the `email` scope; `name` + `picture` need
 /// `profile`.
 pub async fn userinfo(State(state): State<AppState>, headers: HeaderMap) -> Response {
-    let invalid = || error_json(StatusCode::UNAUTHORIZED, "invalid_token");
     let token = bearer_token(&headers);
     if token.is_empty() {
-        return invalid();
+        return invalid_token("Bearer");
     }
+    let invalid = || invalid_token(r#"Bearer error="invalid_token""#);
     let Ok(claims) = state.jwt_verifier.verify(&token) else {
         return invalid();
     };

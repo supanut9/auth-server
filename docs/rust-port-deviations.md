@@ -17,6 +17,7 @@ Legend:
 | devseed upsert | update, delete and insert are 3 separate statements | one transaction per client, so a failure never leaves a prod client without redirect URIs | Internal |
 | Client IP when the peer is unknown | gin returns `""` and ignores headers | reads `X-Forwarded-For` / `X-Real-IP`. Required on Vercel, which gives no peer address, so OTP rate-limit keys stay per-client | Internal |
 | Panic response | 500 from gin.Recovery | same, and CORS headers are still present | Client-visible (only on a crash) |
+| Protocol response headers (AUTH-042) | no cache directives or bearer challenge | token and introspection send `Cache-Control: no-store` and `Pragma: no-cache` on success and error. Userinfo 401s send a bearer challenge | Client-visible |
 
 ## Accepted deviations (plan §3)
 

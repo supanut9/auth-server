@@ -33,4 +33,6 @@ Token and introspection responses carry `Cache-Control: no-store` and `Pragma: n
 
 Authorization-code exchange checks PKCE before consuming the code. A wrong verifier returns `400 invalid_grant` with `error_description` set to `pkce validation failed`. The client can retry with the correct verifier until the code expires.
 
+Token, revocation, and introspection require an active client. Empty client status counts as active. Inactive clients receive `401 {"error":"invalid_client"}`. Revocation returns an empty `200` for authenticated active clients, including requests for an unknown token, and `401` when client authentication fails.
+
 Refer to `../../docs/auth/phase-1-endpoints.md` in the parent workspace for the original phase-1 endpoint contract and [the cutover deviations](rust-port-deviations.md) for known compatibility differences.

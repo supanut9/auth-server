@@ -378,6 +378,31 @@ async fn token_and_introspection_cache_headers_and_userinfo_challenges() {
 }
 
 #[tokio::test]
+async fn inactive_clients_cannot_authenticate_at_protocol_endpoints() {
+    let api = Api::new();
+    let client = OAuthClient {
+        id: setting("CONTRACT_INACTIVE_CLIENT_ID", "knowledge-web"),
+        secret: Some(setting(
+            "CONTRACT_INACTIVE_CLIENT_SECRET",
+            "knowledge-web-secret",
+        )),
+        redirect_uri: String::new(),
+    };
+    for (path, fields) in [
+        (TOKEN, [("grant_type", "authorization_code")]),
+        (TOKEN, [("grant_type", "refresh_token")]),
+        (TOKEN, [("grant_type", "client_credentials")]),
+        (REVOKE, [("token", "unknown")]),
+        (INTROSPECT, [("token", "unknown")]),
+    ] {
+        let reply = send(api.form(path, &client, ClientAuth::Basic, &fields)).await;
+        assert_error(reply, StatusCode::UNAUTHORIZED, "invalid_client", None).await;
+    }
+    let reply = send(api.post(REVOKE).form(&[("token", "unknown")])).await;
+    assert_error(reply, StatusCode::UNAUTHORIZED, "invalid_client", None).await;
+}
+
+#[tokio::test]
 async fn client_credentials_scope_and_auth_methods() {
     let api = Api::new();
     let keys = jwks(&api).await;

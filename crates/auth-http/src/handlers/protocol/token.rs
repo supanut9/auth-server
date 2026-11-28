@@ -78,11 +78,10 @@ impl ClientAuthError {
     }
 }
 
-/// Go `authenticateClient`: unknown client → `invalid_client`; a public
+/// Unknown or inactive client → `invalid_client`; a public
 /// client where a confidential one is required → `unauthorized_client`; a
 /// confidential client whose secret does not match → `invalid_client`.
-/// Public clients are not secret-checked. The client status is not checked
-/// (as in Go).
+/// Public clients are not secret-checked.
 async fn authenticate_client(
     state: &AppState,
     client_id: &str,
@@ -96,6 +95,9 @@ async fn authenticate_client(
     else {
         return Err(ClientAuthError::InvalidClient);
     };
+    if !client.status.is_usable() {
+        return Err(ClientAuthError::InvalidClient);
+    }
     let confidential = client.client_type == ClientType::Confidential;
     if confidential_only && !confidential {
         return Err(ClientAuthError::UnauthorizedClient);

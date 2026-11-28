@@ -19,6 +19,7 @@ Legend:
 | Panic response | 500 from gin.Recovery | same, and CORS headers are still present | Client-visible (only on a crash) |
 | Protocol response headers (AUTH-042) | no cache directives or bearer challenge | token and introspection send `Cache-Control: no-store` and `Pragma: no-cache` on success and error. Userinfo 401s send a bearer challenge | Client-visible |
 | Authorization-code PKCE (AUTH-043) | consumed the code before checking the verifier | failed PKCE leaves the code usable through its existing expiry | Client-visible |
+| Protocol client status (AUTH-044) | authenticated inactive clients at token, revoke, and introspect | rejects inactive clients with `401 invalid_client`. Empty status counts as active | Client-visible |
 
 ## Accepted deviations (plan §3)
 
@@ -72,7 +73,6 @@ Legend:
 
 These behaviors were preserved at cutover. The port plan tracks them individually (§7):
 - ID tokens pass introspection and userinfo.
-- Inactive clients pass the token, revoke and introspect endpoints.
 - Token `iss` is untrimmed while discovery's `issuer` is trimmed.
 - OTP email is case-sensitive, and the code compare is not constant-time.
 - Resend can revive an expired OTP challenge.

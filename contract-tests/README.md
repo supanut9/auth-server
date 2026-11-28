@@ -69,7 +69,7 @@ to run the fixed-behavior checks.
 | `CONTRACT_BROWSER_CLIENT_ID`, `CONTRACT_BROWSER_REDIRECT_URI` | `dev-browser`, `http://localhost:8050/dev/callback` |
 | `CONTRACT_WEB_CLIENT_ID`, `CONTRACT_WEB_CLIENT_SECRET`, `CONTRACT_WEB_REDIRECT_URI` | `community-web`, `community-web-secret`, `http://localhost:3006/api/auth/oauth2/callback/auth-server` |
 | `CONTRACT_WORKER_CLIENT_ID`, `CONTRACT_WORKER_CLIENT_SECRET` | `dev-worker`, `dev-worker-secret` |
-| `CONTRACT_INACTIVE_CLIENT_ID` | `knowledge-web`. Seed it with inactive status. |
+| `CONTRACT_INACTIVE_CLIENT_ID`, `CONTRACT_INACTIVE_CLIENT_SECRET` | `knowledge-web`, `knowledge-web-secret`. Seed the confidential client with inactive status and the matching secret. |
 | `CONTRACT_MALFORMED_CLIENT_ID`, `CONTRACT_MALFORMED_REDIRECT_URI` | `language-web`, `/contract-callback`. Register the relative URI on this active client. |
 | `CONTRACT_BROWSER_DISPLAY_NAME` | `Development Browser Client`. Match the public client's seeded display name. |
 | `CONTRACT_APP_NAME`, `CONTRACT_AUDIENCE`, `CONTRACT_ISSUER` | `auth-server`, `platform-api`, and the base URL without a trailing slash. |

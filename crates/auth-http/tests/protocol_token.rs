@@ -5,7 +5,10 @@
 mod protocol_support;
 
 use auth_core::{
-    domain::{AccountId, ClientId, ClientType, OAuthClient, RefreshTokenChainStatus, SessionId},
+    domain::{
+        AccountId, ClientId, ClientStatus, ClientType, OAuthClient, RefreshTokenChainStatus,
+        SessionId,
+    },
     oauth::pkce::s256_challenge,
     ports::JwtVerifier,
     token::UserTokenRequest,
@@ -531,6 +534,37 @@ async fn client_authentication_rules() {
 }
 
 #[tokio::test]
+async fn protocol_client_authentication_requires_an_active_client() {
+    let fixture = Fixture::new();
+    let router = fixture.router();
+    let auth = worker_auth();
+    for status in ["inactive", "suspended", ""] {
+        fixture
+            .clients
+            .rows
+            .lock()
+            .unwrap()
+            .iter_mut()
+            .find(|client| client.client_id.as_str() == WORKER)
+            .unwrap()
+            .status = ClientStatus::parse(status);
+
+        for (path, fields) in [
+            (TOKEN, [("grant_type", "client_credentials")]),
+            (REVOKE, [("token", "unknown")]),
+            (INTROSPECT, [("token", "unknown")]),
+        ] {
+            let reply = post_form(&router, path, &[("authorization", &auth)], &fields).await;
+            if status.is_empty() {
+                assert_eq!(reply.status, StatusCode::OK, "{path}");
+            } else {
+                reply.assert_json(StatusCode::UNAUTHORIZED, INVALID_CLIENT);
+            }
+        }
+    }
+}
+
+#[tokio::test]
 async fn client_credentials_scope_rules_match_golden() {
     let fixture = Fixture::new();
     let golden = golden("scopes.json");
@@ -684,6 +718,9 @@ async fn revoke_rules() {
     assert_eq!(revoke("own-token").await.status, StatusCode::OK);
 
     // Client authentication still applies.
+    post_form(&router, REVOKE, &[], &[("token", "x")])
+        .await
+        .assert_json(StatusCode::UNAUTHORIZED, INVALID_CLIENT);
     post_form(
         &router,
         REVOKE,
